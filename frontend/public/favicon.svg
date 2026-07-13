@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 9" shape-rendering="crispEdges">
+  <!-- Controle pixel-art do DataQuest (arte própria do projeto) -->
+  <rect x="1" y="1" width="12" height="6" fill="#475569"/>
+  <rect x="0" y="2" width="2" height="5" fill="#334155"/>
+  <rect x="12" y="2" width="2" height="5" fill="#334155"/>
+  <rect x="1" y="1" width="12" height="1" fill="#64748b"/>
+  <!-- d-pad -->
+  <rect x="2" y="3" width="3" height="1" fill="#0f172a"/>
+  <rect x="3" y="2" width="1" height="3" fill="#0f172a"/>
+  <!-- start / select -->
+  <rect x="6" y="4" width="1" height="1" fill="#94a3b8"/>
+  <rect x="7" y="4" width="1" height="1" fill="#94a3b8"/>
+  <!-- botões A B X Y -->
+  <rect x="10" y="2" width="1" height="1" fill="#facc15"/>
+  <rect x="9" y="3" width="1" height="1" fill="#4ade80"/>
+  <rect x="11" y="3" width="1" height="1" fill="#f87171"/>
+  <rect x="10" y="4" width="1" height="1" fill="#60a5fa"/>
+</svg>

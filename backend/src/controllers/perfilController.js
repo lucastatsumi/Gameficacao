@@ -1,0 +1,25 @@
+import * as perfilService from '../services/perfilService.js';
+
+export async function perfil(req, res, next) {
+  try {
+    res.json(await perfilService.obterPerfil(req.usuario));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function badges(req, res, next) {
+  try {
+    res.json(await perfilService.listarBadges(req.usuario.id));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function historico(req, res, next) {
+  try {
+    res.json(await perfilService.historicoDeTentativas(req.usuario.id));
+  } catch (err) {
+    next(err);
+  }
+}
