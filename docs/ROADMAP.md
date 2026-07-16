@@ -64,10 +64,15 @@ estudantes primeiro.
   prioridade como estrutura própria (hoje só aparecem mencionados dentro da
   fase de Árvores), recursão — exigiria uma fase nova (fase 7), não só mais
   questões nas fases atuais.
-- **Extrair componentes de `pages/Quiz.jsx`, `Admin.jsx`, `Quizzes.jsx`** —
-  arquivos hoje com 500–950 linhas; mover blocos para
-  `components/quiz/`, `components/mapa/`, `components/ranking/` (hoje vazios,
-  só `.gitkeep`), melhorando manutenibilidade.
+- ✅ **Extrair componentes de `pages/Quiz.jsx`** — tinha crescido para 692
+  linhas (as features de poderes e batalha de complexidade desta rodada
+  ajudaram a inchar). Movidos `BotaoAlternativa`, `BotaoBatalha`,
+  `CartaoStat`, `ConfetePixel` e `TelaResultado` para `components/quiz/`,
+  puro reposicionamento sem mudança de comportamento (build idêntico,
+  mesmo bundle). `Quiz.jsx` caiu para 451 linhas.
+- **`Admin.jsx` (957 linhas) e `Quizzes.jsx` (346 linhas) ainda não foram
+  extraídos** — não foram tocados nesta rodada; `Admin.jsx` em particular é
+  o maior arquivo do frontend e o próximo candidato natural.
 - ✅ **CI** — `.github/workflows/ci.yml`: roda `npm test` do backend e
   `npm run build` do frontend em push para `main` e em todo PR. Validado
   localmente com `npm ci` (não só `npm install`) em ambos, para garantir
