@@ -68,11 +68,13 @@ estudantes primeiro.
   arquivos hoje com 500–950 linhas; mover blocos para
   `components/quiz/`, `components/mapa/`, `components/ranking/` (hoje vazios,
   só `.gitkeep`), melhorando manutenibilidade.
-- **CI** — não há workflow de CI configurado no repositório; adicionar
-  `npm test` do backend rodando em cada PR (o frontend não tem suíte própria
-  ainda; começar por testes de utilitários puros como `nivel.js` foi feito no
-  backend — replicar o padrão no frontend quando houver lógica não-visual
-  suficiente para justificar).
+- ✅ **CI** — `.github/workflows/ci.yml`: roda `npm test` do backend e
+  `npm run build` do frontend em push para `main` e em todo PR. Validado
+  localmente com `npm ci` (não só `npm install`) em ambos, para garantir
+  que os lockfiles batem com o que o CI vai instalar. O frontend ainda não
+  tem suíte de testes própria; começar por lógica não-visual (ex.: uma
+  eventual extração de helpers puros de `Quiz.jsx`) quando houver o
+  suficiente para justificar.
 
 ## Médio prazo (features de jogo)
 
