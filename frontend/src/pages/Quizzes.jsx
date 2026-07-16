@@ -241,6 +241,7 @@ function FormQuiz({ form, aoFechar, aoSalvar }) {
         value={dados.titulo}
         onChange={(e) => mudar('titulo', e.target.value)}
         placeholder="Título do quiz (ex.: Desafio relâmpago de Pilhas)"
+        aria-label="Título do quiz"
         className={inputCls}
         required
       />
@@ -248,6 +249,7 @@ function FormQuiz({ form, aoFechar, aoSalvar }) {
         value={dados.descricao}
         onChange={(e) => mudar('descricao', e.target.value)}
         placeholder="Descrição (opcional)"
+        aria-label="Descrição do quiz"
         className={inputCls}
       />
 
@@ -268,6 +270,7 @@ function FormQuiz({ form, aoFechar, aoSalvar }) {
               onChange={(e) => mudar('tempo_limite_seg', e.target.value)}
               className={`${inputCls} w-20`}
               title="segundos"
+              aria-label="Segundos por questão"
             />
           )}
         </label>
@@ -298,6 +301,7 @@ function FormQuiz({ form, aoFechar, aoSalvar }) {
           <select
             value={filtroFase}
             onChange={(e) => setFiltroFase(e.target.value)}
+            aria-label="Filtrar questões por fase"
             className="ml-auto border-2 border-slate-700 bg-slate-900 px-2 py-1 text-xs"
           >
             <option value="">Todas as fases</option>
