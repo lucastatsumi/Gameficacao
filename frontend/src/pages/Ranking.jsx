@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from '../services/api.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
@@ -21,7 +20,6 @@ export default function Ranking() {
   const [erro, setErro] = useState(null);
   const [codigoTurma, setCodigoTurma] = useState('');
   const [msgTurma, setMsgTurma] = useState(null);
-  const [quizzesTurma, setQuizzesTurma] = useState([]);
   const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
@@ -44,14 +42,6 @@ export default function Ranking() {
   useEffect(() => {
     carregar();
   }, [carregar]);
-
-  // quizzes customizados da turma selecionada
-  useEffect(() => {
-    setQuizzesTurma([]);
-    if (aba === 'turma' && turmaId) {
-      api.get(`/turmas/${turmaId}/quizzes`).then(setQuizzesTurma).catch(() => {});
-    }
-  }, [aba, turmaId]);
 
   // Qualquer participante (aluno ou professor) pode convidar: copia o
   // código de acesso da turma para compartilhar
@@ -189,50 +179,6 @@ export default function Ranking() {
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {/* quizzes montados pelo professor para a turma selecionada */}
-      {aba === 'turma' && turmaId && quizzesTurma.length > 0 && (
-        <div className="card-pixel mt-4 border-2 border-indigo-500/40 bg-slate-900/60 p-4">
-          <p className="flex items-center gap-2 font-pixel text-[11px] text-indigo-300">
-            <PixelIcon nome="gamepad" className="h-4 w-4" />
-            Quizzes da turma
-          </p>
-          <div className="mt-3 space-y-2">
-            {quizzesTurma.map((q) => (
-              <div
-                key={q.id}
-                className="flex flex-wrap items-center gap-3 border-2 border-slate-800 bg-slate-950/60 p-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-slate-100">{q.titulo}</p>
-                  {q.descricao && <p className="text-xs text-slate-400">{q.descricao}</p>}
-                  <p className="mt-1 flex flex-wrap gap-3 text-xs text-slate-500">
-                    <span>{q.total_questoes} questões</span>
-                    <span className="flex items-center gap-1">
-                      <PixelIcon nome="clock" className="h-3.5 w-3.5" />
-                      {q.tempo_limite_seg ? `${q.tempo_limite_seg}s fixos` : 'tempo por questão'}
-                    </span>
-                    {q.permitir_dicas && (
-                      <span className="flex items-center gap-1 text-amber-400/80">
-                        <PixelIcon nome="zap" className="h-3.5 w-3.5" />
-                        dicas liberadas
-                      </span>
-                    )}
-                    {!q.sons && <span>sem sons</span>}
-                  </p>
-                </div>
-                <Link
-                  to={`/quiz/custom/${q.id}`}
-                  className="btn-pixel flex items-center gap-2 bg-indigo-600 px-4 py-2 font-pixel text-[10px] text-white hover:bg-indigo-500"
-                >
-                  <PixelIcon nome="play" className="h-4 w-4" />
-                  JOGAR
-                </Link>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 
