@@ -64,11 +64,12 @@ ou no bundle do backend — isso é importante especialmente para a
   deliberado (mais realista/seguro), mas pode surpreender em uma
   demonstração rápida — o Supabase também aplica rate-limit ao envio desses
   e-mails no plano free.
-- **CORS do backend está `FRONTEND_URL=*`** (libera qualquer origem). Já que
-  a URL do frontend é estável, vale trocar para
-  `https://gameficacao-omega.vercel.app` para reduzir a superfície de ataque
-  — está listado como melhoria pendente (não é urgente: a API já exige JWT
-  válido em toda rota de dados, então CORS aberto não expõe dados sem auth).
+- **CORS do backend restrito a `https://gameficacao-omega.vercel.app`**
+  (`FRONTEND_URL` na Vercel). Qualquer outra origem tentando ler a API pelo
+  navegador é bloqueada pelo próprio navegador (o servidor sempre responde;
+  quem recusa ler é o `fetch`/XHR da página maliciosa, ao comparar o header
+  `Access-Control-Allow-Origin` com a própria origem). Ferramentas como
+  `curl` não reforçam CORS — não é um jeito válido de testar o bloqueio.
 - **Vulnerabilidade conhecida, baixo risco:** `npm audit` no frontend acusa
   `esbuild ≤0.24.2` (via Vite 5) — permite que qualquer site enviado ao
   navegador do desenvolvedor leia respostas do **dev server local**
