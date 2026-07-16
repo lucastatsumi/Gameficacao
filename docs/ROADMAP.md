@@ -6,7 +6,7 @@ estudantes primeiro.
 
 ## ✅ Implementado nesta rodada
 
-- **Testes automatizados no backend** (vitest) — 74 testes cobrindo a lógica
+- **Testes automatizados no backend** (vitest) — 80 testes cobrindo a lógica
   mais crítica do jogo: `nivel.js`, `streak.js`, `badgeService` (todas as
   condições de badge), `quizCustomService.validarPayload`,
   `relatorioService` (CSV), `poderService` e os fluxos centrais de
@@ -194,9 +194,11 @@ endpoint `POST /quiz/poder`, e UI em `Quiz.jsx`/`Perfil.jsx`.
   início/fim, multiplicador). `eventoService.eventoAtivoParaFase` (testado)
   integrado em `quizService.finalizarQuiz`: multiplica o XP bruto ANTES da
   regra anti-farming, só no modo campanha. `/quiz/finalizar` retorna o
-  evento aplicado e a tela de resultado celebra. **Pendência**: não há UI
-  de administração para o professor criar eventos — hoje só via SQL/MCP
-  direto na tabela. Seria a próxima aba natural em `Admin.jsx`.
+  evento aplicado e a tela de resultado celebra. UI de administração
+  também pronta: nova aba "Eventos" em `Admin.jsx`
+  (`components/admin/AbaEventos.jsx`) — professor cria (nome, fase ou
+  "todas", multiplicador, início/fim) e remove eventos, com status
+  ativo/futuro/encerrado calculado no backend.
 
 ### Ordem sugerida de implementação
 

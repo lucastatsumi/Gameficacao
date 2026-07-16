@@ -1,6 +1,7 @@
 import * as turmaService from '../services/turmaService.js';
 import * as questaoService from '../services/questaoService.js';
 import * as relatorioService from '../services/relatorioService.js';
+import * as eventoService from '../services/eventoService.js';
 
 // ---------- Turmas ----------
 
@@ -87,6 +88,33 @@ export async function exportarCsvTurma(req, res, next) {
       .type('text/csv; charset=utf-8')
       .set('Content-Disposition', `attachment; filename="${nomeArquivo}"`)
       .send(conteudo);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ---------- Eventos temporários ----------
+
+export async function criarEvento(req, res, next) {
+  try {
+    res.status(201).json(await eventoService.criarEvento(req.body));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listarEventos(req, res, next) {
+  try {
+    res.json(await eventoService.listarEventos());
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function removerEvento(req, res, next) {
+  try {
+    await eventoService.removerEvento(req.params.id);
+    res.status(204).end();
   } catch (err) {
     next(err);
   }

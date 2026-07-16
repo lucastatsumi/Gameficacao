@@ -21,3 +21,8 @@ adminRoutes.delete('/questoes/:id', adminController.desativarQuestao);
 
 // Relatórios
 adminRoutes.get('/relatorio/questoes', adminController.relatorioQuestoes);
+
+// Eventos temporários
+adminRoutes.get('/eventos', adminController.listarEventos);
+adminRoutes.post('/eventos', adminController.criarEvento);
+adminRoutes.delete('/eventos/:id', adminController.removerEvento);
