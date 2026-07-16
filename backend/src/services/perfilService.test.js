@@ -7,7 +7,9 @@ const { db } = await import('../config/supabase.js');
 const { obterPerfil, historicoDeTentativas, errosRecentes } = await import('./perfilService.js');
 
 function configurarDb(filas) {
-  db.from.mockImplementation(makeDb(filas).from);
+  const mock = makeDb(filas);
+  db.from.mockImplementation(mock.from);
+  return mock;
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -20,6 +22,7 @@ describe('obterPerfil', () => {
       usuario_badges: [ok(null)], // head:true -> só o count importa
       usuario_poderes: [ok([])],
       progresso_fase: [ok([])],
+      respostas: [ok([])],
     });
 
     const perfil = await obterPerfil(usuarioBase);
@@ -38,6 +41,7 @@ describe('obterPerfil', () => {
           { fases: { nome: 'Pilhas', ordem: 2 } },
         ]),
       ],
+      respostas: [ok([])],
     });
 
     const perfil = await obterPerfil({ ...usuarioBase, nivel: 7 });
@@ -50,11 +54,50 @@ describe('obterPerfil', () => {
       usuario_badges: [ok(null)],
       usuario_poderes: [ok([{ poder: 'tempo_extra', quantidade: 1 }])],
       progresso_fase: [ok([])],
+      respostas: [ok([])],
     });
 
     const perfil = await obterPerfil(usuarioBase);
     expect(perfil.streak_dias).toBe(0);
     expect(perfil.poderes).toEqual({ eliminar_alternativa: 0, tempo_extra: 1, pular_questao: 0 });
+  });
+
+  it('calcula atributos (precisão, velocidade, dias ativos) a partir do histórico', async () => {
+    configurarDb({
+      usuario_badges: [ok(null)],
+      usuario_poderes: [ok([])],
+      progresso_fase: [ok([])],
+      respostas: [
+        ok([
+          { correta: true, tempo_resposta_ms: 1000, respondida_em: '2026-01-01T10:00:00Z' },
+          { correta: false, tempo_resposta_ms: 3000, respondida_em: '2026-01-01T11:00:00Z' },
+          { correta: true, tempo_resposta_ms: 2000, respondida_em: '2026-01-02T09:00:00Z' },
+        ]),
+      ],
+    });
+
+    const perfil = await obterPerfil(usuarioBase);
+    expect(perfil.atributos).toEqual({
+      precisao_pct: 67, // 2 de 3, arredondado
+      velocidade_media_ms: 2000, // (1000+3000+2000)/3
+      dias_ativos: 2, // 2026-01-01 e 2026-01-02
+    });
+  });
+
+  it('sem nenhuma resposta ainda, atributos ficam null/0 sem quebrar', async () => {
+    configurarDb({
+      usuario_badges: [ok(null)],
+      usuario_poderes: [ok([])],
+      progresso_fase: [ok([])],
+      respostas: [ok([])],
+    });
+
+    const perfil = await obterPerfil(usuarioBase);
+    expect(perfil.atributos).toEqual({
+      precisao_pct: null,
+      velocidade_media_ms: null,
+      dias_ativos: 0,
+    });
   });
 });
 

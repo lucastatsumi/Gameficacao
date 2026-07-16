@@ -85,6 +85,29 @@ export default function Perfil() {
           </p>
         </div>
 
+        {perfil.atributos && (
+          <div className="mt-4 grid grid-cols-3 gap-3 border-t-2 border-slate-800 pt-4">
+            <div className="text-center">
+              <p className="font-pixel text-sm text-slate-100">
+                {perfil.atributos.precisao_pct != null ? `${perfil.atributos.precisao_pct}%` : '—'}
+              </p>
+              <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-500">Precisão</p>
+            </div>
+            <div className="text-center">
+              <p className="font-pixel text-sm text-slate-100">
+                {perfil.atributos.velocidade_media_ms != null
+                  ? `${(perfil.atributos.velocidade_media_ms / 1000).toFixed(1)}s`
+                  : '—'}
+              </p>
+              <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-500">Velocidade</p>
+            </div>
+            <div className="text-center">
+              <p className="font-pixel text-sm text-slate-100">{perfil.atributos.dias_ativos}</p>
+              <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-500">Persistência</p>
+            </div>
+          </div>
+        )}
+
         {perfil.poderes &&
           (perfil.poderes.eliminar_alternativa > 0 ||
             perfil.poderes.tempo_extra > 0 ||

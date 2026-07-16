@@ -6,7 +6,7 @@ estudantes primeiro.
 
 ## ✅ Implementado nesta rodada
 
-- **Testes automatizados no backend** (vitest) — 129 testes cobrindo a lógica
+- **Testes automatizados no backend** (vitest) — 131 testes cobrindo a lógica
   mais crítica do jogo: `nivel.js`, `streak.js`, `badgeService` (todas as
   condições de badge), `quizCustomService.validarPayload`,
   `relatorioService` (CSV), `poderService` e os fluxos centrais de
@@ -133,10 +133,14 @@ no frontend antes da hora.
 - **Avatar por nível** (sprite pixel-art que muda visualmente): ainda não
   implementado — hoje só existe o texto do título, sem arte nova. Precisa de
   assets extras que não existem no projeto.
-- **Atributos exibidos no Perfil** (derivados, não gameplay): Precisão (%
-  acerto histórico), Velocidade (tempo médio de resposta), Persistência
-  (sequência de dias ativos). Tudo calculável a partir de `tentativas` e
-  `respostas`, sem nova tabela — próximo passo natural desta seção.
+- ✅ **Atributos exibidos no Perfil** — `perfilService.atributosDoJogador`
+  calcula Precisão (% de acerto no histórico inteiro de `respostas`),
+  Velocidade (tempo médio de resposta) e Persistência (nº de dias
+  distintos, calendário UTC, em que o aluno respondeu algo — diferente do
+  streak: aqui é o total histórico, não a sequência atual). Sem nova
+  tabela, puro cálculo sobre `respostas`. 2 testes novos (cálculo correto e
+  "sem histórico ainda" sem quebrar). Exibido como 3 cartões no cabeçalho
+  do `Perfil`.
 
 ### 2. Poderes (power-ups) usáveis durante o quiz
 

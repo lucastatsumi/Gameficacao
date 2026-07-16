@@ -7,10 +7,11 @@ export async function obterPerfil(usuario) {
   const xpNivelAtual = xpParaNivel(usuario.nivel);
   const xpProximoNivel = xpParaNivel(usuario.nivel + 1);
 
-  const [{ count: totalBadges }, poderes, classe] = await Promise.all([
+  const [{ count: totalBadges }, poderes, classe, atributos] = await Promise.all([
     db.from('usuario_badges').select('*', { count: 'exact', head: true }).eq('user_id', usuario.id),
     estoqueDoUsuario(usuario.id),
     classeDoJogador(usuario.id),
+    atributosDoJogador(usuario.id),
   ]);
 
   return {
@@ -32,7 +33,34 @@ export async function obterPerfil(usuario) {
     // Progressão de personagem (RPG leve, cosmético — não afeta gameplay)
     titulo_nivel: tituloPorNivel(usuario.nivel),
     classe,
+    atributos,
   };
+}
+
+// Atributos derivados (cosméticos, calculados a partir de tentativas e
+// respostas já existentes — sem nova tabela):
+// - precisao_pct: % de respostas corretas no histórico inteiro
+// - velocidade_media_ms: tempo médio de resposta
+// - dias_ativos: nº de dias distintos (calendário UTC) em que respondeu algo
+async function atributosDoJogador(userId) {
+  const { data, error } = await db
+    .from('respostas')
+    .select('correta, tempo_resposta_ms, respondida_em, tentativas!inner ( user_id )')
+    .eq('tentativas.user_id', userId);
+  if (error) throw error;
+
+  const total = data.length;
+  const corretas = data.filter((r) => r.correta).length;
+  const precisaoPct = total ? Math.round((100 * corretas) / total) : null;
+
+  const tempos = data.map((r) => r.tempo_resposta_ms).filter((t) => t != null);
+  const velocidadeMediaMs = tempos.length
+    ? Math.round(tempos.reduce((soma, t) => soma + t, 0) / tempos.length)
+    : null;
+
+  const diasAtivos = new Set(data.map((r) => r.respondida_em?.slice(0, 10)).filter(Boolean)).size;
+
+  return { precisao_pct: precisaoPct, velocidade_media_ms: velocidadeMediaMs, dias_ativos: diasAtivos };
 }
 
 // "Classe" temática = nome da fase de maior ordem já concluída
