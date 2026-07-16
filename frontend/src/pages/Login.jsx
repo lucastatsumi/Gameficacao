@@ -166,6 +166,7 @@ export default function Login() {
                 <input
                   className={inputCls}
                   placeholder="Seu nome"
+                  aria-label="Nome"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   autoComplete="name"
@@ -175,6 +176,7 @@ export default function Login() {
                 className={inputCls}
                 type="email"
                 placeholder="E-mail"
+                aria-label="E-mail"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
@@ -184,6 +186,7 @@ export default function Login() {
                 className={inputCls}
                 type="password"
                 placeholder="Senha (mín. 6 caracteres)"
+                aria-label="Senha"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 autoComplete={modo === 'login' ? 'current-password' : 'new-password'}

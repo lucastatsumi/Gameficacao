@@ -108,6 +108,7 @@ export default function Ranking() {
           <select
             value={turmaId}
             onChange={(e) => setTurmaId(e.target.value)}
+            aria-label="Turma do ranking"
             className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
           >
             <option value="">Escolha a turma...</option>
@@ -123,6 +124,7 @@ export default function Ranking() {
           <select
             value={faseId}
             onChange={(e) => setFaseId(e.target.value)}
+            aria-label="Fase do ranking"
             className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
           >
             <option value="">Escolha a fase...</option>
@@ -143,6 +145,7 @@ export default function Ranking() {
               value={codigoTurma}
               onChange={(e) => setCodigoTurma(e.target.value.toUpperCase())}
               placeholder="Código da turma (ex.: ABC123)"
+              aria-label="Código da turma"
               className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm uppercase placeholder-slate-500 outline-none focus:border-indigo-500"
             />
             <button className="btn-pixel flex items-center gap-1.5 bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
