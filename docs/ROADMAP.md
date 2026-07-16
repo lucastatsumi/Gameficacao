@@ -6,7 +6,7 @@ estudantes primeiro.
 
 ## ✅ Implementado nesta rodada
 
-- **Testes automatizados no backend** (vitest) — 54 testes cobrindo a lógica
+- **Testes automatizados no backend** (vitest) — 66 testes cobrindo a lógica
   mais crítica do jogo: `nivel.js`, `streak.js`, `badgeService` (todas as
   condições de badge), `quizCustomService.validarPayload`,
   `relatorioService` (CSV), `poderService` e os fluxos centrais de
@@ -94,18 +94,22 @@ no frontend antes da hora.
 
 ### 1. Progressão de personagem (RPG leve)
 
-- **Avatar por nível**: sprite pixel-art evolui a cada faixa de nível (usa o
-  mesmo estilo visual de `assets/pixelarticons`). Reaproveita o cálculo de
-  nível já existente em `backend/src/utils/nivel.js`.
-- **"Classes" temáticas por fase**: ao concluir a fase de Listas, Pilhas/
-  Filas, Árvores, Grafos etc., o aluno ganha um título temático (ex.:
-  "Guardião das Listas") exibido no `Perfil` e no `Ranking`.
+- ✅ **Título por nível** — implementado sem nova tabela:
+  `backend/src/utils/titulo.js` (`tituloPorNivel`, testado) mapeia o nível
+  em Aprendiz/Aventureiro/Especialista/Lenda, exposto em `GET /perfil` como
+  `titulo_nivel`.
+- ✅ **"Classe" pela fase mais avançada concluída** — `perfilService.js`
+  calcula `classe` ("Mestre de <fase>") a partir de `progresso_fase`, sem
+  nova tabela. Exibido no cabeçalho do `Perfil`. Ainda não aparece no
+  `Ranking` (a view de ranking não traz essa informação por jogador; exigiria
+  join extra na view ou uma consulta por linha, ainda não feito).
+- **Avatar por nível** (sprite pixel-art que muda visualmente): ainda não
+  implementado — hoje só existe o texto do título, sem arte nova. Precisa de
+  assets extras que não existem no projeto.
 - **Atributos exibidos no Perfil** (derivados, não gameplay): Precisão (%
   acerto histórico), Velocidade (tempo médio de resposta), Persistência
   (sequência de dias ativos). Tudo calculável a partir de `tentativas` e
-  `respostas`, sem nova tabela.
-- Escopo de dados: tabela nova `personagem` (ou colunas em `profiles`) para
-  título atual e cosmético de avatar equipado.
+  `respostas`, sem nova tabela — próximo passo natural desta seção.
 
 ### 2. Poderes (power-ups) usáveis durante o quiz
 
@@ -167,8 +171,7 @@ endpoint `POST /quiz/poder`, e UI em `Quiz.jsx`/`Perfil.jsx`.
 1. ~~Streak diário~~ ✅ feito.
 2. ~~Poderes "Eliminar alternativa" e "Tempo extra"~~ ✅ feito.
 3. ~~Minigame "Batalha de complexidade"~~ ✅ feito.
-4. Progressão de personagem / avatar por nível (cosmético, sem risco de
-   lógica de jogo).
+4. ~~Título por nível e classe por fase~~ ✅ feito (falta o avatar visual).
 5. Eventos temporários e recompensa crescente de streak.
 6. "Reordenar algoritmo" e boss fight (maior esforço de UI/conteúdo).
 

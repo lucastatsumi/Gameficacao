@@ -37,8 +37,20 @@ export default function Perfil() {
           <div className="min-w-0 flex-1">
             <h1 className="font-pixel text-base text-slate-100">{perfil.nome}</h1>
             <p className="mt-1 text-sm text-slate-400">{perfil.email}</p>
-            <p className="mt-1 text-xs uppercase tracking-wide text-indigo-300">
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-indigo-300">
               {perfil.role === 'professor' ? 'Professor' : 'Aluno'}
+              {perfil.role !== 'professor' && (
+                <>
+                  <span className="text-slate-600">·</span>
+                  <span className="text-violet-300">{perfil.titulo_nivel}</span>
+                  {perfil.classe && (
+                    <>
+                      <span className="text-slate-600">·</span>
+                      <span className="text-emerald-300">{perfil.classe}</span>
+                    </>
+                  )}
+                </>
+              )}
             </p>
           </div>
           <div className="text-right">

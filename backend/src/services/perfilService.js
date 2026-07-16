@@ -1,14 +1,16 @@
 import { db } from '../config/supabase.js';
 import { xpParaNivel } from '../utils/nivel.js';
+import { tituloPorNivel } from '../utils/titulo.js';
 import { estoqueDoUsuario } from './poderService.js';
 
 export async function obterPerfil(usuario) {
   const xpNivelAtual = xpParaNivel(usuario.nivel);
   const xpProximoNivel = xpParaNivel(usuario.nivel + 1);
 
-  const [{ count: totalBadges }, poderes] = await Promise.all([
+  const [{ count: totalBadges }, poderes, classe] = await Promise.all([
     db.from('usuario_badges').select('*', { count: 'exact', head: true }).eq('user_id', usuario.id),
     estoqueDoUsuario(usuario.id),
+    classeDoJogador(usuario.id),
   ]);
 
   return {
@@ -27,7 +29,27 @@ export async function obterPerfil(usuario) {
     total_badges: totalBadges ?? 0,
     streak_dias: usuario.streak_dias ?? 0,
     poderes,
+    // Progressão de personagem (RPG leve, cosmético — não afeta gameplay)
+    titulo_nivel: tituloPorNivel(usuario.nivel),
+    classe,
   };
+}
+
+// "Classe" temática = nome da fase de maior ordem já concluída
+// (ex.: "Mestre de Árvores"). null se o aluno ainda não concluiu nenhuma.
+async function classeDoJogador(userId) {
+  const { data, error } = await db
+    .from('progresso_fase')
+    .select('fases ( nome, ordem )')
+    .eq('user_id', userId)
+    .eq('concluida', true);
+  if (error) throw error;
+  if (!data.length) return null;
+
+  const maisAvancada = data.reduce((maior, atual) =>
+    atual.fases.ordem > maior.fases.ordem ? atual : maior
+  );
+  return `Mestre de ${maisAvancada.fases.nome}`;
 }
 
 // Todas as badges do jogo, marcando as já conquistadas (para a estante de troféus)
