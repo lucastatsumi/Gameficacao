@@ -36,6 +36,14 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen">
+      {/* Link de salto para quem navega por teclado/leitor de tela: fica oculto
+          até receber foco, evitando tabular por toda a navegação. */}
+      <a
+        href="#conteudo"
+        className="sr-only z-20 bg-indigo-600 px-4 py-2 font-medium text-white focus:not-sr-only focus:absolute focus:left-4 focus:top-3"
+      >
+        Pular para o conteúdo
+      </a>
       <header className="sticky top-0 z-10 border-b-2 border-indigo-950 bg-slate-950/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3">
           <NavLink to="/" className="flex items-center gap-2">
@@ -89,7 +97,7 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-8">
+      <main id="conteudo" className="mx-auto max-w-5xl px-4 py-8">
         <Outlet />
       </main>
     </div>
