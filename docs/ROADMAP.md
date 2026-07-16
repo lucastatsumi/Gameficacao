@@ -4,30 +4,52 @@ Ideias organizadas por horizonte de prazo. Não é um compromisso de entrega —
 serve para priorizar o que agrega mais valor ao TCC e ao aprendizado dos
 estudantes primeiro.
 
+## ✅ Implementado nesta rodada
+
+- **Testes automatizados no backend** (vitest) — 43 testes cobrindo a lógica
+  mais crítica do jogo: `nivel.js`, `badgeService` (todas as condições de
+  badge), `quizCustomService.validarPayload`, `relatorioService` (CSV) e os
+  fluxos centrais de `quizService` (bloqueio de fase, sorteio de questões sem
+  vazar gabarito, timer/tempo esgotado, regra anti-farming de XP). Rodar com
+  `cd backend && npm test`.
+- **Correção de bug**: `Ranking.jsx` chamava `GET /turmas/:id/quizzes`, um
+  endpoint que nunca existiu no backend — código morto de antes da migration
+  `07_quizzes_abertos.sql` (quizzes deixaram de ser por turma). Removido e
+  substituído por um link direto para `/quizzes`.
+- **Streak diário** (mecânica de retenção, ver seção de engajamento) —
+  implementado ponta a ponta: `database/08_streak_diario.sql` +
+  `09_streak_badges_seed.sql`, `backend/src/utils/streak.js` (lógica pura,
+  testada), integração em `quizService.finalizarQuiz`, novo tipo de badge
+  `streak_dias` (3/7/30 dias), exibição no `Perfil` e na tela de resultado do
+  quiz.
+- Correção de imprecisões deste documento: `relatorioService.js` **já
+  existia** (relatório de desempenho por questão + exportação CSV da turma),
+  o timer já tinha aviso visual (`timerCritico`), e os estados vazios de
+  Ranking/Quizzes/MapaFases já eram tratados — não eram lacunas reais.
+
 ## Curto prazo (ganhos rápidos)
 
 - **Ampliar o banco de questões** — hoje há 22 questões em 5 fases. Usar o
   agente `question-researcher` para cobrir tópicos ainda ausentes: pilhas,
   filas, árvores (binária, AVL, B), grafos (BFS/DFS), tabelas hash,
   heaps/filas de prioridade, recursão.
-- **Feedback de resposta mais didático no Quiz** — garantir tempo de leitura
-  suficiente da `explicacao` antes de avançar para a próxima questão (usar o
-  agente `ux-game-enhancer` para revisar o fluxo em `pages/Quiz.jsx`).
-- **Aviso visual gradual do timer** — mudança de cor/animação da barra de
-  tempo conforme se aproxima do limite, em vez de só o número regressivo.
-- **Estados vazios tratados** — ranking sem participantes, turma sem alunos,
-  fase sem questões ativas: mensagens específicas em vez de tela em branco.
 - **Extrair componentes de `pages/Quiz.jsx`, `Admin.jsx`, `Quizzes.jsx`** —
   arquivos hoje com 500–950 linhas; mover blocos para
   `components/quiz/`, `components/mapa/`, `components/ranking/` (hoje vazios,
   só `.gitkeep`), melhorando manutenibilidade.
+- **CI** — não há workflow de CI configurado no repositório; adicionar
+  `npm test` do backend rodando em cada PR (o frontend não tem suíte própria
+  ainda; começar por testes de utilitários puros como `nivel.js` foi feito no
+  backend — replicar o padrão no frontend quando houver lógica não-visual
+  suficiente para justificar).
 
 ## Médio prazo (features de jogo)
 
-- **Sistema de badges mais rico** — `badgeService.js` já calcula sequência de
-  acertos; adicionar critérios novos (velocidade de resposta, fase concluída
-  sem erro, streak diário de estudo) e exibir conquista com celebração visual
-  (modal/animação ao desbloquear).
+- **Sistema de badges mais rico** — `badgeService.js` já cobre XP acumulado,
+  fase concluída, quiz perfeito, velocidade, sequência de acertos e (nesta
+  rodada) streak diário; falta celebração visual mais elaborada ao
+  desbloquear (hoje é um card estático na tela de resultado) e critérios
+  novos como "sem usar dica".
 - **Modo de revisão de erros** — tela que lista questões que o aluno errou
   nas últimas tentativas, com a explicação, para reforço espaçado.
 - **Dificuldade adaptativa** — ajustar mix de questões fácil/média/difícil
@@ -36,9 +58,10 @@ estudantes primeiro.
 - **Notificações/lembretes de retomada** — para alunos que abandonaram uma
   fase ou não acessam há X dias (o campo `abandonarTentativasAbertas` já
   existe em `quizService.js` como base).
-- **Painel do professor mais completo** — `relatorioService.js` está vazio
-  hoje; construir relatórios de turma (desempenho por fase, questões com
-  maior taxa de erro, tempo médio de resposta) para apoiar a docência.
+- **Painel do professor — mais relatórios** — `relatorioService.js` já traz
+  desempenho por questão e exportação CSV da turma; falta uma visão agregada
+  por fase (não só por questão individual) e gráfico de evolução ao longo do
+  tempo.
 - **Quizzes customizados com mais opções** — `quizCustomService.js` e
   `06_quiz_custom_dicas.sql`/`07_quizzes_abertos.sql` já dão base para
   quizzes abertos com dicas; adicionar templates prontos por tópico para o
@@ -102,23 +125,29 @@ que hoje serve a questão/processa a resposta — o frontend só pede
 
 ### 4. Retenção contínua
 
-- **Streak diário** com recompensa crescente (mais XP ou poderes a cada dia
-  consecutivo) — precisa de um job/consulta diária sobre `tentativas` para
-  calcular e não quebrar a sequência por fuso horário.
+- ✅ **Streak diário** — implementado (`backend/src/utils/streak.js` +
+  integração em `quizService.finalizarQuiz`, badges em 3/7/30 dias, exibido
+  no Perfil e no resultado do quiz). Simplificação assumida: o "dia" é
+  contado em UTC, não no fuso do aluno — ajustar se isso incomodar na
+  prática.
+- **Recompensa crescente por streak** (mais XP ou poderes a cada dia
+  consecutivo) — ainda não implementado; hoje o streak só concede as badges
+  de marco (3/7/30 dias), sem bônus contínuo de XP.
 - **Eventos temporários** (ex.: "semana das árvores" com XP em dobro em
   questões daquela fase) — flag simples de período ativo + multiplicador no
   cálculo de XP em `quizService.js`.
 
 ### Ordem sugerida de implementação
 
-1. Minigame "Batalha de complexidade" (reaproveita infraestrutura de questão
+1. ~~Streak diário~~ ✅ feito.
+2. Minigame "Batalha de complexidade" (reaproveita infraestrutura de questão
    existente, menor risco).
-2. Poderes "Eliminar alternativa" e "Tempo extra" (maior impacto percebido,
+3. Poderes "Eliminar alternativa" e "Tempo extra" (maior impacto percebido,
    escopo de backend contido).
-3. Progressão de personagem / avatar por nível (cosmético, sem risco de
+4. Progressão de personagem / avatar por nível (cosmético, sem risco de
    lógica de jogo).
-4. Streak diário e eventos temporários.
-5. "Reordenar algoritmo" e boss fight (maior esforço de UI/conteúdo).
+5. Eventos temporários e recompensa crescente de streak.
+6. "Reordenar algoritmo" e boss fight (maior esforço de UI/conteúdo).
 
 ## Longo prazo (expansão)
 
@@ -138,11 +167,10 @@ que hoje serve a questão/processa a resposta — o frontend só pede
 
 ## Infraestrutura / qualidade
 
-- **Testes automatizados** — hoje não há suíte de testes visível em
-  `backend/` nem `frontend/`; priorizar testes de `quizService.js` (regra
-  de XP/aprovação/desbloqueio) por ser a lógica mais crítica do jogo.
-- **CI** — não há workflow de CI configurado no repositório; adicionar
-  lint + testes rodando em cada PR.
+- **Ampliar cobertura de testes** — os fluxos mais críticos de `quizService`
+  e `badgeService` já têm testes; faltam `perfilService`, `turmaService`,
+  `questaoService` e testes de componente no frontend (ex.: com
+  `@testing-library/react`, ainda não instalado).
 - **Monitoramento de qualidade das questões** — rodar o agente
   `question-researcher` periodicamente em modo de auditoria sobre
   `database/05_seed_questoes.sql` e futuras seeds, para pegar
