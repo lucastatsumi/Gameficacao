@@ -8,6 +8,9 @@ function LinkNav({ para, icone, children }) {
   return (
     <NavLink
       to={para}
+      // O rótulo some no mobile (hidden sm:inline) e o ícone é aria-hidden;
+      // sem aria-label o link ficaria sem nome acessível em telas pequenas.
+      aria-label={children}
       className={({ isActive }) =>
         `flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
           isActive
@@ -76,6 +79,7 @@ export default function Layout() {
             <button
               onClick={aoSair}
               title="Sair"
+              aria-label="Sair"
               className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-200"
             >
               <PixelIcon nome="logout" className="h-4 w-4" />
