@@ -1,5 +1,5 @@
 import { db } from '../config/supabase.js';
-import { xpParaNivel } from '../utils/nivel.js';
+import { xpParaNivel, progressoNivelPct } from '../utils/nivel.js';
 
 export async function obterPerfil(usuario) {
   const xpNivelAtual = xpParaNivel(usuario.nivel);
@@ -20,9 +20,7 @@ export async function obterPerfil(usuario) {
     // Dados para a barra de progresso do nível
     xp_nivel_atual: xpNivelAtual,
     xp_proximo_nivel: xpProximoNivel,
-    progresso_nivel_pct: Math.round(
-      (100 * (usuario.xp_total - xpNivelAtual)) / (xpProximoNivel - xpNivelAtual),
-    ),
+    progresso_nivel_pct: progressoNivelPct(usuario.xp_total, usuario.nivel),
     total_badges: totalBadges ?? 0,
   };
 }
