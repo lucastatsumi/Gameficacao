@@ -35,7 +35,7 @@ export default function Login() {
         if (!nome.trim()) throw new Error('Informe seu nome');
         await cadastrar(nome.trim(), email, senha);
         setAviso(
-          'Conta criada! Se a confirmação por e-mail estiver ativa no projeto, confirme antes de entrar.'
+          'Conta criada! Se a confirmação por e-mail estiver ativa no projeto, confirme antes de entrar.',
         );
         setModo('login');
       } else {
@@ -55,19 +55,54 @@ export default function Login() {
       <div className="pointer-events-none absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-violet-600/20 blur-3xl" />
 
       {/* cenário pixel flutuante */}
-      <img src={pixelNuvem} alt="" aria-hidden className="anim-flutuar-lento pointer-events-none absolute left-[4%] top-[10%] w-24 opacity-40 sm:w-32" />
-      <img src={pixelNuvem} alt="" aria-hidden className="anim-flutuar pointer-events-none absolute right-[6%] top-[22%] w-16 opacity-30 sm:w-24" />
-      <img src={pixelTrofeu} alt="" aria-hidden className="anim-flutuar pointer-events-none absolute right-[9%] top-[7%] w-10 sm:w-14" />
-      <img src={pixelEstrela} alt="" aria-hidden className="anim-flutuar-rapido pointer-events-none absolute bottom-[12%] left-[8%] w-8 sm:w-10" />
-      <img src={pixelEstrela} alt="" aria-hidden className="anim-flutuar-lento pointer-events-none absolute right-[14%] bottom-[18%] w-6 opacity-70 sm:w-8" />
-      <PixelIcon nome="heart" className="anim-flutuar pointer-events-none absolute left-[14%] top-[30%] h-8 w-8 text-red-400/70" />
-      <PixelIcon nome="zap" className="anim-flutuar-rapido pointer-events-none absolute right-[4%] bottom-[38%] h-8 w-8 text-amber-300/70" />
+      <img
+        src={pixelNuvem}
+        alt=""
+        aria-hidden
+        className="anim-flutuar-lento pointer-events-none absolute left-[4%] top-[10%] w-24 opacity-40 sm:w-32"
+      />
+      <img
+        src={pixelNuvem}
+        alt=""
+        aria-hidden
+        className="anim-flutuar pointer-events-none absolute right-[6%] top-[22%] w-16 opacity-30 sm:w-24"
+      />
+      <img
+        src={pixelTrofeu}
+        alt=""
+        aria-hidden
+        className="anim-flutuar pointer-events-none absolute right-[9%] top-[7%] w-10 sm:w-14"
+      />
+      <img
+        src={pixelEstrela}
+        alt=""
+        aria-hidden
+        className="anim-flutuar-rapido pointer-events-none absolute bottom-[12%] left-[8%] w-8 sm:w-10"
+      />
+      <img
+        src={pixelEstrela}
+        alt=""
+        aria-hidden
+        className="anim-flutuar-lento pointer-events-none absolute right-[14%] bottom-[18%] w-6 opacity-70 sm:w-8"
+      />
+      <PixelIcon
+        nome="heart"
+        className="anim-flutuar pointer-events-none absolute left-[14%] top-[30%] h-8 w-8 text-red-400/70"
+      />
+      <PixelIcon
+        nome="zap"
+        className="anim-flutuar-rapido pointer-events-none absolute right-[4%] bottom-[38%] h-8 w-8 text-amber-300/70"
+      />
 
       <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center gap-10 px-4 py-10 lg:flex-row lg:gap-16">
         {/* ---------- coluna da marca ---------- */}
         <div className="max-w-lg text-center lg:text-left">
           <div className="flex items-center justify-center gap-4 lg:justify-start">
-            <img src={pixelGamepad} alt="Controle de videogame pixel-art" className="w-16 sm:w-20" />
+            <img
+              src={pixelGamepad}
+              alt="Controle de videogame pixel-art"
+              className="w-16 sm:w-20"
+            />
             <h1 className="font-pixel text-xl leading-relaxed text-indigo-300 sm:text-2xl">
               DataQuest
             </h1>
@@ -87,8 +122,8 @@ export default function Login() {
 
           <ul className="mt-6 grid gap-3 text-left text-sm text-slate-400 sm:grid-cols-3">
             <li className="card-pixel flex items-center gap-2 border-2 border-slate-800 bg-slate-900/60 px-3 py-2">
-              <PixelIcon nome="map-pin" className="h-5 w-5 shrink-0 text-indigo-400" />
-              5 fases: de Listas a Ordenação
+              <PixelIcon nome="map-pin" className="h-5 w-5 shrink-0 text-indigo-400" />5 fases: de
+              Listas a Ordenação
             </li>
             <li className="card-pixel flex items-center gap-2 border-2 border-slate-800 bg-slate-900/60 px-3 py-2">
               <PixelIcon nome="clock" className="h-5 w-5 shrink-0 text-amber-300" />
@@ -176,7 +211,12 @@ export default function Login() {
 
           <p className="mt-3 text-center text-xs text-slate-600">
             Ícones:{' '}
-            <a href="https://pixelarticons.com" target="_blank" rel="noreferrer" className="underline hover:text-slate-400">
+            <a
+              href="https://pixelarticons.com"
+              target="_blank"
+              rel="noreferrer"
+              className="underline hover:text-slate-400"
+            >
               Pixelarticons
             </a>{' '}
             (MIT) · Fonte: Press Start 2P (OFL)

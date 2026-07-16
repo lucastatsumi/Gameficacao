@@ -40,7 +40,7 @@ export async function iniciarQuiz(userId, faseId) {
   const { data: questoes, error: erroQuestoes } = await db
     .from('questoes')
     .select(
-      'id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, alternativas ( id, letra, texto )'
+      'id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, alternativas ( id, letra, texto )',
     )
     .eq('fase_id', faseId)
     .eq('ativa', true);
@@ -88,7 +88,7 @@ export async function iniciarQuizCustom(usuario, quizId) {
   const { data: itens, error: erroItens } = await db
     .from('quiz_custom_questoes')
     .select(
-      'ordem, questoes ( id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, dica, ativa, alternativas ( id, letra, texto ) )'
+      'ordem, questoes ( id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, dica, ativa, alternativas ( id, letra, texto ) )',
     )
     .eq('quiz_id', quizId)
     .order('ordem');
@@ -97,7 +97,7 @@ export async function iniciarQuizCustom(usuario, quizId) {
   const questoes = itens
     .map((i) => i.questoes)
     .filter((q) => q?.ativa)
-    .map(({ dica, ativa, ...q }) => ({
+    .map(({ dica, ativa: _ativa, ...q }) => ({
       ...q,
       // tempo fixo do quiz (se configurado) vence o tempo da questão
       tempo_limite_seg: quiz.tempo_limite_seg ?? q.tempo_limite_seg,
@@ -157,9 +157,7 @@ export async function obterDica(userId, dados) {
   if (erroQuestao) throw erroQuestao;
   if (!questao?.dica?.trim()) throw new HttpError(404, 'Esta questão não tem dica cadastrada');
 
-  const { error: erroInsert } = await db
-    .from('dicas_usadas')
-    .insert({ tentativa_id, questao_id });
+  const { error: erroInsert } = await db.from('dicas_usadas').insert({ tentativa_id, questao_id });
   // 23505 = já pediu a dica antes nesta tentativa: só devolve de novo
   if (erroInsert && erroInsert.code !== '23505') throw erroInsert;
 
@@ -277,9 +275,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
   if (erroRespostas) throw erroRespostas;
 
   const acertos = respostas.filter((r) => r.correta).length;
-  const xpBruto = respostas
-    .filter((r) => r.correta)
-    .reduce((soma, r) => soma + xpDaResposta(r), 0);
+  const xpBruto = respostas.filter((r) => r.correta).reduce((soma, r) => soma + xpDaResposta(r), 0);
   const aprovada = acertos >= Math.ceil(tentativa.total_questoes * PCT_APROVACAO);
 
   // Anti-farming: repetir só rende o XP que EXCEDER o melhor desempenho
@@ -320,9 +316,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
   if (erroPerfil) throw erroPerfil;
 
   // Tempo médio só vale se o quiz foi respondido por completo
-  const temposValidos = respostas
-    .map((r) => r.tempo_resposta_ms)
-    .filter((t) => t != null);
+  const temposValidos = respostas.map((r) => r.tempo_resposta_ms).filter((t) => t != null);
   const tempoMedioMs =
     respostas.length === tentativa.total_questoes && temposValidos.length === respostas.length
       ? temposValidos.reduce((soma, t) => soma + t, 0) / temposValidos.length
@@ -413,7 +407,7 @@ async function melhorXpBrutoAnterior(userId, tentativa, tentativaAtualId) {
   let query = db
     .from('respostas')
     .select(
-      'tentativa_id, usou_dica, questoes ( xp_valor ), tentativas!inner ( user_id, fase_id, quiz_custom_id )'
+      'tentativa_id, usou_dica, questoes ( xp_valor ), tentativas!inner ( user_id, fase_id, quiz_custom_id )',
     )
     .eq('correta', true)
     .eq('tentativas.user_id', userId)
@@ -449,8 +443,7 @@ async function atualizarProgressoFase(userId, faseId, acertos, aprovada) {
     num_tentativas: (existente?.num_tentativas ?? 0) + 1,
     melhor_pontuacao: Math.max(existente?.melhor_pontuacao ?? 0, acertos),
     concluida: (existente?.concluida ?? false) || aprovada,
-    concluida_em:
-      existente?.concluida_em ?? (aprovada ? new Date().toISOString() : null),
+    concluida_em: existente?.concluida_em ?? (aprovada ? new Date().toISOString() : null),
   };
 
   const { data, error } = await db

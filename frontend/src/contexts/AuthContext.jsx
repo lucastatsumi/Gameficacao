@@ -55,7 +55,15 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ sessao, perfil, carregando, login, cadastrar, sair, recarregarPerfil: carregarPerfil }}
+      value={{
+        sessao,
+        perfil,
+        carregando,
+        login,
+        cadastrar,
+        sair,
+        recarregarPerfil: carregarPerfil,
+      }}
     >
       {children}
     </AuthContext.Provider>

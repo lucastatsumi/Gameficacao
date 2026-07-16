@@ -107,9 +107,24 @@ export default function MapaFases() {
   return (
     <div className="relative">
       {/* cenário do mundo */}
-      <img src={pixelNuvem} alt="" aria-hidden className="anim-flutuar-lento pointer-events-none absolute -top-4 right-[5%] w-24 opacity-30" />
-      <img src={pixelNuvem} alt="" aria-hidden className="anim-flutuar pointer-events-none absolute top-1/3 -left-6 w-16 opacity-20" />
-      <img src={pixelEstrela} alt="" aria-hidden className="anim-flutuar-rapido pointer-events-none absolute top-10 right-[30%] w-6 opacity-60" />
+      <img
+        src={pixelNuvem}
+        alt=""
+        aria-hidden
+        className="anim-flutuar-lento pointer-events-none absolute -top-4 right-[5%] w-24 opacity-30"
+      />
+      <img
+        src={pixelNuvem}
+        alt=""
+        aria-hidden
+        className="anim-flutuar pointer-events-none absolute top-1/3 -left-6 w-16 opacity-20"
+      />
+      <img
+        src={pixelEstrela}
+        alt=""
+        aria-hidden
+        className="anim-flutuar-rapido pointer-events-none absolute top-10 right-[30%] w-6 opacity-60"
+      />
 
       <div className="flex items-center gap-3">
         <PixelIcon nome="map-pin" className="h-7 w-7 text-indigo-400" />

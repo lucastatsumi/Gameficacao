@@ -5,7 +5,7 @@ const ausentes = obrigatorias.filter((nome) => !process.env[nome]);
 if (ausentes.length) {
   throw new Error(
     `Variáveis de ambiente ausentes: ${ausentes.join(', ')}. ` +
-    'Copie backend/.env.example para backend/.env e preencha os valores.'
+      'Copie backend/.env.example para backend/.env e preencha os valores.',
   );
 }
 

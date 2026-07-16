@@ -154,7 +154,10 @@ function validarPayload(dados) {
   for (const alt of alternativas) {
     if (!alt.texto?.trim()) throw new HttpError(400, `Alternativa ${alt.letra}: texto obrigatório`);
     if (!alt.explicacao?.trim()) {
-      throw new HttpError(400, `Alternativa ${alt.letra}: explicação obrigatória (é o feedback pedagógico)`);
+      throw new HttpError(
+        400,
+        `Alternativa ${alt.letra}: explicação obrigatória (é o feedback pedagógico)`,
+      );
     }
   }
 

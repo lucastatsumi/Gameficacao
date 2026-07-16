@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api.js';
-import { useAuth } from '../contexts/AuthContext.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import Alerta from '../components/ui/Alerta.jsx';
 import PixelIcon from '../components/ui/PixelIcon.jsx';
@@ -20,13 +19,15 @@ const QUIZ_VAZIO = {
 };
 
 export default function Quizzes() {
-  const { perfil } = useAuth();
   const [quizzes, setQuizzes] = useState(null);
   const [form, setForm] = useState(null); // { dados, editandoId }
   const [erro, setErro] = useState(null);
 
   const carregar = useCallback(() => {
-    api.get('/quizzes').then(setQuizzes).catch((err) => setErro(err.message));
+    api
+      .get('/quizzes')
+      .then(setQuizzes)
+      .catch((err) => setErro(err.message));
   }, []);
 
   useEffect(carregar, [carregar]);
@@ -78,9 +79,7 @@ export default function Quizzes() {
       )}
 
       {quizzes.length === 0 ? (
-        <p className="mt-6 text-sm text-slate-500">
-          Nenhum quiz criado ainda — seja o primeiro!
-        </p>
+        <p className="mt-6 text-sm text-slate-500">Nenhum quiz criado ainda — seja o primeiro!</p>
       ) : (
         <div className="mt-6 space-y-3">
           {quizzes.map((quiz) => (
@@ -169,8 +168,14 @@ function FormQuiz({ form, aoFechar, aoSalvar }) {
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
-    api.get('/quizzes/banco').then(setBanco).catch((err) => setErro(err.message));
-    api.get('/fases').then(setFases).catch(() => {});
+    api
+      .get('/quizzes/banco')
+      .then(setBanco)
+      .catch((err) => setErro(err.message));
+    api
+      .get('/fases')
+      .then(setFases)
+      .catch(() => {});
   }, []);
 
   function mudar(campo, valor) {
@@ -216,7 +221,10 @@ function FormQuiz({ form, aoFechar, aoSalvar }) {
     : [];
 
   return (
-    <form onSubmit={salvar} className="card-pixel space-y-4 border-2 border-indigo-500/40 bg-slate-900/80 p-5">
+    <form
+      onSubmit={salvar}
+      className="card-pixel space-y-4 border-2 border-indigo-500/40 bg-slate-900/80 p-5"
+    >
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">{form.editandoId ? 'Editar quiz' : 'Novo quiz'}</h3>
         <button

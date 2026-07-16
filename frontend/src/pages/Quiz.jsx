@@ -84,7 +84,7 @@ export default function Quiz() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [enviando, feedback, quiz, questao, sonsPermitidos]
+    [enviando, feedback, quiz, questao, sonsPermitidos],
   );
 
   // ---------- pedir dica (quiz custom; corta o XP da questão) ----------
@@ -121,6 +121,9 @@ export default function Quiz() {
       }
     }, 250);
     return () => clearInterval(intervalo);
+    // sonsPermitidos de propósito fora das deps: alternar o som não pode
+    // reiniciar o intervalo e resetar a contagem do timer em andamento.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [questao, feedback, resultado, responder]);
 
   // ---------- avançar / finalizar ----------
@@ -331,7 +334,7 @@ export default function Quiz() {
               </p>
               {(() => {
                 const explicacao = feedback.explicacoes.find(
-                  (e) => e.id === (feedback.alternativa_correta?.id ?? null)
+                  (e) => e.id === (feedback.alternativa_correta?.id ?? null),
                 );
                 return explicacao ? (
                   <p className="mt-2 text-sm text-slate-300">{explicacao.explicacao}</p>
@@ -451,9 +454,15 @@ function TelaResultado({ resultado, sons = true }) {
       {resultado.aprovada ? (
         <img src={pixelTrofeu} alt="Troféu pixel-art" className="anim-flutuar mx-auto w-24" />
       ) : (
-        <img src={pixelTriste} alt="Carinha triste pixel-art" className="anim-flutuar mx-auto w-20" />
+        <img
+          src={pixelTriste}
+          alt="Carinha triste pixel-art"
+          className="anim-flutuar mx-auto w-20"
+        />
       )}
-      <h1 className={`mt-6 font-pixel text-lg text-slate-100 ${resultado.aprovada ? 'anim-pop' : ''}`}>
+      <h1
+        className={`mt-6 font-pixel text-lg text-slate-100 ${resultado.aprovada ? 'anim-pop' : ''}`}
+      >
         {resultado.aprovada ? 'FASE CONCLUÍDA!' : 'QUASE LÁ!'}
       </h1>
       <p className="mt-1 text-slate-400">

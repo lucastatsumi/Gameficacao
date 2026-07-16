@@ -10,17 +10,14 @@ export async function listarFasesComProgresso(userId) {
   if (progressoRes.error) throw progressoRes.error;
 
   const progressoPorFase = new Map(progressoRes.data.map((p) => [p.fase_id, p]));
-  const concluidas = new Set(
-    progressoRes.data.filter((p) => p.concluida).map((p) => p.fase_id)
-  );
+  const concluidas = new Set(progressoRes.data.filter((p) => p.concluida).map((p) => p.fase_id));
 
   return fasesRes.data.map((fase) => ({
     id: fase.id,
     nome: fase.nome,
     descricao: fase.descricao,
     ordem: fase.ordem,
-    desbloqueada:
-      fase.fase_requisito_id == null || concluidas.has(fase.fase_requisito_id),
+    desbloqueada: fase.fase_requisito_id == null || concluidas.has(fase.fase_requisito_id),
     progresso: progressoPorFase.get(fase.id) ?? null,
   }));
 }

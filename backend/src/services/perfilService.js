@@ -21,7 +21,7 @@ export async function obterPerfil(usuario) {
     xp_nivel_atual: xpNivelAtual,
     xp_proximo_nivel: xpProximoNivel,
     progresso_nivel_pct: Math.round(
-      (100 * (usuario.xp_total - xpNivelAtual)) / (xpProximoNivel - xpNivelAtual)
+      (100 * (usuario.xp_total - xpNivelAtual)) / (xpProximoNivel - xpNivelAtual),
     ),
     total_badges: totalBadges ?? 0,
   };
@@ -48,7 +48,9 @@ export async function listarBadges(userId) {
 export async function historicoDeTentativas(userId, limite = 50) {
   const { data, error } = await db
     .from('tentativas')
-    .select('id, acertos, total_questoes, xp_ganho, aprovada, iniciada_em, finalizada_em, fases ( id, nome )')
+    .select(
+      'id, acertos, total_questoes, xp_ganho, aprovada, iniciada_em, finalizada_em, fases ( id, nome )',
+    )
     .eq('user_id', userId)
     .not('finalizada_em', 'is', null)
     .order('finalizada_em', { ascending: false })

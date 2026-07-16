@@ -21,7 +21,7 @@ export async function verificarBadges(userId, contexto) {
   const sequenciaAtual = precisaSequencia ? await sequenciaDeAcertos(userId) : 0;
 
   const novas = pendentes.filter((badge) =>
-    condicaoAtendida(badge, { ...contexto, sequenciaAtual })
+    condicaoAtendida(badge, { ...contexto, sequenciaAtual }),
   );
   if (!novas.length) return [];
 
@@ -44,9 +44,7 @@ function condicaoAtendida(badge, ctx) {
       return ctx.quizPerfeito;
     case 'velocidade':
       return (
-        ctx.aprovada &&
-        ctx.tempoMedioMs != null &&
-        ctx.tempoMedioMs <= (p.tempo_medio_ms ?? 0)
+        ctx.aprovada && ctx.tempoMedioMs != null && ctx.tempoMedioMs <= (p.tempo_medio_ms ?? 0)
       );
     case 'sequencia_acertos':
       return ctx.sequenciaAtual >= (p.acertos ?? Infinity);

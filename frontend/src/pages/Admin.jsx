@@ -68,7 +68,10 @@ function AbaTurmas() {
   }
 
   const carregar = useCallback(() => {
-    api.get('/admin/turmas').then(setTurmas).catch((err) => setErro(err.message));
+    api
+      .get('/admin/turmas')
+      .then(setTurmas)
+      .catch((err) => setErro(err.message));
   }, []);
 
   useEffect(carregar, [carregar]);
@@ -121,7 +124,10 @@ function AbaTurmas() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {turmas.map((turma) => (
-            <div key={turma.id} className="card-pixel border-2 border-slate-800 bg-slate-900/60 p-4">
+            <div
+              key={turma.id}
+              className="card-pixel border-2 border-slate-800 bg-slate-900/60 p-4"
+            >
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h3 className="font-semibold">{turma.nome}</h3>
@@ -246,7 +252,10 @@ function AbaQuestoes() {
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
-    api.get('/fases').then(setFases).catch(() => {});
+    api
+      .get('/fases')
+      .then(setFases)
+      .catch(() => {});
   }, []);
 
   const carregar = useCallback(() => {
@@ -260,7 +269,9 @@ function AbaQuestoes() {
   useEffect(carregar, [carregar]);
 
   async function desativar(questao) {
-    if (!window.confirm('Desativar esta questão? Ela sai dos quizzes, mas o histórico é preservado.'))
+    if (
+      !window.confirm('Desativar esta questão? Ela sai dos quizzes, mas o histórico é preservado.')
+    )
       return;
     try {
       await api.delete(`/admin/questoes/${questao.id}`);
@@ -403,7 +414,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
           ? { ...a, correta: a.letra === letra }
           : a.letra === letra
             ? { ...a, [campo]: valor }
-            : a
+            : a,
       ),
     }));
   }
@@ -432,7 +443,10 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
   }
 
   return (
-    <form onSubmit={salvar} className="card-pixel space-y-4 border-2 border-indigo-500/40 bg-slate-900/80 p-5">
+    <form
+      onSubmit={salvar}
+      className="card-pixel space-y-4 border-2 border-indigo-500/40 bg-slate-900/80 p-5"
+    >
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">{form.editandoId ? 'Editar questão' : 'Nova questão'}</h3>
         <button
@@ -566,7 +580,10 @@ function AbaRelatorio() {
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
-    api.get('/fases').then(setFases).catch(() => {});
+    api
+      .get('/fases')
+      .then(setFases)
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -615,7 +632,10 @@ function AbaRelatorio() {
             </thead>
             <tbody>
               {linhas.map((l) => (
-                <tr key={l.questao_id} className="border-t border-slate-800 odd:bg-slate-950 even:bg-slate-900/40">
+                <tr
+                  key={l.questao_id}
+                  className="border-t border-slate-800 odd:bg-slate-950 even:bg-slate-900/40"
+                >
                   <td className="px-4 py-3">{l.enunciado_resumo}...</td>
                   <td className="px-4 py-3 text-slate-400">{l.dificuldade}</td>
                   <td className="px-4 py-3 text-right font-mono">{l.total_respostas}</td>

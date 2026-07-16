@@ -23,7 +23,9 @@ export async function porTurma(req, res, next) {
 
 export async function porFase(req, res, next) {
   try {
-    res.json(await rankingService.rankingPorFase(req.usuario.id, Number(req.params.faseId), limiteDe(req)));
+    res.json(
+      await rankingService.rankingPorFase(req.usuario.id, Number(req.params.faseId), limiteDe(req)),
+    );
   } catch (err) {
     next(err);
   }

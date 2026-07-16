@@ -32,7 +32,10 @@ export default function Perfil() {
       <div className="card-pixel border-2 border-slate-800 bg-slate-900/60 p-6">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center border-2 border-indigo-500/40 bg-indigo-950 text-indigo-300">
-            <PixelIcon nome={perfil.role === 'professor' ? 'book-open' : 'gamepad'} className="h-9 w-9" />
+            <PixelIcon
+              nome={perfil.role === 'professor' ? 'book-open' : 'gamepad'}
+              className="h-9 w-9"
+            />
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="font-pixel text-base text-slate-100">{perfil.nome}</h1>
@@ -110,7 +113,10 @@ export default function Perfil() {
               </thead>
               <tbody>
                 {historico.map((t) => (
-                  <tr key={t.id} className="border-t border-slate-800 odd:bg-slate-950 even:bg-slate-900/40">
+                  <tr
+                    key={t.id}
+                    className="border-t border-slate-800 odd:bg-slate-950 even:bg-slate-900/40"
+                  >
                     <td className="px-4 py-3 font-medium">{t.fase?.nome}</td>
                     <td className="px-4 py-3">
                       {t.acertos}/{t.total_questoes}

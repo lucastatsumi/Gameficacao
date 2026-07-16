@@ -28,7 +28,7 @@ export async function criarQuiz(criadorId, dados) {
       quiz_id: criado.id,
       questao_id: questaoId,
       ordem: i,
-    }))
+    })),
   );
   if (erroItens) {
     // Compensação: não deixa quiz órfão sem questões
@@ -44,7 +44,7 @@ export async function listarQuizzes(userId) {
   const { data, error } = await db
     .from('quizzes_custom')
     .select(
-      'id, criador_id, titulo, descricao, tempo_limite_seg, sons, permitir_dicas, ativo, created_at, profiles ( nome ), quiz_custom_questoes ( count )'
+      'id, criador_id, titulo, descricao, tempo_limite_seg, sons, permitir_dicas, ativo, created_at, profiles ( nome ), quiz_custom_questoes ( count )',
     )
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -101,7 +101,7 @@ export async function atualizarQuiz(userId, quizId, dados) {
       quiz_id: existente.id,
       questao_id: questaoId,
       ordem: i,
-    }))
+    })),
   );
   if (erroItens) throw erroItens;
 
@@ -132,7 +132,10 @@ async function validarPayload(dados) {
 
   if (!titulo?.trim()) throw new HttpError(400, 'O título do quiz é obrigatório');
   if (tempo_limite_seg != null && (!Number.isInteger(tempo_limite_seg) || tempo_limite_seg < 10)) {
-    throw new HttpError(400, 'tempo_limite_seg deve ser null (tempo de cada questão) ou inteiro >= 10');
+    throw new HttpError(
+      400,
+      'tempo_limite_seg deve ser null (tempo de cada questão) ou inteiro >= 10',
+    );
   }
   if (!Array.isArray(questao_ids) || questao_ids.length < 1 || questao_ids.length > MAX_QUESTOES) {
     throw new HttpError(400, `Selecione de 1 a ${MAX_QUESTOES} questões`);

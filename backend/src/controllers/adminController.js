@@ -81,7 +81,7 @@ export async function exportarCsvTurma(req, res, next) {
   try {
     const { nomeArquivo, conteudo } = await relatorioService.csvDesempenhoTurma(
       req.usuario.id,
-      req.params.turmaId
+      req.params.turmaId,
     );
     res
       .type('text/csv; charset=utf-8')

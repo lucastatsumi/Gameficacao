@@ -23,8 +23,14 @@ export default function Ranking() {
   const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
-    api.get('/turmas').then(setTurmas).catch(() => {});
-    api.get('/fases').then(setFases).catch(() => {});
+    api
+      .get('/turmas')
+      .then(setTurmas)
+      .catch(() => {});
+    api
+      .get('/fases')
+      .then(setFases)
+      .catch(() => {});
   }, []);
 
   const carregar = useCallback(async () => {

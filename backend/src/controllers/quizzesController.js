@@ -36,9 +36,7 @@ export async function atualizar(req, res, next) {
 
 export async function alternarAtivo(req, res, next) {
   try {
-    res.json(
-      await quizCustomService.alternarAtivo(req.usuario.id, req.params.id, req.body?.ativo)
-    );
+    res.json(await quizCustomService.alternarAtivo(req.usuario.id, req.params.id, req.body?.ativo));
   } catch (err) {
     next(err);
   }
