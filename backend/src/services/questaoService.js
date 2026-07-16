@@ -116,7 +116,7 @@ export async function desativarQuestao(questaoId) {
 const LETRAS = ['A', 'B', 'C', 'D'];
 const DIFICULDADES = ['facil', 'media', 'dificil'];
 
-function validarPayload(dados) {
+export function validarPayload(dados) {
   const {
     fase_id,
     enunciado,
