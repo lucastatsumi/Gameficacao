@@ -38,12 +38,12 @@ export async function csvDesempenhoTurma(professorId, turmaId) {
   return { nomeArquivo: `desempenho-${slug(turma.nome)}.csv`, conteudo: BOM + csv };
 }
 
-function escaparCsv(valor) {
+export function escaparCsv(valor) {
   const texto = String(valor ?? '');
   return /[;"\r\n]/.test(texto) ? `"${texto.replaceAll('"', '""')}"` : texto;
 }
 
-function slug(texto) {
+export function slug(texto) {
   return texto
     .toLowerCase()
     .normalize('NFD')
