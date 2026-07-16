@@ -50,14 +50,19 @@ export async function finalizar(req, res, next) {
     const resultado = await quizService.finalizarQuiz(req.usuario, req.body?.tentativa_id);
 
     // Recompensa de poderes: cada badge nova concede 1 uso de
-    // "eliminar_alternativa"; um quiz 100% de acerto concede 1 "tempo_extra".
-    // Feito aqui (e não dentro de finalizarQuiz) para não criar dependência
-    // circular entre quizService e poderService.
+    // "eliminar_alternativa"; um quiz 100% de acerto concede 1 "tempo_extra";
+    // concluir uma fase pela primeira vez concede 1 "pular_questao" (ajuda
+    // nas fases seguintes, que tendem a ser mais difíceis). Feito aqui (e
+    // não dentro de finalizarQuiz) para não criar dependência circular
+    // entre quizService e poderService.
     for (const _badge of resultado.badges_novas ?? []) {
       await poderService.concederPoder(req.usuario.id, 'eliminar_alternativa', 1);
     }
     if (resultado.acertos > 0 && resultado.acertos === resultado.total_questoes) {
       await poderService.concederPoder(req.usuario.id, 'tempo_extra', 1);
+    }
+    if (resultado.fase_concluida) {
+      await poderService.concederPoder(req.usuario.id, 'pular_questao', 1);
     }
 
     res.json(resultado);

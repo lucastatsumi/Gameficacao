@@ -30,7 +30,11 @@ export default function Quiz() {
   // poderes (power-ups): estoque local, sincronizado do perfil ao carregar o
   // quiz e debitado localmente a cada uso (o servidor é a fonte da verdade —
   // recarregarPerfil() no fim do quiz corrige qualquer divergência)
-  const [estoquePoderes, setEstoquePoderes] = useState({ eliminar_alternativa: 0, tempo_extra: 0 });
+  const [estoquePoderes, setEstoquePoderes] = useState({
+    eliminar_alternativa: 0,
+    tempo_extra: 0,
+    pular_questao: 0,
+  });
   const [alternativaEscondida, setAlternativaEscondida] = useState(null);
   const [tempoExtraUsado, setTempoExtraUsado] = useState(false);
   const extraSegundosRef = useRef(0);
@@ -145,11 +149,12 @@ export default function Quiz() {
     }
   }
 
-  // ---------- usar poder (eliminar alternativa / tempo extra) ----------
+  // ---------- usar poder (eliminar alternativa / tempo extra / pular) ----------
   async function usarPoder(poder) {
-    if (enviando || feedback) return;
+    if (enviando || feedback || feedbackSeq) return;
     if (poder === 'eliminar_alternativa' && (alternativaEscondida || estoquePoderes.eliminar_alternativa <= 0)) return;
     if (poder === 'tempo_extra' && (tempoExtraUsado || estoquePoderes.tempo_extra <= 0)) return;
+    if (poder === 'pular_questao' && estoquePoderes.pular_questao <= 0) return;
 
     som(tocarClique);
     try {
@@ -159,6 +164,11 @@ export default function Quiz() {
         poder,
       });
       setEstoquePoderes((e) => ({ ...e, [poder]: e[poder] - 1 }));
+      if (poder === 'pular_questao') {
+        // sem tela de feedback: pular avança direto para a próxima questão
+        proxima();
+        return;
+      }
       if (poder === 'eliminar_alternativa') {
         setAlternativaEscondida(resp.alternativa_removida_id);
       } else {
@@ -384,12 +394,13 @@ export default function Quiz() {
         </div>
       )}
 
-      {/* poderes — não se aplicam ao minigame de reordenar (sem alternativas) */}
+      {/* poderes — eliminar/tempo extra não se aplicam ao minigame de reordenar (sem alternativas) */}
       {!respondida &&
-        questao.formato !== 'reordenar_algoritmo' &&
-        (estoquePoderes.eliminar_alternativa > 0 || estoquePoderes.tempo_extra > 0) && (
+        (estoquePoderes.pular_questao > 0 ||
+          (questao.formato !== 'reordenar_algoritmo' &&
+            (estoquePoderes.eliminar_alternativa > 0 || estoquePoderes.tempo_extra > 0))) && (
         <div className="mt-3 flex flex-wrap gap-2">
-          {estoquePoderes.eliminar_alternativa > 0 && (
+          {questao.formato !== 'reordenar_algoritmo' && estoquePoderes.eliminar_alternativa > 0 && (
             <button
               onClick={() => usarPoder('eliminar_alternativa')}
               disabled={Boolean(alternativaEscondida) || enviando}
@@ -400,7 +411,7 @@ export default function Quiz() {
               50/50 ({estoquePoderes.eliminar_alternativa})
             </button>
           )}
-          {estoquePoderes.tempo_extra > 0 && (
+          {questao.formato !== 'reordenar_algoritmo' && estoquePoderes.tempo_extra > 0 && (
             <button
               onClick={() => usarPoder('tempo_extra')}
               disabled={tempoExtraUsado || enviando}
@@ -409,6 +420,17 @@ export default function Quiz() {
             >
               <PixelIcon nome="clock" className="h-4 w-4" />
               +15s ({estoquePoderes.tempo_extra})
+            </button>
+          )}
+          {estoquePoderes.pular_questao > 0 && (
+            <button
+              onClick={() => usarPoder('pular_questao')}
+              disabled={enviando}
+              title="Pula esta questão sem contar contra sua aprovação"
+              className="btn-pixel flex items-center gap-2 border-2 border-emerald-500/40 bg-slate-900 px-3 py-2 font-pixel text-[10px] text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-40"
+            >
+              <PixelIcon nome="arrow-right" className="h-4 w-4" />
+              PULAR ({estoquePoderes.pular_questao})
             </button>
           )}
         </div>

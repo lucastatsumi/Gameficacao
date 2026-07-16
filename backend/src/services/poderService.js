@@ -4,7 +4,7 @@ import { embaralhar } from '../utils/random.js';
 import { buscarTentativa, exigirQuestaoNoQuiz } from './quizService.js';
 
 const SEGUNDOS_EXTRA = 15;
-export const PODERES_VALIDOS = ['eliminar_alternativa', 'tempo_extra'];
+export const PODERES_VALIDOS = ['eliminar_alternativa', 'tempo_extra', 'pular_questao'];
 
 // Estoque de poderes do usuário, sempre com as duas chaves presentes
 // (0 para quem nunca ganhou nenhum).
@@ -71,6 +71,19 @@ export async function usarPoder(userId, dados) {
     throw new HttpError(400, 'Questão não pertence a esta tentativa');
   }
 
+  if (poder === 'pular_questao') {
+    // Não pode pular uma questão que já foi respondida — isso duplicaria
+    // a exclusão do denominador de aprovação em finalizarQuiz com uma
+    // resposta que já conta normalmente.
+    const { data: jaRespondida } = await db
+      .from('respostas')
+      .select('id')
+      .eq('tentativa_id', tentativa_id)
+      .eq('questao_id', questao_id)
+      .maybeSingle();
+    if (jaRespondida) throw new HttpError(409, 'Esta questão já foi respondida');
+  }
+
   const { data: existente, error: erroEstoque } = await db
     .from('usuario_poderes')
     .select('quantidade')
@@ -101,6 +114,11 @@ export async function usarPoder(userId, dados) {
 
   if (poder === 'tempo_extra') {
     return { poder, segundos_extra: SEGUNDOS_EXTRA };
+  }
+  if (poder === 'pular_questao') {
+    // O cliente não envia resposta para esta questão — finalizarQuiz exclui
+    // as questões puladas (via poderes_usados) do denominador de aprovação.
+    return { poder, pulada: true };
   }
 
   // eliminar_alternativa: sorteia UMA alternativa errada para o cliente

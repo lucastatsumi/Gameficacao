@@ -374,6 +374,7 @@ describe('finalizarQuiz — regra anti-farming de XP', () => {
       fases: [ok({ ordem: 1, nome: 'Listas' })],
       profiles: [ok(null)],
       eventos: [ok([])],
+      poderes_usados: [ok([])],
     });
 
     const usuario = { id: 'user-1', xp_total: 0, nivel: 1 };
@@ -406,6 +407,7 @@ describe('finalizarQuiz — regra anti-farming de XP', () => {
       fases: [ok({ ordem: 1, nome: 'Listas' })],
       profiles: [ok(null)],
       eventos: [ok([{ id: 1, nome: 'Semana das Listas', fase_id: 1, multiplicador_xp: 2 }])],
+      poderes_usados: [ok([])],
     });
 
     const usuario = { id: 'user-1', xp_total: 0, nivel: 1 };
@@ -442,6 +444,7 @@ describe('finalizarQuiz — regra anti-farming de XP', () => {
       fases: [ok({ ordem: 1, nome: 'Listas' })],
       profiles: [ok(null)],
       eventos: [ok([])],
+      poderes_usados: [ok([])],
     });
 
     const usuario = { id: 'user-1', xp_total: 25, nivel: 1 };
@@ -449,6 +452,78 @@ describe('finalizarQuiz — regra anti-farming de XP', () => {
 
     expect(res.xp_bruto).toBe(10);
     expect(res.xp_ganho).toBe(0); // 10 não supera o recorde de 25
+  });
+
+  it('questão pulada com o poder não conta contra a aprovação (denominador efetivo)', async () => {
+    // 3 questões no total: 1 pulada (poder), 2 respondidas e ambas certas.
+    // Sem excluir a pulada, 2/3 = 67% reprovaria (precisa de 70%); excluindo,
+    // 2/2 = 100% aprova.
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't4',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 3,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([
+          { correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } },
+          { correta: true, usou_dica: false, tempo_resposta_ms: 2000, questoes: { xp_valor: 10 } },
+        ]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: true })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([{ questao_id: 'q-pulada' }])],
+    });
+
+    const usuario = { id: 'user-1', xp_total: 0, nivel: 1 };
+    const res = await finalizarQuiz(usuario, 't4');
+
+    expect(res.acertos).toBe(2);
+    expect(res.total_questoes).toBe(3);
+    expect(res.questoes_puladas).toBe(1);
+    expect(res.aprovada).toBe(true);
+  });
+
+  it('sem pular nenhuma questão, o mesmo cenário (2 de 3) reprova', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't5',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 3,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([
+          { correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } },
+          { correta: true, usou_dica: false, tempo_resposta_ms: 2000, questoes: { xp_valor: 10 } },
+        ]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: false })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([])],
+    });
+
+    const usuario = { id: 'user-1', xp_total: 0, nivel: 1 };
+    const res = await finalizarQuiz(usuario, 't5');
+
+    expect(res.aprovada).toBe(false); // 2/3 = 67% < 70%
   });
 
   it('rejeita finalizar uma tentativa já finalizada', async () => {

@@ -6,7 +6,7 @@ estudantes primeiro.
 
 ## ✅ Implementado nesta rodada
 
-- **Testes automatizados no backend** (vitest) — 122 testes cobrindo a lógica
+- **Testes automatizados no backend** (vitest) — 126 testes cobrindo a lógica
   mais crítica do jogo: `nivel.js`, `streak.js`, `badgeService` (todas as
   condições de badge), `quizCustomService.validarPayload`,
   `relatorioService` (CSV), `poderService` e os fluxos centrais de
@@ -147,15 +147,35 @@ Regra de design: todo poder é resolvido **no backend** — o frontend só pede
 |---|---|---|
 | Eliminar alternativa (50/50) | Sorteia e remove 1 alternativa errada; o cliente esconde e nunca sabe qual das restantes é a certa | ✅ implementado |
 | Tempo extra (+15s) | Soma ao tempo limite da questão; o servidor guarda o uso e soma o extra ao validar o timer em `/quiz/responder` | ✅ implementado |
-| Pular sem perder XP | Marca a questão como pulada sem contar erro, 1x por fase | não implementado |
-| Segunda chance | Erro na 1ª tentativa da fase não é contabilizado contra aprovação | não implementado |
+| Pular sem perder XP | Pula a questão sem contar contra a aprovação da fase/quiz | ✅ implementado |
+| Segunda chance | Erro na 1ª tentativa da fase não é contabilizado contra aprovação | fundido conceitualmente em "Pular" (ver nota) |
 
-Implementado em `database/10_poderes.sql` (tabelas `usuario_poderes` e
-`poderes_usados`), `backend/src/services/poderService.js` (com testes),
-endpoint `POST /quiz/poder`, e UI em `Quiz.jsx`/`Perfil.jsx`.
+Implementado em `database/10_poderes.sql` + `16_poder_pular.sql` (novo
+valor do enum `tipo_poder`), `backend/src/services/poderService.js` (com
+testes), endpoint `POST /quiz/poder`, e UI em `Quiz.jsx`/`Perfil.jsx`.
+
+**"Pular sem perder XP"** foi o mais delicado de implementar dos três:
+diferente de eliminar/tempo-extra, ele muda o CÁLCULO de aprovação. A
+questão pulada nunca vira uma linha em `respostas` (o cliente não
+responde), então `finalizarQuiz` precisa excluí-la do denominador — senão
+pular equivaleria a errar. Solução: consulta `poderes_usados` (poder =
+`pular_questao`) e calcula um `total_questoes` **efetivo**
+(`tentativa.total_questoes - puladas`), usado só no cálculo de aprovação e
+na elegibilidade da badge de velocidade — o `total_questoes` "cru" exibido
+ao aluno continua sendo o real. Testado com um cenário explícito
+(2 acertos de 3 questões: reprova sem pular, aprova excluindo a pulada do
+denominador) para não deixar essa matemática por conta de inspeção visual.
+Também bloqueado o double-dip: não dá pra pular uma questão que já foi
+respondida (evitaria contar a mesma questão como excluída E como
+correta). Decidi não implementar "Segunda chance" como poder separado —
+as duas ideias do roadmap original resolviam o mesmo problema ("uma
+questão ruim não deveria te prejudicar tanto") por ângulos quase
+idênticos; entregar um mecanismo bem testado pareceu melhor que dois
+mecanismos redundantes e mal cobertos.
 
 - **Aquisição**: cada badge nova concede 1 uso de "eliminar_alternativa";
-  cravar um quiz 100% concede 1 uso de "tempo_extra" (regra em
+  cravar um quiz 100% concede 1 uso de "tempo_extra"; concluir uma fase
+  pela primeira vez concede 1 uso de "pular_questao" (regra em
   `quizController.finalizar`, fora de `quizService` para não criar
   dependência circular entre os dois serviços). Ainda não há concessão
   ligada a streak — próximo passo natural.

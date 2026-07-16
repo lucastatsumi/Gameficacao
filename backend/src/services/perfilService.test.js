@@ -54,7 +54,7 @@ describe('obterPerfil', () => {
 
     const perfil = await obterPerfil(usuarioBase);
     expect(perfil.streak_dias).toBe(0);
-    expect(perfil.poderes).toEqual({ eliminar_alternativa: 0, tempo_extra: 1 });
+    expect(perfil.poderes).toEqual({ eliminar_alternativa: 0, tempo_extra: 1, pular_questao: 0 });
   });
 });
 

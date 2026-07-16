@@ -59,7 +59,8 @@ fases desbloqueável e ranking.
 │   ├── 12_mais_questoes.sql      #   +15 questões (3 por fase, mais variedade)
 │   ├── 13_eventos_temporarios.sql #  XP multiplicado por período
 │   ├── 14_reordenar_algoritmo.sql #  Minigame de ordenar passos de algoritmo
-│   └── 15_boss_fight.sql         #   Vidas em quizzes customizados
+│   ├── 15_boss_fight.sql         #   Vidas em quizzes customizados
+│   └── 16_poder_pular.sql        #   Poder "pular sem perder XP"
 ├── backend/
 │   └── src/
 │       ├── config/               # Cliente Supabase, variáveis de ambiente

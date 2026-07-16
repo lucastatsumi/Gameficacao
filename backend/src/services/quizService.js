@@ -372,7 +372,18 @@ export async function finalizarQuiz(usuario, tentativaId) {
   const multiplicadorEvento = evento?.multiplicador_xp ?? 1;
   const xpBruto = Math.round(xpSemEvento * multiplicadorEvento);
 
-  const aprovada = acertos >= Math.ceil(tentativa.total_questoes * PCT_APROVACAO);
+  // Poder "pular_questao": a questão pulada nunca vira uma linha em
+  // `respostas` (o cliente não responde), então precisa ser excluída do
+  // denominador de aprovação — senão pular equivaleria a errar.
+  const { data: puladasData, error: erroPuladas } = await db
+    .from('poderes_usados')
+    .select('questao_id')
+    .eq('tentativa_id', tentativaId)
+    .eq('poder', 'pular_questao');
+  if (erroPuladas) throw erroPuladas;
+  const totalEfetivo = Math.max(0, tentativa.total_questoes - puladasData.length);
+
+  const aprovada = acertos >= Math.ceil(totalEfetivo * PCT_APROVACAO);
 
   // Anti-farming: repetir só rende o XP que EXCEDER o melhor desempenho
   // anterior na mesma origem (fase ou quiz custom).
@@ -426,7 +437,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
     .map((r) => r.tempo_resposta_ms)
     .filter((t) => t != null);
   const tempoMedioMs =
-    respostas.length === tentativa.total_questoes && temposValidos.length === respostas.length
+    respostas.length === totalEfetivo && temposValidos.length === respostas.length
       ? temposValidos.reduce((soma, t) => soma + t, 0) / temposValidos.length
       : null;
 
@@ -449,6 +460,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
     fase: titulo,
     acertos,
     total_questoes: tentativa.total_questoes,
+    questoes_puladas: puladasData.length,
     aprovada,
     xp_bruto: xpBruto,
     xp_ganho: xpGanho,

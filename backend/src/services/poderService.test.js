@@ -19,7 +19,7 @@ describe('estoqueDoUsuario', () => {
     configurarDb({ usuario_poderes: [ok([{ poder: 'eliminar_alternativa', quantidade: 2 }])] });
 
     const estoque = await estoqueDoUsuario('user-1');
-    expect(estoque).toEqual({ eliminar_alternativa: 2, tempo_extra: 0 });
+    expect(estoque).toEqual({ eliminar_alternativa: 2, tempo_extra: 0, pular_questao: 0 });
   });
 });
 
@@ -153,6 +153,41 @@ describe('usarPoder', () => {
 
     await expect(
       usarPoder('user-1', { tentativa_id: 't1', questao_id: 'q1', poder: 'tempo_extra' })
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('pular_questao: registra o uso, debita o estoque e não mexe em alternativas', async () => {
+    const mock = configurarDb({
+      tentativas: [ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 1 })],
+      questoes: [ok(questaoComAlternativas)],
+      respostas: [ok(null)], // ainda não respondida
+      usuario_poderes: [ok({ quantidade: 1 }), ok(null)],
+      poderes_usados: [ok(null)],
+    });
+
+    const resultado = await usarPoder('user-1', {
+      tentativa_id: 't1',
+      questao_id: 'q1',
+      poder: 'pular_questao',
+    });
+
+    expect(resultado).toEqual({ poder: 'pular_questao', pulada: true });
+
+    const insertChain = mock.chainsPara('poderes_usados')[0];
+    expect(insertChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ poder: 'pular_questao', segundos_extra: null })
+    );
+  });
+
+  it('rejeita pular_questao se a questão já foi respondida', async () => {
+    configurarDb({
+      tentativas: [ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 1 })],
+      questoes: [ok(questaoComAlternativas)],
+      respostas: [ok({ id: 'r1' })], // já respondida
+    });
+
+    await expect(
+      usarPoder('user-1', { tentativa_id: 't1', questao_id: 'q1', poder: 'pular_questao' })
     ).rejects.toMatchObject({ status: 409 });
   });
 
