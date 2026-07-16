@@ -70,9 +70,13 @@ estudantes primeiro.
   `CartaoStat`, `ConfetePixel` e `TelaResultado` para `components/quiz/`,
   puro reposicionamento sem mudança de comportamento (build idêntico,
   mesmo bundle). `Quiz.jsx` caiu para 451 linhas.
-- **`Admin.jsx` (957 linhas) e `Quizzes.jsx` (346 linhas) ainda não foram
-  extraídos** — não foram tocados nesta rodada; `Admin.jsx` em particular é
-  o maior arquivo do frontend e o próximo candidato natural.
+- ✅ **`Admin.jsx` e `Quizzes.jsx` também extraídos** — `Admin.jsx` caiu de
+  957 para 48 linhas (as 4 abas viraram `components/admin/AbaTurmas.jsx`,
+  `AbaQuestoes.jsx`, `AbaQuizzes.jsx`, `AbaRelatorio.jsx`); `Quizzes.jsx`
+  caiu de 346 para 157 linhas (`FormQuiz` virou
+  `components/quizzes/FormQuiz.jsx`). Bundle final idêntico ao anterior
+  (confirma reposicionamento puro). De brinde, removida uma variável morta
+  (`perfil` desestruturado de `useAuth()` em `Quizzes.jsx` mas nunca usado).
 - ✅ **CI** — `.github/workflows/ci.yml`: roda `npm test` do backend e
   `npm run build` do frontend em push para `main` e em todo PR. Validado
   localmente com `npm ci` (não só `npm install`) em ambos, para garantir
