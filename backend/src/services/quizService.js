@@ -356,7 +356,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
 // ---------------------------------------------------------------
 
 // Dica usada corta o XP da questão pela metade (mínimo 1)
-function xpDaResposta(r) {
+export function xpDaResposta(r) {
   const xp = r.questoes?.xp_valor ?? 0;
   return r.usou_dica ? Math.max(1, Math.floor(xp / 2)) : xp;
 }

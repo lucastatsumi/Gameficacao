@@ -33,7 +33,7 @@ export async function verificarBadges(userId, contexto) {
   return novas.map(({ id, nome, descricao, icone }) => ({ id, nome, descricao, icone }));
 }
 
-function condicaoAtendida(badge, ctx) {
+export function condicaoAtendida(badge, ctx) {
   const p = badge.parametro ?? {};
   switch (badge.tipo_condicao) {
     case 'xp_acumulado':
