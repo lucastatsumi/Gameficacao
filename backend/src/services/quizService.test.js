@@ -454,6 +454,125 @@ describe('finalizarQuiz — regra anti-farming de XP', () => {
     expect(res.xp_ganho).toBe(0); // 10 não supera o recorde de 25
   });
 
+  it('streak alto soma bônus de XP ao xp_bruto (só quando acertou algo)', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't6',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 2,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([{ correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } }]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: false })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([])],
+    });
+
+    // streak_ultimo_dia = ontem -> hoje incrementa para o dia 6
+    const ontem = new Date();
+    ontem.setUTCDate(ontem.getUTCDate() - 1);
+    const usuario = {
+      id: 'user-1',
+      xp_total: 0,
+      nivel: 1,
+      streak_dias: 5,
+      streak_ultimo_dia: ontem.toISOString().slice(0, 10),
+    };
+    const res = await finalizarQuiz(usuario, 't6');
+
+    expect(res.streak_dias).toBe(6);
+    expect(res.bonus_streak).toBe(5); // dia 6 - 1
+    expect(res.xp_bruto).toBe(15); // 10 (questão) + 5 (bônus)
+  });
+
+  it('sem acertar nenhuma questão, não há bônus de streak (não recompensa "bater ponto")', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't7',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 2,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([{ correta: false, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } }]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: false })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([])],
+    });
+
+    const ontem = new Date();
+    ontem.setUTCDate(ontem.getUTCDate() - 1);
+    const usuario = {
+      id: 'user-1',
+      xp_total: 0,
+      nivel: 1,
+      streak_dias: 10,
+      streak_ultimo_dia: ontem.toISOString().slice(0, 10),
+    };
+    const res = await finalizarQuiz(usuario, 't7');
+
+    expect(res.bonus_streak).toBe(0);
+    expect(res.xp_bruto).toBe(0);
+  });
+
+  it('bônus de streak tem teto de +20 (streak de 21+ dias)', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't8',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 2,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([{ correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } }]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: false })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([])],
+    });
+
+    const ontem = new Date();
+    ontem.setUTCDate(ontem.getUTCDate() - 1);
+    const usuario = {
+      id: 'user-1',
+      xp_total: 0,
+      nivel: 1,
+      streak_dias: 99,
+      streak_ultimo_dia: ontem.toISOString().slice(0, 10),
+    };
+    const res = await finalizarQuiz(usuario, 't8');
+
+    expect(res.streak_dias).toBe(100);
+    expect(res.bonus_streak).toBe(20); // teto
+  });
+
   it('questão pulada com o poder não conta contra a aprovação (denominador efetivo)', async () => {
     // 3 questões no total: 1 pulada (poder), 2 respondidas e ambas certas.
     // Sem excluir a pulada, 2/3 = 67% reprovaria (precisa de 70%); excluindo,

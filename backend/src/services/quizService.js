@@ -354,6 +354,16 @@ export async function finalizarQuiz(usuario, tentativaId) {
 
   const ehCustom = Boolean(tentativa.quiz_custom_id);
 
+  // Streak diário: qualquer quiz finalizado (campanha ou custom) conta como
+  // atividade do dia. Calculado ANTES do XP porque o bônus de streak entra
+  // no xp_bruto desta tentativa (ver abaixo).
+  const hoje = dataDeHoje();
+  const streakDias = proximoStreak({
+    streakAtual: usuario.streak_dias,
+    ultimoDia: usuario.streak_ultimo_dia,
+    hoje,
+  });
+
   const { data: respostas, error: erroRespostas } = await db
     .from('respostas')
     .select('correta, usou_dica, tempo_resposta_ms, questoes ( xp_valor )')
@@ -370,7 +380,14 @@ export async function finalizarQuiz(usuario, tentativaId) {
   // fase associada para casar com o evento.
   const evento = ehCustom ? null : await eventoAtivoParaFase(tentativa.fase_id);
   const multiplicadorEvento = evento?.multiplicador_xp ?? 1;
-  const xpBruto = Math.round(xpSemEvento * multiplicadorEvento);
+
+  // Recompensa crescente de streak: só faz sentido se o aluno de fato
+  // acertou algo (xpSemEvento > 0) — não recompensa reprovar de propósito
+  // só para "bater ponto". +1 XP por dia de streak além do primeiro,
+  // até um teto de +20 (streak de 21+ dias).
+  const bonusStreak = xpSemEvento > 0 ? Math.min(Math.max(0, streakDias - 1), 20) : 0;
+
+  const xpBruto = Math.round(xpSemEvento * multiplicadorEvento) + bonusStreak;
 
   // Poder "pular_questao": a questão pulada nunca vira uma linha em
   // `respostas` (o cliente não responde), então precisa ser excluída do
@@ -417,15 +434,6 @@ export async function finalizarQuiz(usuario, tentativaId) {
   const xpTotal = usuario.xp_total + xpGanho;
   const nivel = nivelPorXp(xpTotal);
 
-  // Streak diário: qualquer quiz finalizado (campanha ou custom) conta como
-  // atividade do dia. Calculado no servidor a partir do streak salvo.
-  const hoje = dataDeHoje();
-  const streakDias = proximoStreak({
-    streakAtual: usuario.streak_dias,
-    ultimoDia: usuario.streak_ultimo_dia,
-    hoje,
-  });
-
   const { error: erroPerfil } = await db
     .from('profiles')
     .update({ xp_total: xpTotal, nivel, streak_dias: streakDias, streak_ultimo_dia: hoje })
@@ -463,6 +471,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
     questoes_puladas: puladasData.length,
     aprovada,
     xp_bruto: xpBruto,
+    bonus_streak: bonusStreak,
     xp_ganho: xpGanho,
     xp_total: xpTotal,
     nivel,

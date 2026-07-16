@@ -6,7 +6,7 @@ estudantes primeiro.
 
 ## ✅ Implementado nesta rodada
 
-- **Testes automatizados no backend** (vitest) — 126 testes cobrindo a lógica
+- **Testes automatizados no backend** (vitest) — 129 testes cobrindo a lógica
   mais crítica do jogo: `nivel.js`, `streak.js`, `badgeService` (todas as
   condições de badge), `quizCustomService.validarPayload`,
   `relatorioService` (CSV), `poderService` e os fluxos centrais de
@@ -234,9 +234,14 @@ mecanismos redundantes e mal cobertos.
   no Perfil e no resultado do quiz). Simplificação assumida: o "dia" é
   contado em UTC, não no fuso do aluno — ajustar se isso incomodar na
   prática.
-- **Recompensa crescente por streak** (mais XP ou poderes a cada dia
-  consecutivo) — ainda não implementado; hoje o streak só concede as badges
-  de marco (3/7/30 dias), sem bônus contínuo de XP.
+- ✅ **Recompensa crescente por streak** — `quizService.finalizarQuiz` soma
+  um bônus de XP ao `xp_bruto` da tentativa: +1 XP por dia de streak além
+  do primeiro, até um teto de +20 (streak de 21+ dias). Só se aplica se o
+  aluno de fato acertou alguma questão (`xpSemEvento > 0`) — não recompensa
+  reprovar de propósito só para manter o streak. Testado com 3 cenários
+  (streak alto soma bônus, zero acertos zera o bônus, teto de +20).
+  `/quiz/finalizar` retorna `bonus_streak` e a tela de resultado mostra o
+  valor junto com o streak.
 - ✅ **Eventos temporários** — `database/13_eventos_temporarios.sql`
   (tabela `eventos`: fase_id nullable = vale pra qualquer fase, período
   início/fim, multiplicador). `eventoService.eventoAtivoParaFase` (testado)

@@ -59,6 +59,9 @@ export default function TelaResultado({ resultado, sons = true }) {
         <div className="anim-pop card-pixel mt-4 flex items-center justify-center gap-2 border-2 border-orange-500/40 bg-orange-500/10 p-3 text-orange-300">
           <PixelIcon nome="fire" className="h-5 w-5" />
           {resultado.streak_dias} dias seguidos jogando!
+          {resultado.bonus_streak > 0 && (
+            <span className="text-amber-300">(+{resultado.bonus_streak} XP de bônus)</span>
+          )}
         </div>
       )}
 
