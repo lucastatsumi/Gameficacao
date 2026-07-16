@@ -6,7 +6,7 @@ estudantes primeiro.
 
 ## ✅ Implementado nesta rodada
 
-- **Testes automatizados no backend** (vitest) — 69 testes cobrindo a lógica
+- **Testes automatizados no backend** (vitest) — 74 testes cobrindo a lógica
   mais crítica do jogo: `nivel.js`, `streak.js`, `badgeService` (todas as
   condições de badge), `quizCustomService.validarPayload`,
   `relatorioService` (CSV), `poderService` e os fluxos centrais de
@@ -189,9 +189,14 @@ endpoint `POST /quiz/poder`, e UI em `Quiz.jsx`/`Perfil.jsx`.
 - **Recompensa crescente por streak** (mais XP ou poderes a cada dia
   consecutivo) — ainda não implementado; hoje o streak só concede as badges
   de marco (3/7/30 dias), sem bônus contínuo de XP.
-- **Eventos temporários** (ex.: "semana das árvores" com XP em dobro em
-  questões daquela fase) — flag simples de período ativo + multiplicador no
-  cálculo de XP em `quizService.js`.
+- ✅ **Eventos temporários** — `database/13_eventos_temporarios.sql`
+  (tabela `eventos`: fase_id nullable = vale pra qualquer fase, período
+  início/fim, multiplicador). `eventoService.eventoAtivoParaFase` (testado)
+  integrado em `quizService.finalizarQuiz`: multiplica o XP bruto ANTES da
+  regra anti-farming, só no modo campanha. `/quiz/finalizar` retorna o
+  evento aplicado e a tela de resultado celebra. **Pendência**: não há UI
+  de administração para o professor criar eventos — hoje só via SQL/MCP
+  direto na tabela. Seria a próxima aba natural em `Admin.jsx`.
 
 ### Ordem sugerida de implementação
 

@@ -5,6 +5,10 @@ const CHAIN_METHODS = [
   'eq',
   'neq',
   'in',
+  'lte',
+  'gte',
+  'lt',
+  'gt',
   'order',
   'limit',
   'insert',
@@ -13,6 +17,7 @@ const CHAIN_METHODS = [
   'delete',
   'is',
   'not',
+  'or',
 ];
 
 // Constrói um "query builder" falso do supabase-js: todo método de filtro

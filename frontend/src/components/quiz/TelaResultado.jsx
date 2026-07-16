@@ -48,6 +48,13 @@ export default function TelaResultado({ resultado, sons = true }) {
         <CartaoStat rotulo="Nível" valor={resultado.nivel} />
       </div>
 
+      {resultado.evento && (
+        <div className="anim-pop card-pixel mt-4 flex items-center justify-center gap-2 border-2 border-fuchsia-500/40 bg-fuchsia-500/10 p-3 text-fuchsia-300">
+          <PixelIcon nome="fire" className="h-5 w-5" />
+          Evento "{resultado.evento.nome}": XP x{resultado.evento.multiplicador_xp}!
+        </div>
+      )}
+
       {resultado.streak_dias > 1 && (
         <div className="anim-pop card-pixel mt-4 flex items-center justify-center gap-2 border-2 border-orange-500/40 bg-orange-500/10 p-3 text-orange-300">
           <PixelIcon nome="fire" className="h-5 w-5" />

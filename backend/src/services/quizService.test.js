@@ -229,6 +229,7 @@ describe('finalizarQuiz — regra anti-farming de XP', () => {
       progresso_fase: [ok(null), ok({ concluida: true })],
       fases: [ok({ ordem: 1, nome: 'Listas' })],
       profiles: [ok(null)],
+      eventos: [ok([])],
     });
 
     const usuario = { id: 'user-1', xp_total: 0, nivel: 1 };
@@ -237,6 +238,37 @@ describe('finalizarQuiz — regra anti-farming de XP', () => {
     expect(res.xp_bruto).toBe(25);
     expect(res.xp_ganho).toBe(25);
     expect(res.aprovada).toBe(true); // 2/2 >= 70%
+    expect(res.evento).toBeNull();
+  });
+
+  it('com evento ativo na fase, multiplica o XP bruto antes da regra anti-farming', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't3',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 2,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([{ correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } }]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: false })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([{ id: 1, nome: 'Semana das Listas', fase_id: 1, multiplicador_xp: 2 }])],
+    });
+
+    const usuario = { id: 'user-1', xp_total: 0, nivel: 1 };
+    const res = await finalizarQuiz(usuario, 't3');
+
+    expect(res.xp_bruto).toBe(20); // 10 * 2
+    expect(res.evento).toEqual({ nome: 'Semana das Listas', multiplicador_xp: 2 });
   });
 
   it('repetir a fase só rende XP que EXCEDE o recorde anterior', async () => {
@@ -265,6 +297,7 @@ describe('finalizarQuiz — regra anti-farming de XP', () => {
       progresso_fase: [ok({ concluida: true }), ok({ concluida: true })],
       fases: [ok({ ordem: 1, nome: 'Listas' })],
       profiles: [ok(null)],
+      eventos: [ok([])],
     });
 
     const usuario = { id: 'user-1', xp_total: 25, nivel: 1 };

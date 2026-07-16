@@ -4,6 +4,7 @@ import { embaralhar } from '../utils/random.js';
 import { nivelPorXp } from '../utils/nivel.js';
 import { dataDeHoje, proximoStreak } from '../utils/streak.js';
 import { verificarBadges } from './badgeService.js';
+import { eventoAtivoParaFase } from './eventoService.js';
 
 const QUESTOES_POR_QUIZ = 10;
 const PCT_APROVACAO = 0.7; // acertar 70% conclui a fase / aprova o quiz
@@ -289,9 +290,17 @@ export async function finalizarQuiz(usuario, tentativaId) {
   if (erroRespostas) throw erroRespostas;
 
   const acertos = respostas.filter((r) => r.correta).length;
-  const xpBruto = respostas
+  const xpSemEvento = respostas
     .filter((r) => r.correta)
     .reduce((soma, r) => soma + xpDaResposta(r), 0);
+
+  // Evento temporário (ex.: "semana das árvores"): multiplica o XP bruto
+  // desta tentativa. Só se aplica ao modo campanha — quiz custom não tem
+  // fase associada para casar com o evento.
+  const evento = ehCustom ? null : await eventoAtivoParaFase(tentativa.fase_id);
+  const multiplicadorEvento = evento?.multiplicador_xp ?? 1;
+  const xpBruto = Math.round(xpSemEvento * multiplicadorEvento);
+
   const aprovada = acertos >= Math.ceil(tentativa.total_questoes * PCT_APROVACAO);
 
   // Anti-farming: repetir só rende o XP que EXCEDER o melhor desempenho
@@ -378,6 +387,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
     fase_concluida: progresso.concluida,
     badges_novas: badgesNovas,
     streak_dias: streakDias,
+    evento: evento && { nome: evento.nome, multiplicador_xp: evento.multiplicador_xp },
   };
 }
 
