@@ -13,3 +13,6 @@ backend/dist/
 .DS_Store
 Thumbs.db
 *.log
+
+# Vercel CLI (link local)
+.vercel/
