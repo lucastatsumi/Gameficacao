@@ -24,6 +24,7 @@ export async function obterPerfil(usuario) {
       (100 * (usuario.xp_total - xpNivelAtual)) / (xpProximoNivel - xpNivelAtual)
     ),
     total_badges: totalBadges ?? 0,
+    streak_dias: usuario.streak_dias ?? 0,
   };
 }
 

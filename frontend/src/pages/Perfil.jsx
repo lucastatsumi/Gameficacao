@@ -48,6 +48,20 @@ export default function Perfil() {
             </p>
             <p className="mt-1 text-xs text-slate-400">XP total</p>
           </div>
+          {perfil.streak_dias > 0 && (
+            <div
+              title="Dias seguidos jogando"
+              className="card-pixel flex items-center gap-2 border-2 border-orange-500/40 bg-orange-500/10 px-3 py-2"
+            >
+              <PixelIcon nome="fire" className="h-6 w-6 text-orange-400" />
+              <div>
+                <p className="font-pixel text-sm text-orange-300">{perfil.streak_dias}</p>
+                <p className="text-[10px] uppercase tracking-wide text-orange-400/70">
+                  {perfil.streak_dias === 1 ? 'dia seguido' : 'dias seguidos'}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
         <div className="mt-5">
           <BarraXp perfil={perfil} />

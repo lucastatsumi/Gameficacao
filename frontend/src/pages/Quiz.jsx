@@ -471,6 +471,13 @@ function TelaResultado({ resultado, sons = true }) {
         <CartaoStat rotulo="Nível" valor={resultado.nivel} />
       </div>
 
+      {resultado.streak_dias > 1 && (
+        <div className="anim-pop card-pixel mt-4 flex items-center justify-center gap-2 border-2 border-orange-500/40 bg-orange-500/10 p-3 text-orange-300">
+          <PixelIcon nome="fire" className="h-5 w-5" />
+          {resultado.streak_dias} dias seguidos jogando!
+        </div>
+      )}
+
       {resultado.xp_ganho === 0 && resultado.xp_bruto > 0 && (
         <p className="mt-3 text-xs text-slate-500">
           Você já havia alcançado essa pontuação antes — repetir a fase só rende XP ao superar seu

@@ -50,6 +50,8 @@ function condicaoAtendida(badge, ctx) {
       );
     case 'sequencia_acertos':
       return ctx.sequenciaAtual >= (p.acertos ?? Infinity);
+    case 'streak_dias':
+      return (ctx.streakAtual ?? 0) >= (p.dias ?? Infinity);
     default:
       return false;
   }

@@ -2,6 +2,7 @@ import { db } from '../config/supabase.js';
 import { HttpError } from '../utils/httpError.js';
 import { embaralhar } from '../utils/random.js';
 import { nivelPorXp } from '../utils/nivel.js';
+import { dataDeHoje, proximoStreak } from '../utils/streak.js';
 import { verificarBadges } from './badgeService.js';
 
 const QUESTOES_POR_QUIZ = 10;
@@ -313,9 +314,19 @@ export async function finalizarQuiz(usuario, tentativaId) {
 
   const xpTotal = usuario.xp_total + xpGanho;
   const nivel = nivelPorXp(xpTotal);
+
+  // Streak diário: qualquer quiz finalizado (campanha ou custom) conta como
+  // atividade do dia. Calculado no servidor a partir do streak salvo.
+  const hoje = dataDeHoje();
+  const streakDias = proximoStreak({
+    streakAtual: usuario.streak_dias,
+    ultimoDia: usuario.streak_ultimo_dia,
+    hoje,
+  });
+
   const { error: erroPerfil } = await db
     .from('profiles')
-    .update({ xp_total: xpTotal, nivel })
+    .update({ xp_total: xpTotal, nivel, streak_dias: streakDias, streak_ultimo_dia: hoje })
     .eq('id', usuario.id);
   if (erroPerfil) throw erroPerfil;
 
@@ -334,6 +345,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
     faseOrdem: fase?.ordem ?? null,
     quizPerfeito: tentativa.total_questoes > 0 && acertos === tentativa.total_questoes,
     tempoMedioMs,
+    streakAtual: streakDias,
   });
 
   let titulo = fase?.nome;
@@ -354,6 +366,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
     subiu_nivel: nivel > usuario.nivel,
     fase_concluida: progresso.concluida,
     badges_novas: badgesNovas,
+    streak_dias: streakDias,
   };
 }
 

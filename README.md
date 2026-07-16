@@ -50,7 +50,10 @@ fases desbloqueável e ranking.
 │   ├── 03_seed_fases_badges.sql  #   Fases e badges iniciais
 │   ├── 04_hardening.sql          #   Views security invoker, search_path, revokes
 │   ├── 05_seed_questoes.sql      #   22 questões de exemplo (5 fases)
-│   └── 06_quiz_custom_dicas.sql  #   Quizzes do professor (tempo/sons/dicas)
+│   ├── 06_quiz_custom_dicas.sql  #   Quizzes do professor (tempo/sons/dicas)
+│   ├── 07_quizzes_abertos.sql    #   Quizzes deixam de ser restritos a turma
+│   ├── 08_streak_diario.sql      #   Coluna de streak + valor de enum de badge
+│   └── 09_streak_badges_seed.sql #   Badges de streak (3/7/30 dias)
 ├── backend/
 │   └── src/
 │       ├── config/               # Cliente Supabase, variáveis de ambiente
