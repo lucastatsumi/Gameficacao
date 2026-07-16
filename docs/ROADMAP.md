@@ -44,6 +44,82 @@ estudantes primeiro.
   quizzes abertos com dicas; adicionar templates prontos por tópico para o
   professor montar quiz rápido.
 
+## Engajamento e retenção — RPG, poderes e minigames
+
+Conjunto de mecânicas para prender o aluno além do quiz puro, mantendo a
+regra de ouro do projeto: **o backend continua sendo o único que sabe qual
+alternativa é a correta**; nenhuma mecânica nova pode vazar essa informação
+no frontend antes da hora.
+
+### 1. Progressão de personagem (RPG leve)
+
+- **Avatar por nível**: sprite pixel-art evolui a cada faixa de nível (usa o
+  mesmo estilo visual de `assets/pixelarticons`). Reaproveita o cálculo de
+  nível já existente em `backend/src/utils/nivel.js`.
+- **"Classes" temáticas por fase**: ao concluir a fase de Listas, Pilhas/
+  Filas, Árvores, Grafos etc., o aluno ganha um título temático (ex.:
+  "Guardião das Listas") exibido no `Perfil` e no `Ranking`.
+- **Atributos exibidos no Perfil** (derivados, não gameplay): Precisão (%
+  acerto histórico), Velocidade (tempo médio de resposta), Persistência
+  (sequência de dias ativos). Tudo calculável a partir de `tentativas` e
+  `respostas`, sem nova tabela.
+- Escopo de dados: tabela nova `personagem` (ou colunas em `profiles`) para
+  título atual e cosmético de avatar equipado.
+
+### 2. Poderes (power-ups) usáveis durante o quiz
+
+Regra de design: todo poder é resolvido **no backend**, no mesmo endpoint
+que hoje serve a questão/processa a resposta — o frontend só pede
+"usar poder X" e recebe o efeito já aplicado.
+
+| Poder | Efeito | Onde entra no backend |
+|---|---|---|
+| Eliminar alternativa (50/50) | Remove 1 alternativa errada da resposta da API antes de enviar ao cliente | `quizController`/`quizService`, no momento de montar a questão a exibir |
+| Tempo extra (+15s) | Soma ao `tempo_limite_seg` daquela questão específica | mesmo ponto onde o timer é validado no submit |
+| Pular sem perder XP | Marca a questão como pulada sem contar erro, 1x por fase | fluxo de `respostas`, novo tipo de resultado além de certo/errado/tempo-esgotado |
+| Segunda chance | Erro na 1ª tentativa da fase não é contabilizado contra aprovação | lógica de `atualizarProgressoFase` em `quizService.js` |
+
+- **Aquisição**: poderes ganhos como recompensa de badge/streak, com estoque
+  limitado (ex.: "você tem 2 usos de 50/50 essa semana") — cria decisão
+  estratégica em vez de trivializar o quiz.
+- Nova tabela sugerida: `poderes` (catálogo) + `usuario_poderes` (estoque
+  por aluno) + registro de uso em `respostas` (ex.: coluna
+  `poder_usado_id` nullable).
+
+### 3. Minigames entre fases
+
+- **Reordenar algoritmo**: arrastar passos embaralhados de um algoritmo
+  (ex.: bubble sort, busca binária) na ordem correta, contra o tempo —
+  variação de UI que não depende de nova lógica de correção complexa (é uma
+  sequência fixa correta por algoritmo, cadastrável como conteúdo estático).
+- **Batalha de complexidade**: compara Big-O de dois trechos de código,
+  aluno escolhe o mais eficiente, timer curto estilo arcade — reaproveita o
+  modelo de "questão com alternativas", só muda o layout.
+- **Boss fight a cada N fases**: quiz relâmpago misturando questões de fases
+  anteriores, com "vidas" (N erros = fim da tentativa) — reaproveita
+  `quizCustomService.js` (já monta quizzes sob medida) para selecionar o
+  pool de questões.
+
+### 4. Retenção contínua
+
+- **Streak diário** com recompensa crescente (mais XP ou poderes a cada dia
+  consecutivo) — precisa de um job/consulta diária sobre `tentativas` para
+  calcular e não quebrar a sequência por fuso horário.
+- **Eventos temporários** (ex.: "semana das árvores" com XP em dobro em
+  questões daquela fase) — flag simples de período ativo + multiplicador no
+  cálculo de XP em `quizService.js`.
+
+### Ordem sugerida de implementação
+
+1. Minigame "Batalha de complexidade" (reaproveita infraestrutura de questão
+   existente, menor risco).
+2. Poderes "Eliminar alternativa" e "Tempo extra" (maior impacto percebido,
+   escopo de backend contido).
+3. Progressão de personagem / avatar por nível (cosmético, sem risco de
+   lógica de jogo).
+4. Streak diário e eventos temporários.
+5. "Reordenar algoritmo" e boss fight (maior esforço de UI/conteúdo).
+
 ## Longo prazo (expansão)
 
 - **Multiplayer/desafio entre colegas** — duelo síncrono ou assíncrono
