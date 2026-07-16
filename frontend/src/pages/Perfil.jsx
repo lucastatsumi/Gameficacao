@@ -70,6 +70,26 @@ export default function Perfil() {
             {perfil.nivel + 1}
           </p>
         </div>
+
+        {perfil.poderes && (perfil.poderes.eliminar_alternativa > 0 || perfil.poderes.tempo_extra > 0) && (
+          <div className="mt-4 flex flex-wrap gap-3 border-t-2 border-slate-800 pt-4">
+            <p className="w-full text-xs uppercase tracking-wide text-slate-500">
+              Poderes disponíveis (use durante o quiz)
+            </p>
+            {perfil.poderes.eliminar_alternativa > 0 && (
+              <span className="flex items-center gap-1.5 border-2 border-violet-500/40 bg-violet-500/10 px-3 py-1.5 text-xs text-violet-300">
+                <PixelIcon nome="trash" className="h-4 w-4" />
+                50/50 × {perfil.poderes.eliminar_alternativa}
+              </span>
+            )}
+            {perfil.poderes.tempo_extra > 0 && (
+              <span className="flex items-center gap-1.5 border-2 border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs text-sky-300">
+                <PixelIcon nome="clock" className="h-4 w-4" />
+                +15s × {perfil.poderes.tempo_extra}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* estante de badges */}

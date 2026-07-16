@@ -101,6 +101,7 @@ describe('responderQuestao', () => {
         ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 1, iniciada_em: inicio.toISOString() }),
       ],
       questoes: [ok(questaoBase)],
+      poderes_usados: [ok(null)],
       respostas: [ok(null), ok(null)], // sem resposta anterior; depois o insert
       dicas_usadas: [ok(null)],
     });
@@ -130,6 +131,7 @@ describe('responderQuestao', () => {
         ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 1, iniciada_em: inicio.toISOString() }),
       ],
       questoes: [ok(questaoBase)],
+      poderes_usados: [ok(null)],
       respostas: [ok(null), ok(null)],
       dicas_usadas: [ok(null)],
     });
@@ -152,6 +154,7 @@ describe('responderQuestao', () => {
         ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 1, iniciada_em: inicio.toISOString() }),
       ],
       questoes: [ok(questaoBase)],
+      poderes_usados: [ok(null)],
       respostas: [ok(null)],
     });
 
@@ -167,6 +170,7 @@ describe('responderQuestao', () => {
         ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 1, iniciada_em: inicio.toISOString() }),
       ],
       questoes: [ok(questaoBase)],
+      poderes_usados: [ok(null)],
       respostas: [ok(null), fail({ code: '23505' })],
       dicas_usadas: [ok(null)],
     });

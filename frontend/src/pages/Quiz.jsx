@@ -23,7 +23,7 @@ import {
 export default function Quiz() {
   // /quiz/:faseId (campanha) ou /quiz/custom/:quizId (quiz da turma)
   const { faseId, quizId } = useParams();
-  const { recarregarPerfil } = useAuth();
+  const { recarregarPerfil, perfil } = useAuth();
 
   const [quiz, setQuiz] = useState(null); // { tentativa_id, fase|quiz, questoes }
   const [indice, setIndice] = useState(0);
@@ -34,6 +34,18 @@ export default function Quiz() {
   const [enviando, setEnviando] = useState(false);
   const [somAtivo, setSomAtivo] = useState(somLigado());
   const [dica, setDica] = useState(null); // texto da dica revelada
+
+  // poderes (power-ups): estoque local, sincronizado do perfil ao carregar o
+  // quiz e debitado localmente a cada uso (o servidor é a fonte da verdade —
+  // recarregarPerfil() no fim do quiz corrige qualquer divergência)
+  const [estoquePoderes, setEstoquePoderes] = useState({ eliminar_alternativa: 0, tempo_extra: 0 });
+  const [alternativaEscondida, setAlternativaEscondida] = useState(null);
+  const [tempoExtraUsado, setTempoExtraUsado] = useState(false);
+  const extraSegundosRef = useRef(0);
+
+  useEffect(() => {
+    if (perfil?.poderes) setEstoquePoderes(perfil.poderes);
+  }, [perfil]);
 
   const [tempoRestante, setTempoRestante] = useState(0);
   const inicioQuestaoRef = useRef(Date.now());
@@ -101,12 +113,38 @@ export default function Quiz() {
     }
   }
 
+  // ---------- usar poder (eliminar alternativa / tempo extra) ----------
+  async function usarPoder(poder) {
+    if (enviando || feedback) return;
+    if (poder === 'eliminar_alternativa' && (alternativaEscondida || estoquePoderes.eliminar_alternativa <= 0)) return;
+    if (poder === 'tempo_extra' && (tempoExtraUsado || estoquePoderes.tempo_extra <= 0)) return;
+
+    som(tocarClique);
+    try {
+      const resp = await api.post('/quiz/poder', {
+        tentativa_id: quiz.tentativa_id,
+        questao_id: questao.id,
+        poder,
+      });
+      setEstoquePoderes((e) => ({ ...e, [poder]: e[poder] - 1 }));
+      if (poder === 'eliminar_alternativa') {
+        setAlternativaEscondida(resp.alternativa_removida_id);
+      } else {
+        extraSegundosRef.current += resp.segundos_extra;
+        setTempoExtraUsado(true);
+        setTempoRestante((t) => t + resp.segundos_extra);
+      }
+    } catch (err) {
+      setErro(err.message);
+    }
+  }
+
   // ---------- timer da questão ----------
   useEffect(() => {
     if (!questao || feedback || resultado) return;
     const intervalo = setInterval(() => {
       const decorrido = Math.floor((Date.now() - inicioQuestaoRef.current) / 1000);
-      const restante = questao.tempo_limite_seg - decorrido;
+      const restante = questao.tempo_limite_seg + extraSegundosRef.current - decorrido;
       setTempoRestante(Math.max(0, restante));
 
       // tick sonoro nos 5 segundos finais (uma vez por segundo)
@@ -143,6 +181,9 @@ export default function Quiz() {
     setFeedback(null);
     setSelecionada(null);
     setDica(null);
+    setAlternativaEscondida(null);
+    setTempoExtraUsado(false);
+    extraSegundosRef.current = 0;
     ultimoTickRef.current = null;
     const proximaQuestao = quiz.questoes[indice + 1];
     setTempoRestante(proximaQuestao.tempo_limite_seg);
@@ -279,21 +320,51 @@ export default function Quiz() {
         </div>
       )}
 
+      {/* poderes */}
+      {!feedback && (estoquePoderes.eliminar_alternativa > 0 || estoquePoderes.tempo_extra > 0) && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {estoquePoderes.eliminar_alternativa > 0 && (
+            <button
+              onClick={() => usarPoder('eliminar_alternativa')}
+              disabled={Boolean(alternativaEscondida) || enviando}
+              title="Elimina uma alternativa errada"
+              className="btn-pixel flex items-center gap-2 border-2 border-violet-500/40 bg-slate-900 px-3 py-2 font-pixel text-[10px] text-violet-300 hover:bg-violet-500/10 disabled:opacity-40"
+            >
+              <PixelIcon nome="trash" className="h-4 w-4" />
+              50/50 ({estoquePoderes.eliminar_alternativa})
+            </button>
+          )}
+          {estoquePoderes.tempo_extra > 0 && (
+            <button
+              onClick={() => usarPoder('tempo_extra')}
+              disabled={tempoExtraUsado || enviando}
+              title="Adiciona 15 segundos ao tempo desta questão"
+              className="btn-pixel flex items-center gap-2 border-2 border-sky-500/40 bg-slate-900 px-3 py-2 font-pixel text-[10px] text-sky-300 hover:bg-sky-500/10 disabled:opacity-40"
+            >
+              <PixelIcon nome="clock" className="h-4 w-4" />
+              +15s ({estoquePoderes.tempo_extra})
+            </button>
+          )}
+        </div>
+      )}
+
       {/* alternativas */}
       <div className="mt-4 space-y-3">
-        {questao.alternativas.map((alt) => (
-          <BotaoAlternativa
-            key={alt.id}
-            alt={alt}
-            feedback={feedback}
-            selecionada={selecionada}
-            desabilitado={Boolean(feedback) || enviando}
-            aoClicar={() => {
-              som(tocarClique);
-              responder(alt.id);
-            }}
-          />
-        ))}
+        {questao.alternativas
+          .filter((alt) => alt.id !== alternativaEscondida)
+          .map((alt) => (
+            <BotaoAlternativa
+              key={alt.id}
+              alt={alt}
+              feedback={feedback}
+              selecionada={selecionada}
+              desabilitado={Boolean(feedback) || enviando}
+              aoClicar={() => {
+                som(tocarClique);
+                responder(alt.id);
+              }}
+            />
+          ))}
       </div>
 
       {/* feedback + próxima */}

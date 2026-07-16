@@ -199,6 +199,17 @@ export async function responderQuestao(userId, dados) {
     throw new HttpError(400, 'Questão não pertence a esta tentativa');
   }
 
+  // Poder "tempo_extra" usado nesta questão (registrado pelo servidor em
+  // /quiz/poder) soma ao limite antes de decidir se estourou o tempo.
+  const { data: poderTempo } = await db
+    .from('poderes_usados')
+    .select('segundos_extra')
+    .eq('tentativa_id', tentativa_id)
+    .eq('questao_id', questao_id)
+    .eq('poder', 'tempo_extra')
+    .maybeSingle();
+  if (poderTempo?.segundos_extra) tempoLimiteSeg += poderTempo.segundos_extra;
+
   // Timer no servidor: o tempo conta desde a resposta anterior
   // (ou desde o início da tentativa, na primeira questão)
   const { data: ultimaResposta } = await db
@@ -388,7 +399,7 @@ async function abandonarTentativasAbertas(userId) {
     .is('finalizada_em', null);
 }
 
-async function buscarTentativa(userId, tentativaId) {
+export async function buscarTentativa(userId, tentativaId) {
   const { data, error } = await db
     .from('tentativas')
     .select('*')
@@ -411,7 +422,7 @@ async function buscarQuizCustom(quizId) {
   return data;
 }
 
-async function exigirQuestaoNoQuiz(quizId, questaoId) {
+export async function exigirQuestaoNoQuiz(quizId, questaoId) {
   const { data, error } = await db
     .from('quiz_custom_questoes')
     .select('questao_id')

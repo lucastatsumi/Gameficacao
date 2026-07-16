@@ -6,11 +6,12 @@ estudantes primeiro.
 
 ## ✅ Implementado nesta rodada
 
-- **Testes automatizados no backend** (vitest) — 43 testes cobrindo a lógica
-  mais crítica do jogo: `nivel.js`, `badgeService` (todas as condições de
-  badge), `quizCustomService.validarPayload`, `relatorioService` (CSV) e os
-  fluxos centrais de `quizService` (bloqueio de fase, sorteio de questões sem
-  vazar gabarito, timer/tempo esgotado, regra anti-farming de XP). Rodar com
+- **Testes automatizados no backend** (vitest) — 53 testes cobrindo a lógica
+  mais crítica do jogo: `nivel.js`, `streak.js`, `badgeService` (todas as
+  condições de badge), `quizCustomService.validarPayload`,
+  `relatorioService` (CSV), `poderService` e os fluxos centrais de
+  `quizService` (bloqueio de fase, sorteio de questões sem vazar gabarito,
+  timer/tempo esgotado, regra anti-farming de XP). Rodar com
   `cd backend && npm test`.
 - **Correção de bug**: `Ranking.jsx` chamava `GET /turmas/:id/quizzes`, um
   endpoint que nunca existiu no backend — código morto de antes da migration
@@ -22,6 +23,12 @@ estudantes primeiro.
   testada), integração em `quizService.finalizarQuiz`, novo tipo de badge
   `streak_dias` (3/7/30 dias), exibição no `Perfil` e na tela de resultado do
   quiz.
+- **Poderes (power-ups)** — "Eliminar alternativa" e "Tempo extra"
+  implementados ponta a ponta: `database/10_poderes.sql`,
+  `backend/src/services/poderService.js` (com testes), endpoint
+  `POST /quiz/poder`, integração do tempo extra na validação do timer em
+  `quizService.responderQuestao`, concessão automática ao ganhar badge/tirar
+  100%, e UI em `Quiz.jsx` (botões de poder) e `Perfil.jsx` (estoque).
 - Correção de imprecisões deste documento: `relatorioService.js` **já
   existia** (relatório de desempenho por questão + exportação CSV da turma),
   o timer já tinha aviso visual (`timerCritico`), e os estados vazios de
@@ -91,23 +98,25 @@ no frontend antes da hora.
 
 ### 2. Poderes (power-ups) usáveis durante o quiz
 
-Regra de design: todo poder é resolvido **no backend**, no mesmo endpoint
-que hoje serve a questão/processa a resposta — o frontend só pede
+Regra de design: todo poder é resolvido **no backend** — o frontend só pede
 "usar poder X" e recebe o efeito já aplicado.
 
-| Poder | Efeito | Onde entra no backend |
+| Poder | Efeito | Status |
 |---|---|---|
-| Eliminar alternativa (50/50) | Remove 1 alternativa errada da resposta da API antes de enviar ao cliente | `quizController`/`quizService`, no momento de montar a questão a exibir |
-| Tempo extra (+15s) | Soma ao `tempo_limite_seg` daquela questão específica | mesmo ponto onde o timer é validado no submit |
-| Pular sem perder XP | Marca a questão como pulada sem contar erro, 1x por fase | fluxo de `respostas`, novo tipo de resultado além de certo/errado/tempo-esgotado |
-| Segunda chance | Erro na 1ª tentativa da fase não é contabilizado contra aprovação | lógica de `atualizarProgressoFase` em `quizService.js` |
+| Eliminar alternativa (50/50) | Sorteia e remove 1 alternativa errada; o cliente esconde e nunca sabe qual das restantes é a certa | ✅ implementado |
+| Tempo extra (+15s) | Soma ao tempo limite da questão; o servidor guarda o uso e soma o extra ao validar o timer em `/quiz/responder` | ✅ implementado |
+| Pular sem perder XP | Marca a questão como pulada sem contar erro, 1x por fase | não implementado |
+| Segunda chance | Erro na 1ª tentativa da fase não é contabilizado contra aprovação | não implementado |
 
-- **Aquisição**: poderes ganhos como recompensa de badge/streak, com estoque
-  limitado (ex.: "você tem 2 usos de 50/50 essa semana") — cria decisão
-  estratégica em vez de trivializar o quiz.
-- Nova tabela sugerida: `poderes` (catálogo) + `usuario_poderes` (estoque
-  por aluno) + registro de uso em `respostas` (ex.: coluna
-  `poder_usado_id` nullable).
+Implementado em `database/10_poderes.sql` (tabelas `usuario_poderes` e
+`poderes_usados`), `backend/src/services/poderService.js` (com testes),
+endpoint `POST /quiz/poder`, e UI em `Quiz.jsx`/`Perfil.jsx`.
+
+- **Aquisição**: cada badge nova concede 1 uso de "eliminar_alternativa";
+  cravar um quiz 100% concede 1 uso de "tempo_extra" (regra em
+  `quizController.finalizar`, fora de `quizService` para não criar
+  dependência circular entre os dois serviços). Ainda não há concessão
+  ligada a streak — próximo passo natural.
 
 ### 3. Minigames entre fases
 
@@ -140,10 +149,9 @@ que hoje serve a questão/processa a resposta — o frontend só pede
 ### Ordem sugerida de implementação
 
 1. ~~Streak diário~~ ✅ feito.
-2. Minigame "Batalha de complexidade" (reaproveita infraestrutura de questão
+2. ~~Poderes "Eliminar alternativa" e "Tempo extra"~~ ✅ feito.
+3. Minigame "Batalha de complexidade" (reaproveita infraestrutura de questão
    existente, menor risco).
-3. Poderes "Eliminar alternativa" e "Tempo extra" (maior impacto percebido,
-   escopo de backend contido).
 4. Progressão de personagem / avatar por nível (cosmético, sem risco de
    lógica de jogo).
 5. Eventos temporários e recompensa crescente de streak.

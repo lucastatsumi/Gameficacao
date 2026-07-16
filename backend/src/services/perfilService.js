@@ -1,14 +1,15 @@
 import { db } from '../config/supabase.js';
 import { xpParaNivel } from '../utils/nivel.js';
+import { estoqueDoUsuario } from './poderService.js';
 
 export async function obterPerfil(usuario) {
   const xpNivelAtual = xpParaNivel(usuario.nivel);
   const xpProximoNivel = xpParaNivel(usuario.nivel + 1);
 
-  const { count: totalBadges } = await db
-    .from('usuario_badges')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', usuario.id);
+  const [{ count: totalBadges }, poderes] = await Promise.all([
+    db.from('usuario_badges').select('*', { count: 'exact', head: true }).eq('user_id', usuario.id),
+    estoqueDoUsuario(usuario.id),
+  ]);
 
   return {
     id: usuario.id,
@@ -25,6 +26,7 @@ export async function obterPerfil(usuario) {
     ),
     total_badges: totalBadges ?? 0,
     streak_dias: usuario.streak_dias ?? 0,
+    poderes,
   };
 }
 
