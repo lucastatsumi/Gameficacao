@@ -5,22 +5,33 @@ import Alerta from '../ui/Alerta.jsx';
 import PixelIcon from '../ui/PixelIcon.jsx';
 import { inputCls } from './inputCls.js';
 
-const QUESTAO_VAZIA = {
-  fase_id: '',
-  enunciado: '',
-  codigo_snippet: '',
-  linguagem: 'javascript',
-  dificuldade: 'media',
-  tempo_limite_seg: 60,
-  xp_valor: 10,
-  dica: '',
-  alternativas: ['A', 'B', 'C', 'D'].map((letra) => ({
+// Cada formato de questão exige um conjunto fixo de letras — precisa bater
+// com LETRAS_POR_FORMATO em backend/src/services/questaoService.js.
+const LETRAS_POR_FORMATO = { padrao: ['A', 'B', 'C', 'D'], batalha_complexidade: ['A', 'B'] };
+
+function alternativasVazias(formato) {
+  return LETRAS_POR_FORMATO[formato].map((letra) => ({
     letra,
     texto: '',
     correta: letra === 'A',
     explicacao: '',
-  })),
-};
+  }));
+}
+
+function questaoVazia(formato = 'padrao') {
+  return {
+    fase_id: '',
+    enunciado: '',
+    codigo_snippet: '',
+    linguagem: 'javascript',
+    dificuldade: 'media',
+    tempo_limite_seg: formato === 'batalha_complexidade' ? 15 : 60,
+    xp_valor: formato === 'batalha_complexidade' ? 20 : 10,
+    dica: '',
+    formato,
+    alternativas: alternativasVazias(formato),
+  };
+}
 
 export default function AbaQuestoes() {
   const [fases, setFases] = useState([]);
@@ -70,7 +81,7 @@ export default function AbaQuestoes() {
           ))}
         </select>
         <button
-          onClick={() => setForm({ dados: structuredClone(QUESTAO_VAZIA), editandoId: null })}
+          onClick={() => setForm({ dados: questaoVazia(), editandoId: null })}
           className="btn-pixel ml-auto flex items-center gap-1.5 bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
         >
           <PixelIcon nome="plus" className="h-4 w-4" />
@@ -106,6 +117,11 @@ export default function AbaQuestoes() {
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap gap-2 text-xs">
+                    {q.formato === 'batalha_complexidade' && (
+                      <span className="rounded-full bg-fuchsia-500/10 px-2 py-0.5 text-fuchsia-300">
+                        batalha
+                      </span>
+                    )}
                     <span className="rounded-full bg-slate-800 px-2 py-0.5 text-slate-400">
                       {fases.find((f) => f.id === q.fase_id)?.nome ?? `Fase ${q.fase_id}`}
                     </span>
@@ -136,6 +152,7 @@ export default function AbaQuestoes() {
                           tempo_limite_seg: q.tempo_limite_seg,
                           xp_valor: q.xp_valor,
                           dica: q.dica ?? '',
+                          formato: q.formato ?? 'padrao',
                           alternativas: q.alternativas.map((a) => ({
                             letra: a.letra,
                             texto: a.texto,
@@ -177,6 +194,10 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
 
   function mudar(campo, valor) {
     setDados((d) => ({ ...d, [campo]: valor }));
+  }
+
+  function mudarFormato(formato) {
+    setDados((d) => ({ ...d, formato, alternativas: alternativasVazias(formato) }));
   }
 
   function mudarAlternativa(letra, campo, valor) {
@@ -242,6 +263,16 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
               {f.nome}
             </option>
           ))}
+        </select>
+        <select
+          value={dados.formato}
+          onChange={(e) => mudarFormato(e.target.value)}
+          disabled={Boolean(form.editandoId)}
+          title={form.editandoId ? 'O formato não pode ser alterado depois de criada' : undefined}
+          className={`${inputCls} disabled:opacity-50`}
+        >
+          <option value="padrao">Múltipla escolha (4 alternativas)</option>
+          <option value="batalha_complexidade">Batalha de Complexidade (2 alternativas)</option>
         </select>
         <select
           value={dados.dificuldade}

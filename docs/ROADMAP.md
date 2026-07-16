@@ -6,7 +6,7 @@ estudantes primeiro.
 
 ## ✅ Implementado nesta rodada
 
-- **Testes automatizados no backend** (vitest) — 80 testes cobrindo a lógica
+- **Testes automatizados no backend** (vitest) — 96 testes cobrindo a lógica
   mais crítica do jogo: `nivel.js`, `streak.js`, `badgeService` (todas as
   condições de badge), `quizCustomService.validarPayload`,
   `relatorioService` (CSV), `poderService` e os fluxos centrais de
@@ -214,12 +214,21 @@ endpoint `POST /quiz/poder`, e UI em `Quiz.jsx`/`Perfil.jsx`.
 - **Multiplayer/desafio entre colegas** — duelo síncrono ou assíncrono
   (melhor tempo/acertos) entre dois alunos na mesma fase.
 - **Trilhas de aprendizagem alternativas** — múltiplos caminhos no mapa de
-  fases (não só linear), com fases opcionais de aprofundamento.
-- **Editor visual de questões para o professor** — hoje a criação de questão
-  provavelmente passa por SQL/admin; um formulário guiado no `Admin.jsx`
-  reduziria erro humano e dependência do agente de conteúdo.
-- **Exportação de relatórios (CSV/PDF)** para uso do professor fora da
-  plataforma (apoio ao TCC/avaliação).
+  fases (não só linear), com fases opcionais de aprofundamento. A "Batalha
+  de Complexidade" (fase 6, sempre desbloqueada) já é um primeiro passo
+  nessa direção — uma fase fora da trilha sequencial obrigatória.
+- ~~Editor visual de questões para o professor~~ **já existia antes desta
+  rodada** — `components/admin/AbaQuestoes.jsx` (`FormQuestao`) já é um
+  formulário guiado completo. Item retirado daqui por engano na primeira
+  versão deste roadmap. ✅ **Nesta rodada**: o editor passou a suportar
+  também `formato = 'batalha_complexidade'` (2 alternativas A/B em vez de
+  4) — seletor de formato no momento da criação (não pode mudar depois de
+  criada: `questaoService.atualizarQuestao` ignora o formato do payload e
+  usa sempre o já salvo, já que as alternativas existentes têm um número
+  fixo de letras). `questaoService` ganhou testes (16 casos).
+- ~~Exportação de relatórios (CSV/PDF)~~ **CSV já existia antes desta
+  rodada** (`GET /admin/turmas/:id/relatorio.csv`, botão "CSV" na aba
+  Turmas). Falta só a exportação em **PDF**.
 - **Internacionalização** — se houver interesse em usar o jogo além do
   público de língua portuguesa.
 - **Acessibilidade avançada** — suporte a leitor de tela completo no fluxo
@@ -227,10 +236,11 @@ endpoint `POST /quiz/poder`, e UI em `Quiz.jsx`/`Perfil.jsx`.
 
 ## Infraestrutura / qualidade
 
-- **Ampliar cobertura de testes** — os fluxos mais críticos de `quizService`
-  e `badgeService` já têm testes; faltam `perfilService`, `turmaService`,
-  `questaoService` e testes de componente no frontend (ex.: com
-  `@testing-library/react`, ainda não instalado).
+- **Ampliar cobertura de testes** — `quizService`, `badgeService`,
+  `perfilService`, `questaoService`, `poderService`, `eventoService` e
+  `quizCustomService` já têm testes (96 no total). Falta `turmaService` e
+  testes de componente no frontend (ex.: com `@testing-library/react`,
+  ainda não instalado).
 - **Monitoramento de qualidade das questões** — rodar o agente
   `question-researcher` periodicamente em modo de auditoria sobre
   `database/05_seed_questoes.sql` e futuras seeds, para pegar

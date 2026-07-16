@@ -33,6 +33,7 @@ export async function criarQuestao(professorId, dados) {
       tempo_limite_seg: questao.tempo_limite_seg,
       xp_valor: questao.xp_valor,
       dica: questao.dica,
+      formato: questao.formato,
       criada_por: professorId,
     })
     .select()
@@ -52,15 +53,19 @@ export async function criarQuestao(professorId, dados) {
 }
 
 export async function atualizarQuestao(questaoId, dados) {
-  const questao = validarPayload(dados);
-
   const { data: existente, error: erroBusca } = await db
     .from('questoes')
-    .select('id, alternativas ( id, letra )')
+    .select('id, formato, alternativas ( id, letra )')
     .eq('id', questaoId)
     .maybeSingle();
   if (erroBusca) throw erroBusca;
   if (!existente) throw new HttpError(404, 'Questão não encontrada');
+
+  // O formato (padrão x batalha_complexidade) não pode mudar na edição:
+  // as alternativas já criadas (e possivelmente já respondidas por algum
+  // aluno) têm um número fixo de letras que não muda depois. Ignora
+  // qualquer "formato" vindo do payload e usa sempre o já salvo.
+  const questao = validarPayload({ ...dados, formato: existente.formato });
 
   const { error } = await db
     .from('questoes')
@@ -113,8 +118,15 @@ export async function desativarQuestao(questaoId) {
 
 // ---------------------------------------------------------------
 
-const LETRAS = ['A', 'B', 'C', 'D'];
 const DIFICULDADES = ['facil', 'media', 'dificil'];
+
+// Cada formato de questão exige um conjunto fixo de letras de alternativa.
+// 'padrao': múltipla escolha A-D. 'batalha_complexidade': duelo A-B (ver
+// database/11_batalha_complexidade.sql e o roadmap de engajamento).
+const LETRAS_POR_FORMATO = {
+  padrao: ['A', 'B', 'C', 'D'],
+  batalha_complexidade: ['A', 'B'],
+};
 
 function validarPayload(dados) {
   const {
@@ -126,6 +138,7 @@ function validarPayload(dados) {
     tempo_limite_seg = 60,
     xp_valor = 10,
     dica = null,
+    formato = 'padrao',
     alternativas,
   } = dados ?? {};
 
@@ -140,13 +153,20 @@ function validarPayload(dados) {
   if (!Number.isInteger(xp_valor) || xp_valor < 1) {
     throw new HttpError(400, 'xp_valor deve ser um inteiro >= 1');
   }
-  if (!Array.isArray(alternativas) || alternativas.length !== 4) {
-    throw new HttpError(400, 'A questão deve ter exatamente 4 alternativas');
+  const letrasEsperadas = LETRAS_POR_FORMATO[formato];
+  if (!letrasEsperadas) {
+    throw new HttpError(400, `formato deve ser um de: ${Object.keys(LETRAS_POR_FORMATO).join(', ')}`);
+  }
+  if (!Array.isArray(alternativas) || alternativas.length !== letrasEsperadas.length) {
+    throw new HttpError(
+      400,
+      `Questões no formato "${formato}" devem ter exatamente ${letrasEsperadas.length} alternativas`
+    );
   }
 
   const letras = alternativas.map((a) => a.letra).sort();
-  if (letras.join('') !== LETRAS.join('')) {
-    throw new HttpError(400, 'As alternativas devem ter as letras A, B, C e D');
+  if (letras.join('') !== [...letrasEsperadas].sort().join('')) {
+    throw new HttpError(400, `As alternativas devem ter as letras ${letrasEsperadas.join(', ')}`);
   }
   if (alternativas.filter((a) => a.correta === true).length !== 1) {
     throw new HttpError(400, 'Exatamente uma alternativa deve ser a correta');
@@ -167,6 +187,7 @@ function validarPayload(dados) {
     tempo_limite_seg,
     xp_valor,
     dica: dica?.trim() || null,
+    formato,
     alternativas: alternativas.map((a) => ({
       letra: a.letra,
       texto: a.texto.trim(),
