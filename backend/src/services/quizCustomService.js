@@ -120,7 +120,10 @@ export async function alternarAtivo(userId, quizId, ativo) {
 
 // ---------- Auxiliares ----------
 
-async function validarPayload(dados) {
+// Validação pura dos campos do quiz (sem tocar no banco): título, tempo,
+// quantidade e unicidade das questões. Isolada para ser testável; a checagem
+// de que cada questão existe/está ativa fica em validarPayload.
+export function validarCamposQuiz(dados) {
   const {
     titulo,
     descricao = null,
@@ -144,16 +147,6 @@ async function validarPayload(dados) {
     throw new HttpError(400, 'Há questões repetidas na lista');
   }
 
-  const { data: existentes, error } = await db
-    .from('questoes')
-    .select('id')
-    .in('id', questao_ids)
-    .eq('ativa', true);
-  if (error) throw error;
-  if (existentes.length !== questao_ids.length) {
-    throw new HttpError(400, 'Alguma questão selecionada não existe ou está desativada');
-  }
-
   return {
     titulo: titulo.trim(),
     descricao: descricao?.trim() || null,
@@ -162,6 +155,22 @@ async function validarPayload(dados) {
     permitir_dicas: permitir_dicas !== false,
     questao_ids,
   };
+}
+
+async function validarPayload(dados) {
+  const quiz = validarCamposQuiz(dados);
+
+  const { data: existentes, error } = await db
+    .from('questoes')
+    .select('id')
+    .in('id', quiz.questao_ids)
+    .eq('ativa', true);
+  if (error) throw error;
+  if (existentes.length !== quiz.questao_ids.length) {
+    throw new HttpError(400, 'Alguma questão selecionada não existe ou está desativada');
+  }
+
+  return quiz;
 }
 
 async function exigirQuizDoCriador(userId, quizId) {
