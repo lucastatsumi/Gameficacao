@@ -47,10 +47,23 @@ estudantes primeiro.
 
 ## Curto prazo (ganhos rápidos)
 
-- **Ampliar o banco de questões** — hoje há 22 questões em 5 fases. Usar o
-  agente `question-researcher` para cobrir tópicos ainda ausentes: pilhas,
-  filas, árvores (binária, AVL, B), grafos (BFS/DFS), tabelas hash,
-  heaps/filas de prioridade, recursão.
+- ✅ **Ampliar o banco de questões (fases existentes)** — as 5 fases da
+  campanha tinham só 4-5 questões cada; como o quiz sorteia até 10 por
+  tentativa, o aluno sempre via as mesmas questões em toda tentativa, o que
+  esvaziava a regra anti-farming de XP (só recompensa quando supera o
+  recorde anterior — sem variedade, repetir a fase é decoreba, não
+  desafio). Usei o agente `question-researcher` para gerar +15 questões
+  verificadas (3 por fase), cobrindo ângulos novos: análise amortizada,
+  detecção de ciclo (Floyd), localidade de cache, RPN, min-stack, BFS vs.
+  DFS, deque monotônica, sucessor em BST, heap vs. BST, counting/heap sort.
+  `database/12_mais_questoes.sql`, validado rodando a cadeia completa
+  01–12 num Postgres local (4 alternativas por questão, exatamente 1
+  correta).
+- **Cobrir tópicos ainda sem fase própria**: grafos (BFS/DFS em grafo geral,
+  não só árvore/grid), tabelas hash (colisões, load factor), heaps/filas de
+  prioridade como estrutura própria (hoje só aparecem mencionados dentro da
+  fase de Árvores), recursão — exigiria uma fase nova (fase 7), não só mais
+  questões nas fases atuais.
 - **Extrair componentes de `pages/Quiz.jsx`, `Admin.jsx`, `Quizzes.jsx`** —
   arquivos hoje com 500–950 linhas; mover blocos para
   `components/quiz/`, `components/mapa/`, `components/ranking/` (hoje vazios,

@@ -55,7 +55,8 @@ fases desbloqueável e ranking.
 │   ├── 08_streak_diario.sql      #   Coluna de streak + valor de enum de badge
 │   ├── 09_streak_badges_seed.sql #   Badges de streak (3/7/30 dias)
 │   ├── 10_poderes.sql            #   Poderes (50/50, tempo extra)
-│   └── 11_batalha_complexidade.sql # Minigame de comparação de Big-O
+│   ├── 11_batalha_complexidade.sql # Minigame de comparação de Big-O
+│   └── 12_mais_questoes.sql      #   +15 questões (3 por fase, mais variedade)
 ├── backend/
 │   └── src/
 │       ├── config/               # Cliente Supabase, variáveis de ambiente
