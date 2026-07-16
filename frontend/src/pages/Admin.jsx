@@ -2,7 +2,6 @@ import { useState } from 'react';
 import PixelIcon from '../components/ui/PixelIcon.jsx';
 import AbaTurmas from '../components/admin/AbaTurmas.jsx';
 import AbaQuestoes from '../components/admin/AbaQuestoes.jsx';
-import AbaQuizzes from '../components/admin/AbaQuizzes.jsx';
 import AbaRelatorio from '../components/admin/AbaRelatorio.jsx';
 import AbaEventos from '../components/admin/AbaEventos.jsx';
 
@@ -20,7 +19,6 @@ export default function Admin() {
         {[
           ['turmas', 'users', 'Turmas'],
           ['questoes', 'pencil', 'Questões'],
-          ['quizzes', 'gamepad', 'Quizzes'],
           ['relatorio', 'chart-bar-big', 'Relatório'],
           ['eventos', 'fire', 'Eventos'],
         ].map(([valor, icone, rotulo]) => (
@@ -42,7 +40,6 @@ export default function Admin() {
       <div className="mt-6">
         {aba === 'turmas' && <AbaTurmas />}
         {aba === 'questoes' && <AbaQuestoes />}
-        {aba === 'quizzes' && <AbaQuizzes />}
         {aba === 'relatorio' && <AbaRelatorio />}
         {aba === 'eventos' && <AbaEventos />}
       </div>
