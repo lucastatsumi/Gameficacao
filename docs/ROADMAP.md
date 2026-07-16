@@ -6,7 +6,7 @@ estudantes primeiro.
 
 ## ✅ Implementado nesta rodada
 
-- **Testes automatizados no backend** (vitest) — 111 testes cobrindo a lógica
+- **Testes automatizados no backend** (vitest) — 117 testes cobrindo a lógica
   mais crítica do jogo: `nivel.js`, `streak.js`, `badgeService` (todas as
   condições de badge), `quizCustomService.validarPayload`,
   `relatorioService` (CSV), `poderService` e os fluxos centrais de
@@ -170,10 +170,24 @@ endpoint `POST /quiz/poder`, e UI em `Quiz.jsx`/`Perfil.jsx`.
   `questoes.formato = 'batalha_complexidade'`: dois cards grandes lado a
   lado ("VS") em vez da lista vertical de alternativas
   (`BotaoBatalha` em `Quiz.jsx`), com timer curto (15s) e XP maior (20).
-- **Reordenar algoritmo**: arrastar passos embaralhados de um algoritmo
-  (ex.: bubble sort, busca binária) na ordem correta, contra o tempo —
-  variação de UI que não depende de nova lógica de correção complexa (é uma
-  sequência fixa correta por algoritmo, cadastrável como conteúdo estático).
+- ✅ **Reordenar algoritmo** — implementado como fase bônus sempre
+  desbloqueada (`database/14_reordenar_algoritmo.sql`, fase "Reordenar
+  Algoritmo", 3 questões: troca de variáveis com temporária, inserção no
+  início de lista ligada, uma passada de Bubble Sort — todas escolhidas por
+  terem uma ÚNICA ordem correta possível, sem ambiguidade). Diferente da
+  Batalha, não reaproveita a tabela `alternativas` (não é escolha única):
+  os passos e a ordem certa ficam em colunas `jsonb` na própria questão
+  (`passos`, `ordem_correta` — nunca exposta ao cliente antes da
+  correção). Correção por endpoint isolado `POST /quiz/responder-sequencia`
+  (`quizService.responderSequencia`) que grava na MESMA tabela `respostas`
+  que `responderQuestao` — por isso `finalizarQuiz` (XP, aprovação,
+  badges, streak) funciona sem nenhuma alteração. UI de clique-para-montar-
+  sequência em `Quiz.jsx` (sem lib de drag-and-drop, 100% acessível por
+  teclado/clique). **Pendência**: o editor de questões do professor
+  (`AbaQuestoes.jsx`) ainda não sabe criar questões deste formato — só via
+  SQL/MCP por enquanto, pois exigiria uma UI bem diferente (lista dinâmica
+  de passos + construtor de ordem correta). Poderes (`eliminar_alternativa`,
+  `tempo_extra`) também não se aplicam a este formato ainda.
 - **Boss fight a cada N fases**: quiz relâmpago misturando questões de fases
   anteriores, com "vidas" (N erros = fim da tentativa) — reaproveita
   `quizCustomService.js` (já monta quizzes sob medida) para selecionar o
@@ -207,7 +221,8 @@ endpoint `POST /quiz/poder`, e UI em `Quiz.jsx`/`Perfil.jsx`.
 3. ~~Minigame "Batalha de complexidade"~~ ✅ feito.
 4. ~~Título por nível e classe por fase~~ ✅ feito (falta o avatar visual).
 5. Eventos temporários e recompensa crescente de streak.
-6. "Reordenar algoritmo" e boss fight (maior esforço de UI/conteúdo).
+6. ~~"Reordenar algoritmo"~~ ✅ feito. Falta só boss fight (maior esforço
+   de UI/conteúdo).
 
 ## Longo prazo (expansão)
 

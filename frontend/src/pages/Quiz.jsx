@@ -39,6 +39,11 @@ export default function Quiz() {
     if (perfil?.poderes) setEstoquePoderes(perfil.poderes);
   }, [perfil]);
 
+  // minigame "reordenar algoritmo": ids dos passos na ordem que o aluno
+  // clicou, até completar a sequência
+  const [ordemEscolhida, setOrdemEscolhida] = useState([]);
+  const [feedbackSeq, setFeedbackSeq] = useState(null); // resposta de /quiz/responder-sequencia
+
   const [tempoRestante, setTempoRestante] = useState(0);
   const inicioQuestaoRef = useRef(Date.now());
   const ultimoTickRef = useRef(null); // evita tocar o tick 2x no mesmo segundo
@@ -91,6 +96,30 @@ export default function Quiz() {
     [enviando, feedback, quiz, questao, sonsPermitidos]
   );
 
+  // ---------- enviar sequência (minigame reordenar algoritmo) ----------
+  const responderSeq = useCallback(
+    async (ordem) => {
+      if (enviando || feedbackSeq) return;
+      setEnviando(true);
+      try {
+        const fb = await api.post('/quiz/responder-sequencia', {
+          tentativa_id: quiz.tentativa_id,
+          questao_id: questao.id,
+          ordem,
+        });
+        setFeedbackSeq(fb);
+        if (fb.correta) som(tocarAcerto);
+        else som(tocarErro);
+      } catch (err) {
+        setErro(err.message);
+      } finally {
+        setEnviando(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [enviando, feedbackSeq, quiz, questao, sonsPermitidos]
+  );
+
   // ---------- pedir dica (quiz custom; corta o XP da questão) ----------
   async function pedirDica() {
     som(tocarClique);
@@ -133,7 +162,7 @@ export default function Quiz() {
 
   // ---------- timer da questão ----------
   useEffect(() => {
-    if (!questao || feedback || resultado) return;
+    if (!questao || feedback || feedbackSeq || resultado) return;
     const intervalo = setInterval(() => {
       const decorrido = Math.floor((Date.now() - inicioQuestaoRef.current) / 1000);
       const restante = questao.tempo_limite_seg + extraSegundosRef.current - decorrido;
@@ -147,11 +176,13 @@ export default function Quiz() {
 
       if (restante <= 0) {
         clearInterval(intervalo);
-        responder(null); // tempo esgotado: envia sem alternativa
+        // tempo esgotado: envia vazio/sem alternativa (o formato decide o formato do payload)
+        if (questao.formato === 'reordenar_algoritmo') responderSeq(ordemEscolhida);
+        else responder(null);
       }
     }, 250);
     return () => clearInterval(intervalo);
-  }, [questao, feedback, resultado, responder]);
+  }, [questao, feedback, feedbackSeq, resultado, responder, responderSeq, ordemEscolhida]);
 
   // ---------- avançar / finalizar ----------
   async function proxima() {
@@ -171,6 +202,8 @@ export default function Quiz() {
     }
     setIndice((i) => i + 1);
     setFeedback(null);
+    setFeedbackSeq(null);
+    setOrdemEscolhida([]);
     setSelecionada(null);
     setDica(null);
     setAlternativaEscondida(null);
@@ -196,16 +229,18 @@ export default function Quiz() {
   if (resultado) return <TelaResultado resultado={resultado} sons={sonsPermitidos} />;
 
   const timerCritico = tempoRestante <= 10;
+  const respondida = Boolean(feedback) || Boolean(feedbackSeq);
+  const correta = feedback?.correta ?? feedbackSeq?.correta ?? false;
 
   return (
     <div className="mx-auto max-w-3xl">
       {/* flash de tela ao responder */}
-      {feedback && (
+      {respondida && (
         <div
           key={`flash-${indice}`}
           aria-hidden
           className={`anim-flash pointer-events-none fixed inset-0 z-20 ${
-            feedback.correta ? 'bg-emerald-400/15' : 'bg-red-500/15'
+            correta ? 'bg-emerald-400/15' : 'bg-red-500/15'
           }`}
         />
       )}
@@ -252,14 +287,14 @@ export default function Quiz() {
       <div className="mb-6 h-1.5 overflow-hidden rounded-full bg-slate-800">
         <div
           className="h-full bg-indigo-500 transition-all"
-          style={{ width: `${((indice + (feedback ? 1 : 0)) / quiz.questoes.length) * 100}%` }}
+          style={{ width: `${((indice + (respondida ? 1 : 0)) / quiz.questoes.length) * 100}%` }}
         />
       </div>
 
       {/* enunciado */}
       <div
         className={`card-pixel relative border-2 border-slate-800 bg-slate-900/60 p-6 ${
-          feedback && !feedback.correta ? 'anim-tremer' : ''
+          respondida && !correta ? 'anim-tremer' : ''
         }`}
       >
         <div className="mb-1 flex gap-2 text-xs">
@@ -267,6 +302,12 @@ export default function Quiz() {
             <span className="flex items-center gap-1 bg-fuchsia-500/10 px-2 py-0.5 text-fuchsia-300">
               <PixelIcon nome="fire" className="h-3.5 w-3.5" />
               BATALHA
+            </span>
+          )}
+          {questao.formato === 'reordenar_algoritmo' && (
+            <span className="flex items-center gap-1 bg-sky-500/10 px-2 py-0.5 text-sky-300">
+              <PixelIcon nome="reload" className="h-3.5 w-3.5" />
+              REORDENAR
             </span>
           )}
           <span className="bg-slate-800 px-2 py-0.5 text-slate-400">{questao.dificuldade}</span>
@@ -282,19 +323,19 @@ export default function Quiz() {
         )}
 
         {/* "+XP" flutuando quando acerta (metade se usou dica) */}
-        {feedback?.correta && (
+        {correta && (
           <span
             key={`xp-${indice}`}
             className="anim-subir pointer-events-none absolute -top-2 right-4 font-pixel text-sm text-amber-300"
           >
-            +{feedback.usou_dica ? Math.max(1, Math.floor(questao.xp_valor / 2)) : questao.xp_valor}{' '}
+            +{feedback?.usou_dica ? Math.max(1, Math.floor(questao.xp_valor / 2)) : questao.xp_valor}{' '}
             XP
           </span>
         )}
       </div>
 
       {/* dica (quiz custom) */}
-      {questao.tem_dica && !feedback && (
+      {questao.tem_dica && !respondida && (
         <div className="mt-3">
           {dica ? (
             <div className="anim-pop card-pixel flex items-start gap-3 border-2 border-amber-500/40 bg-amber-500/10 p-4">
@@ -318,8 +359,10 @@ export default function Quiz() {
         </div>
       )}
 
-      {/* poderes */}
-      {!feedback && (estoquePoderes.eliminar_alternativa > 0 || estoquePoderes.tempo_extra > 0) && (
+      {/* poderes — não se aplicam ao minigame de reordenar (sem alternativas) */}
+      {!respondida &&
+        questao.formato !== 'reordenar_algoritmo' &&
+        (estoquePoderes.eliminar_alternativa > 0 || estoquePoderes.tempo_extra > 0) && (
         <div className="mt-3 flex flex-wrap gap-2">
           {estoquePoderes.eliminar_alternativa > 0 && (
             <button
@@ -372,6 +415,80 @@ export default function Quiz() {
               ))}
           </div>
         </div>
+      ) : questao.formato === 'reordenar_algoritmo' ? (
+        <div className="mt-4 space-y-4">
+          <div>
+            <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">
+              Sua ordem {!respondida && '(clique para desfazer um passo)'}
+            </p>
+            {ordemEscolhida.length === 0 && !respondida && (
+              <p className="text-xs text-slate-600">
+                Clique nos passos abaixo, na ordem que você acha certa.
+              </p>
+            )}
+            <div className="space-y-2">
+              {ordemEscolhida.map((id, i) => {
+                const passo = questao.passos.find((p) => p.id === id);
+                if (!passo) return null;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => {
+                      if (respondida) return;
+                      som(tocarClique);
+                      setOrdemEscolhida((o) => o.filter((x) => x !== id));
+                    }}
+                    disabled={respondida || enviando}
+                    className="card-pixel flex w-full items-center gap-3 border-2 border-sky-500/50 bg-sky-500/10 p-3 text-left text-sm text-slate-100 disabled:cursor-default"
+                  >
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center bg-sky-500/30 font-pixel text-[10px] text-sky-200">
+                      {i + 1}
+                    </span>
+                    {passo.texto}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {!respondida && (
+            <div>
+              <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">
+                Passos disponíveis
+              </p>
+              <div className="space-y-2">
+                {questao.passos
+                  .filter((p) => !ordemEscolhida.includes(p.id))
+                  .map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        som(tocarClique);
+                        setOrdemEscolhida((o) => [...o, p.id]);
+                      }}
+                      disabled={enviando}
+                      className="card-pixel w-full border-2 border-slate-800 bg-slate-900/60 p-3 text-left text-sm text-slate-200 hover:border-sky-500/60"
+                    >
+                      {p.texto}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {!respondida && ordemEscolhida.length === questao.passos.length && (
+            <button
+              onClick={() => responderSeq(ordemEscolhida)}
+              disabled={enviando}
+              className="btn-pixel flex w-full items-center justify-center gap-2 bg-sky-600 py-3 font-pixel text-[11px] text-white hover:bg-sky-500 disabled:opacity-50"
+            >
+              <PixelIcon nome="check" className="h-4 w-4" />
+              {enviando ? 'ENVIANDO...' : 'CONFIRMAR ORDEM'}
+            </button>
+          )}
+        </div>
       ) : (
         <div className="mt-4 space-y-3">
           {questao.alternativas
@@ -392,7 +509,7 @@ export default function Quiz() {
         </div>
       )}
 
-      {/* feedback + próxima */}
+      {/* feedback + próxima (formatos padrão/batalha) */}
       {feedback && (
         <div className="mt-6 space-y-4">
           <div
@@ -433,6 +550,54 @@ export default function Quiz() {
                   <p className="mt-2 text-sm text-slate-300">{explicacao.explicacao}</p>
                 ) : null;
               })()}
+            </div>
+          </div>
+
+          <button
+            onClick={proxima}
+            disabled={enviando}
+            className="btn-pixel flex w-full items-center justify-center gap-2 bg-indigo-600 py-3 font-pixel text-[11px] text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+          >
+            <PixelIcon nome={ultima ? 'flag' : 'arrow-right'} className="h-4 w-4" />
+            {enviando ? 'AGUARDE...' : ultima ? 'VER RESULTADO' : 'PRÓXIMA'}
+          </button>
+        </div>
+      )}
+
+      {/* feedback + próxima (formato reordenar_algoritmo) */}
+      {feedbackSeq && (
+        <div className="mt-6 space-y-4">
+          <div
+            className={`card-pixel flex items-start gap-4 border-2 p-4 ${
+              feedbackSeq.correta
+                ? 'anim-pop border-emerald-500/40 bg-emerald-500/10'
+                : 'anim-tremer border-red-500/40 bg-red-500/10'
+            }`}
+          >
+            <img
+              src={feedbackSeq.correta ? pixelFeliz : pixelTriste}
+              alt={feedbackSeq.correta ? 'Carinha feliz' : 'Carinha triste'}
+              className={`w-12 shrink-0 ${feedbackSeq.correta ? 'anim-pular' : 'anim-tremer'}`}
+            />
+            <div className="min-w-0">
+              <p className="flex flex-wrap items-center gap-2 font-semibold">
+                <PixelIcon
+                  nome={feedbackSeq.tempo_esgotado ? 'clock' : feedbackSeq.correta ? 'check' : 'close'}
+                  className={`h-5 w-5 shrink-0 ${feedbackSeq.correta ? 'text-emerald-300' : 'text-red-300'}`}
+                />
+                {feedbackSeq.tempo_esgotado
+                  ? 'Tempo esgotado!'
+                  : feedbackSeq.correta
+                    ? 'Ordem correta!'
+                    : 'Ordem incorreta'}
+              </p>
+              {!feedbackSeq.correta && (
+                <ol className="mt-2 list-decimal space-y-1 pl-4 text-sm text-slate-300">
+                  {feedbackSeq.ordem_correta.map((id) => (
+                    <li key={id}>{questao.passos.find((p) => p.id === id)?.texto}</li>
+                  ))}
+                </ol>
+              )}
             </div>
           </div>
 

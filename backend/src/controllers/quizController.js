@@ -36,6 +36,15 @@ export async function responder(req, res, next) {
   }
 }
 
+export async function responderSequencia(req, res, next) {
+  try {
+    const feedback = await quizService.responderSequencia(req.usuario.id, req.body);
+    res.json(feedback);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function finalizar(req, res, next) {
   try {
     const resultado = await quizService.finalizarQuiz(req.usuario, req.body?.tentativa_id);

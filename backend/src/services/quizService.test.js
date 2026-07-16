@@ -5,7 +5,9 @@ vi.mock('../config/supabase.js', () => ({ db: { from: vi.fn() } }));
 vi.mock('./badgeService.js', () => ({ verificarBadges: vi.fn().mockResolvedValue([]) }));
 
 const { db } = await import('../config/supabase.js');
-const { iniciarQuiz, responderQuestao, finalizarQuiz } = await import('./quizService.js');
+const { iniciarQuiz, responderQuestao, responderSequencia, finalizarQuiz } = await import(
+  './quizService.js'
+);
 const { HttpError } = await import('../utils/httpError.js');
 
 function configurarDb(filas) {
@@ -201,6 +203,122 @@ describe('responderQuestao', () => {
 
     await expect(
       responderQuestao('user-1', { tentativa_id: 't1', questao_id: 'q1', alternativa_id: 'a-certa' })
+    ).rejects.toMatchObject({ status: 409 });
+  });
+});
+
+describe('responderSequencia — minigame reordenar algoritmo', () => {
+  const questaoSequencia = {
+    id: 'qseq',
+    fase_id: 7,
+    tempo_limite_seg: 30,
+    ordem_correta: ['p1', 'p2', 'p3'],
+  };
+
+  it('rejeita sem "ordem" como array', async () => {
+    await expect(
+      responderSequencia('user-1', { tentativa_id: 't1', questao_id: 'qseq' })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('correta quando a ordem enviada bate exatamente com ordem_correta', async () => {
+    const inicio = new Date('2026-01-01T10:00:00.000Z');
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(inicio.getTime() + 5_000));
+
+    configurarDb({
+      tentativas: [
+        ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 7, iniciada_em: inicio.toISOString() }),
+      ],
+      questoes: [ok(questaoSequencia)],
+      respostas: [ok(null), ok(null)],
+    });
+
+    const fb = await responderSequencia('user-1', {
+      tentativa_id: 't1',
+      questao_id: 'qseq',
+      ordem: ['p1', 'p2', 'p3'],
+    });
+
+    expect(fb.correta).toBe(true);
+    expect(fb.tempo_esgotado).toBe(false);
+  });
+
+  it('incorreta quando a ordem está fora de sequência (mesmo com os ids certos)', async () => {
+    const inicio = new Date('2026-01-01T10:00:00.000Z');
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(inicio.getTime() + 5_000));
+
+    configurarDb({
+      tentativas: [
+        ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 7, iniciada_em: inicio.toISOString() }),
+      ],
+      questoes: [ok(questaoSequencia)],
+      respostas: [ok(null), ok(null)],
+    });
+
+    const fb = await responderSequencia('user-1', {
+      tentativa_id: 't1',
+      questao_id: 'qseq',
+      ordem: ['p2', 'p1', 'p3'],
+    });
+
+    expect(fb.correta).toBe(false);
+    expect(fb.ordem_correta).toEqual(['p1', 'p2', 'p3']);
+  });
+
+  it('incorreta quando o tempo esgotou, mesmo com a ordem certa', async () => {
+    const inicio = new Date('2026-01-01T10:00:00.000Z');
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(inicio.getTime() + 40_000)); // > 30s + 5s tolerância
+
+    configurarDb({
+      tentativas: [
+        ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 7, iniciada_em: inicio.toISOString() }),
+      ],
+      questoes: [ok(questaoSequencia)],
+      respostas: [ok(null), ok(null)],
+    });
+
+    const fb = await responderSequencia('user-1', {
+      tentativa_id: 't1',
+      questao_id: 'qseq',
+      ordem: ['p1', 'p2', 'p3'],
+    });
+
+    expect(fb.correta).toBe(false);
+    expect(fb.tempo_esgotado).toBe(true);
+  });
+
+  it('grava a resposta na mesma tabela respostas (alternativa_id null)', async () => {
+    const inicio = new Date();
+    const mock = configurarDb({
+      tentativas: [
+        ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 7, iniciada_em: inicio.toISOString() }),
+      ],
+      questoes: [ok(questaoSequencia)],
+      respostas: [ok(null), ok(null)],
+    });
+
+    await responderSequencia('user-1', { tentativa_id: 't1', questao_id: 'qseq', ordem: ['p1', 'p2', 'p3'] });
+
+    const insertChain = mock.chainsPara('respostas')[1];
+    expect(insertChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ tentativa_id: 't1', questao_id: 'qseq', alternativa_id: null })
+    );
+  });
+
+  it('rejeita reenviar a mesma questão (23505) como conflito', async () => {
+    configurarDb({
+      tentativas: [
+        ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 7, iniciada_em: new Date().toISOString() }),
+      ],
+      questoes: [ok(questaoSequencia)],
+      respostas: [ok(null), fail({ code: '23505' })],
+    });
+
+    await expect(
+      responderSequencia('user-1', { tentativa_id: 't1', questao_id: 'qseq', ordem: ['p1', 'p2', 'p3'] })
     ).rejects.toMatchObject({ status: 409 });
   });
 });
