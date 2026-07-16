@@ -108,6 +108,7 @@ function AbaTurmas() {
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           placeholder="Nome da nova turma (ex.: ES 2026/2 — Noturno)"
+          aria-label="Nome da nova turma"
           className={inputCls}
           required
         />
@@ -287,6 +288,7 @@ function AbaQuestoes() {
         <select
           value={filtroFase}
           onChange={(e) => setFiltroFase(e.target.value)}
+          aria-label="Filtrar questões por fase"
           className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
         >
           <option value="">Todas as fases</option>
@@ -463,6 +465,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
         <select
           value={dados.fase_id}
           onChange={(e) => mudar('fase_id', e.target.value)}
+          aria-label="Fase da questão"
           className={inputCls}
           required
         >
@@ -476,6 +479,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
         <select
           value={dados.dificuldade}
           onChange={(e) => mudar('dificuldade', e.target.value)}
+          aria-label="Dificuldade da questão"
           className={inputCls}
         >
           <option value="facil">Fácil</option>
@@ -489,6 +493,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
           onChange={(e) => mudar('tempo_limite_seg', e.target.value)}
           className={inputCls}
           title="Tempo limite (segundos)"
+          aria-label="Tempo limite em segundos"
         />
         <input
           type="number"
@@ -497,6 +502,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
           onChange={(e) => mudar('xp_valor', e.target.value)}
           className={inputCls}
           title="XP da questão"
+          aria-label="XP da questão"
         />
       </div>
 
@@ -504,6 +510,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
         value={dados.enunciado}
         onChange={(e) => mudar('enunciado', e.target.value)}
         placeholder="Enunciado (cenário + pergunta)"
+        aria-label="Enunciado da questão"
         rows={3}
         className={inputCls}
         required
@@ -512,6 +519,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
         value={dados.codigo_snippet}
         onChange={(e) => mudar('codigo_snippet', e.target.value)}
         placeholder="Trecho de código (opcional)"
+        aria-label="Trecho de código"
         rows={4}
         className={`${inputCls} font-mono`}
       />
@@ -519,6 +527,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
         value={dados.dica}
         onChange={(e) => mudar('dica', e.target.value)}
         placeholder="Dica (opcional — usada nos quizzes da turma; quem pedir ganha metade do XP)"
+        aria-label="Dica"
         className={inputCls}
       />
 
@@ -532,6 +541,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
                   name="correta"
                   checked={alt.correta}
                   onChange={() => mudarAlternativa(alt.letra, 'correta', true)}
+                  aria-label={`Marcar alternativa ${alt.letra} como correta`}
                 />
                 <span className="flex h-6 w-6 items-center justify-center rounded bg-slate-800 text-xs font-bold text-indigo-300">
                   {alt.letra}
@@ -541,6 +551,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
                 value={alt.texto}
                 onChange={(e) => mudarAlternativa(alt.letra, 'texto', e.target.value)}
                 placeholder={`Texto da alternativa ${alt.letra}`}
+                aria-label={`Texto da alternativa ${alt.letra}`}
                 className={inputCls}
                 required
               />
@@ -549,6 +560,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
               value={alt.explicacao}
               onChange={(e) => mudarAlternativa(alt.letra, 'explicacao', e.target.value)}
               placeholder="Explicação (feedback pedagógico mostrado após a resposta)"
+              aria-label={`Explicação da alternativa ${alt.letra}`}
               className={`${inputCls} mt-2`}
               required
             />
@@ -600,6 +612,7 @@ function AbaRelatorio() {
         <select
           value={filtroFase}
           onChange={(e) => setFiltroFase(e.target.value)}
+          aria-label="Filtrar relatório por fase"
           className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
         >
           <option value="">Todas as fases</option>
