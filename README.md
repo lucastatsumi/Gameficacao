@@ -53,7 +53,9 @@ fases desbloqueável e ranking.
 │   ├── 06_quiz_custom_dicas.sql  #   Quizzes do professor (tempo/sons/dicas)
 │   ├── 07_quizzes_abertos.sql    #   Quizzes deixam de ser restritos a turma
 │   ├── 08_streak_diario.sql      #   Coluna de streak + valor de enum de badge
-│   └── 09_streak_badges_seed.sql #   Badges de streak (3/7/30 dias)
+│   ├── 09_streak_badges_seed.sql #   Badges de streak (3/7/30 dias)
+│   ├── 10_poderes.sql            #   Poderes (50/50, tempo extra)
+│   └── 11_batalha_complexidade.sql # Minigame de comparação de Big-O
 ├── backend/
 │   └── src/
 │       ├── config/               # Cliente Supabase, variáveis de ambiente

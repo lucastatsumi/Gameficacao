@@ -271,6 +271,12 @@ export default function Quiz() {
         }`}
       >
         <div className="mb-1 flex gap-2 text-xs">
+          {questao.formato === 'batalha_complexidade' && (
+            <span className="flex items-center gap-1 bg-fuchsia-500/10 px-2 py-0.5 text-fuchsia-300">
+              <PixelIcon nome="fire" className="h-3.5 w-3.5" />
+              BATALHA
+            </span>
+          )}
           <span className="bg-slate-800 px-2 py-0.5 text-slate-400">{questao.dificuldade}</span>
           <span className="flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 text-amber-300">
             <PixelIcon nome="zap" className="h-3.5 w-3.5" />+{questao.xp_valor} XP
@@ -348,24 +354,51 @@ export default function Quiz() {
         </div>
       )}
 
-      {/* alternativas */}
-      <div className="mt-4 space-y-3">
-        {questao.alternativas
-          .filter((alt) => alt.id !== alternativaEscondida)
-          .map((alt) => (
-            <BotaoAlternativa
-              key={alt.id}
-              alt={alt}
-              feedback={feedback}
-              selecionada={selecionada}
-              desabilitado={Boolean(feedback) || enviando}
-              aoClicar={() => {
-                som(tocarClique);
-                responder(alt.id);
-              }}
-            />
-          ))}
-      </div>
+      {/* alternativas — layout normal ou "VS" da Batalha de Complexidade */}
+      {questao.formato === 'batalha_complexidade' ? (
+        <div className="relative mt-6">
+          {!alternativaEscondida && (
+            <span className="pointer-events-none absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 border-2 border-fuchsia-500/60 bg-slate-950 px-3 py-1 font-pixel text-xs text-fuchsia-300 sm:block">
+              VS
+            </span>
+          )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {questao.alternativas
+              .filter((alt) => alt.id !== alternativaEscondida)
+              .map((alt) => (
+                <BotaoBatalha
+                  key={alt.id}
+                  alt={alt}
+                  feedback={feedback}
+                  selecionada={selecionada}
+                  desabilitado={Boolean(feedback) || enviando}
+                  aoClicar={() => {
+                    som(tocarClique);
+                    responder(alt.id);
+                  }}
+                />
+              ))}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {questao.alternativas
+            .filter((alt) => alt.id !== alternativaEscondida)
+            .map((alt) => (
+              <BotaoAlternativa
+                key={alt.id}
+                alt={alt}
+                feedback={feedback}
+                selecionada={selecionada}
+                desabilitado={Boolean(feedback) || enviando}
+                aoClicar={() => {
+                  som(tocarClique);
+                  responder(alt.id);
+                }}
+              />
+            ))}
+        </div>
+      )}
 
       {/* feedback + próxima */}
       {feedback && (
@@ -460,6 +493,46 @@ function BotaoAlternativa({ alt, feedback, selecionada, desabilitado, aoClicar }
       </div>
       {mostrarExplicacao && explicacao && (
         <p className="mt-2 pl-10 text-xs text-slate-400">{explicacao.explicacao}</p>
+      )}
+    </button>
+  );
+}
+
+// Card grande de opção da Batalha de Complexidade — mesma lógica de
+// certo/errado/selecionada do BotaoAlternativa, layout "vs" em vez de lista.
+function BotaoBatalha({ alt, feedback, selecionada, desabilitado, aoClicar }) {
+  let estilo = 'border-slate-800 bg-slate-900/60 hover:border-fuchsia-500/60 card-pixel';
+  let anim = '';
+  if (feedback) {
+    const ehCorreta = feedback.alternativa_correta?.id === alt.id;
+    const foiEscolhida = selecionada === alt.id;
+    if (ehCorreta) {
+      estilo = 'border-emerald-500/60 bg-emerald-500/10';
+      anim = 'anim-pop';
+    } else if (foiEscolhida) {
+      estilo = 'border-red-500/60 bg-red-500/10';
+      anim = 'anim-tremer';
+    } else estilo = 'border-slate-800 bg-slate-900/40 opacity-60';
+  } else if (selecionada === alt.id) {
+    estilo = 'border-fuchsia-500 bg-fuchsia-500/10';
+  }
+
+  const explicacao = feedback?.explicacoes.find((e) => e.id === alt.id);
+  const mostrarExplicacao =
+    feedback && (selecionada === alt.id || feedback.alternativa_correta?.id === alt.id);
+
+  return (
+    <button
+      onClick={aoClicar}
+      disabled={desabilitado}
+      className={`flex w-full flex-col items-center gap-2 border-2 p-6 text-center transition-colors disabled:cursor-default ${estilo} ${anim}`}
+    >
+      <span className="flex h-8 w-8 items-center justify-center bg-slate-800 font-pixel text-xs text-fuchsia-300">
+        {alt.letra}
+      </span>
+      <span className="font-mono text-sm text-slate-100">{alt.texto}</span>
+      {mostrarExplicacao && explicacao && (
+        <p className="mt-1 text-xs text-slate-400">{explicacao.explicacao}</p>
       )}
     </button>
   );

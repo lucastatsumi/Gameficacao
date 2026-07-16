@@ -68,6 +68,30 @@ describe('iniciarQuiz', () => {
       }
     }
   });
+
+  it('funciona com menos questões que QUESTOES_POR_QUIZ e preserva o formato (ex.: fase bônus com 5 questões)', async () => {
+    const questoesBrutas = Array.from({ length: 5 }, (_, i) => ({
+      id: `b${i}`,
+      enunciado: `Batalha ${i}`,
+      tempo_limite_seg: 15,
+      formato: 'batalha_complexidade',
+      alternativas: [
+        { id: 'a1', letra: 'A', texto: 'O(n)' },
+        { id: 'a2', letra: 'B', texto: 'O(log n)' },
+      ],
+    }));
+
+    configurarDb({
+      fases: [ok({ id: 6, fase_requisito_id: null, nome: 'Batalha de Complexidade' })],
+      tentativas: [ok(null), ok({ id: 'tent-2' })],
+      questoes: [ok(questoesBrutas)],
+    });
+
+    const resultado = await iniciarQuiz('user-1', 6);
+
+    expect(resultado.questoes).toHaveLength(5);
+    expect(resultado.questoes.every((q) => q.formato === 'batalha_complexidade')).toBe(true);
+  });
 });
 
 describe('responderQuestao', () => {

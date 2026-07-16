@@ -41,7 +41,7 @@ export async function iniciarQuiz(userId, faseId) {
   const { data: questoes, error: erroQuestoes } = await db
     .from('questoes')
     .select(
-      'id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, alternativas ( id, letra, texto )'
+      'id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, formato, alternativas ( id, letra, texto )'
     )
     .eq('fase_id', faseId)
     .eq('ativa', true);
@@ -89,7 +89,7 @@ export async function iniciarQuizCustom(usuario, quizId) {
   const { data: itens, error: erroItens } = await db
     .from('quiz_custom_questoes')
     .select(
-      'ordem, questoes ( id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, dica, ativa, alternativas ( id, letra, texto ) )'
+      'ordem, questoes ( id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, formato, dica, ativa, alternativas ( id, letra, texto ) )'
     )
     .eq('quiz_id', quizId)
     .order('ordem');

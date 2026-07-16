@@ -6,7 +6,7 @@ estudantes primeiro.
 
 ## ✅ Implementado nesta rodada
 
-- **Testes automatizados no backend** (vitest) — 53 testes cobrindo a lógica
+- **Testes automatizados no backend** (vitest) — 54 testes cobrindo a lógica
   mais crítica do jogo: `nivel.js`, `streak.js`, `badgeService` (todas as
   condições de badge), `quizCustomService.validarPayload`,
   `relatorioService` (CSV), `poderService` e os fluxos centrais de
@@ -23,6 +23,17 @@ estudantes primeiro.
   testada), integração em `quizService.finalizarQuiz`, novo tipo de badge
   `streak_dias` (3/7/30 dias), exibição no `Perfil` e na tela de resultado do
   quiz.
+- **Minigame "Batalha de Complexidade"** — fase bônus sempre desbloqueada
+  com 5 questões (`database/11_batalha_complexidade.sql`), reaproveitando
+  100% do fluxo de quiz existente; só o layout muda (dois cards "VS").
+- **Todas as migrations SQL (01–11) foram validadas rodando de ponta a
+  ponta num Postgres local** (não só lidas) — pegou e corrigiu um problema
+  real: `ALTER TYPE ... ADD VALUE` não pode ser referenciado na mesma
+  transação em que é criado, por isso o streak ficou em duas migrations
+  separadas (08 e 09). As únicas falhas nessa validação foram
+  especificidades do ambiente gerenciado do Supabase que não existem em
+  Postgres vanilla (papéis `anon`/`authenticated` e a função de plataforma
+  `rls_auto_enable()`), não bugs do projeto.
 - **Poderes (power-ups)** — "Eliminar alternativa" e "Tempo extra"
   implementados ponta a ponta: `database/10_poderes.sql`,
   `backend/src/services/poderService.js` (com testes), endpoint
@@ -120,13 +131,18 @@ endpoint `POST /quiz/poder`, e UI em `Quiz.jsx`/`Perfil.jsx`.
 
 ### 3. Minigames entre fases
 
+- ✅ **Batalha de complexidade** — implementado como fase bônus sempre
+  desbloqueada (`database/11_batalha_complexidade.sql`, fase "Batalha de
+  Complexidade", 5 questões). Reaproveita 100% do fluxo de quiz existente
+  (`/quiz/iniciar` → `/quiz/responder` → `/quiz/finalizar`, mesma correção,
+  mesmo XP/badges/streak/poderes) — só o layout muda quando
+  `questoes.formato = 'batalha_complexidade'`: dois cards grandes lado a
+  lado ("VS") em vez da lista vertical de alternativas
+  (`BotaoBatalha` em `Quiz.jsx`), com timer curto (15s) e XP maior (20).
 - **Reordenar algoritmo**: arrastar passos embaralhados de um algoritmo
   (ex.: bubble sort, busca binária) na ordem correta, contra o tempo —
   variação de UI que não depende de nova lógica de correção complexa (é uma
   sequência fixa correta por algoritmo, cadastrável como conteúdo estático).
-- **Batalha de complexidade**: compara Big-O de dois trechos de código,
-  aluno escolhe o mais eficiente, timer curto estilo arcade — reaproveita o
-  modelo de "questão com alternativas", só muda o layout.
 - **Boss fight a cada N fases**: quiz relâmpago misturando questões de fases
   anteriores, com "vidas" (N erros = fim da tentativa) — reaproveita
   `quizCustomService.js` (já monta quizzes sob medida) para selecionar o
@@ -150,8 +166,7 @@ endpoint `POST /quiz/poder`, e UI em `Quiz.jsx`/`Perfil.jsx`.
 
 1. ~~Streak diário~~ ✅ feito.
 2. ~~Poderes "Eliminar alternativa" e "Tempo extra"~~ ✅ feito.
-3. Minigame "Batalha de complexidade" (reaproveita infraestrutura de questão
-   existente, menor risco).
+3. ~~Minigame "Batalha de complexidade"~~ ✅ feito.
 4. Progressão de personagem / avatar por nível (cosmético, sem risco de
    lógica de jogo).
 5. Eventos temporários e recompensa crescente de streak.

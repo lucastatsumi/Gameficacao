@@ -7,8 +7,9 @@ import PixelIcon from '../components/ui/PixelIcon.jsx';
 import pixelNuvem from '../assets/img/pixel-nuvem.svg';
 import pixelEstrela from '../assets/img/pixel-estrela.svg';
 
-// Ícone pixel de cada fase: Listas, Pilhas, Filas, Árvores, Ordenação
-const ICONES_FASE = ['arrow-right', 'coins', 'users', 'map-pin', 'chart-bar-big'];
+// Ícone pixel de cada fase: Listas, Pilhas, Filas, Árvores, Ordenação,
+// Batalha de Complexidade (fase bônus)
+const ICONES_FASE = ['arrow-right', 'coins', 'users', 'map-pin', 'chart-bar-big', 'fire'];
 
 function NoFase({ fase, indice }) {
   const concluida = fase.progresso?.concluida;
