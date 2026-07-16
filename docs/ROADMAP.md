@@ -6,7 +6,7 @@ estudantes primeiro.
 
 ## ✅ Implementado nesta rodada
 
-- **Testes automatizados no backend** (vitest) — 96 testes cobrindo a lógica
+- **Testes automatizados no backend** (vitest) — 111 testes cobrindo a lógica
   mais crítica do jogo: `nivel.js`, `streak.js`, `badgeService` (todas as
   condições de badge), `quizCustomService.validarPayload`,
   `relatorioService` (CSV), `poderService` e os fluxos centrais de
@@ -236,11 +236,13 @@ endpoint `POST /quiz/poder`, e UI em `Quiz.jsx`/`Perfil.jsx`.
 
 ## Infraestrutura / qualidade
 
-- **Ampliar cobertura de testes** — `quizService`, `badgeService`,
-  `perfilService`, `questaoService`, `poderService`, `eventoService` e
-  `quizCustomService` já têm testes (96 no total). Falta `turmaService` e
-  testes de componente no frontend (ex.: com `@testing-library/react`,
-  ainda não instalado).
+- ✅ **Cobertura de testes de todos os services do backend** —
+  `quizService`, `badgeService`, `perfilService`, `questaoService`,
+  `poderService`, `eventoService`, `quizCustomService`, `relatorioService`
+  e `turmaService` têm testes (111 no total, `cd backend && npm test`).
+  Falta testes de **componente no frontend** (ex.: com
+  `@testing-library/react`, ainda não instalado), próximo passo natural de
+  infra de testes.
 - **Monitoramento de qualidade das questões** — rodar o agente
   `question-researcher` periodicamente em modo de auditoria sobre
   `database/05_seed_questoes.sql` e futuras seeds, para pegar
