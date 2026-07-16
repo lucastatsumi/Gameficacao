@@ -6,7 +6,7 @@ estudantes primeiro.
 
 ## ✅ Implementado nesta rodada
 
-- **Testes automatizados no backend** (vitest) — 66 testes cobrindo a lógica
+- **Testes automatizados no backend** (vitest) — 69 testes cobrindo a lógica
   mais crítica do jogo: `nivel.js`, `streak.js`, `badgeService` (todas as
   condições de badge), `quizCustomService.validarPayload`,
   `relatorioService` (CSV), `poderService` e os fluxos centrais de
@@ -68,8 +68,11 @@ estudantes primeiro.
   rodada) streak diário; falta celebração visual mais elaborada ao
   desbloquear (hoje é um card estático na tela de resultado) e critérios
   novos como "sem usar dica".
-- **Modo de revisão de erros** — tela que lista questões que o aluno errou
-  nas últimas tentativas, com a explicação, para reforço espaçado.
+- ✅ **Modo de revisão de erros** — implementado: `GET /perfil/revisao`
+  (`perfilService.errosRecentes`) traz as últimas respostas erradas com a
+  alternativa escolhida, a correta e a explicação; exibido como nova seção
+  no `Perfil`. Ainda dá pra evoluir para repetição espaçada de verdade
+  (hoje é só uma lista cronológica, sem lembrar o aluno de revisar depois).
 - **Dificuldade adaptativa** — ajustar mix de questões fácil/média/difícil
   por fase com base no desempenho recente do aluno (mantendo lógica no
   backend).

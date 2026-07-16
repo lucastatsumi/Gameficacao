@@ -10,19 +10,21 @@ export default function Perfil() {
   const { perfil } = useAuth();
   const [badges, setBadges] = useState(null);
   const [historico, setHistorico] = useState(null);
+  const [revisao, setRevisao] = useState(null);
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
-    Promise.all([api.get('/perfil/badges'), api.get('/perfil/historico')])
-      .then(([b, h]) => {
+    Promise.all([api.get('/perfil/badges'), api.get('/perfil/historico'), api.get('/perfil/revisao')])
+      .then(([b, h, r]) => {
         setBadges(b);
         setHistorico(h);
+        setRevisao(r);
       })
       .catch((err) => setErro(err.message));
   }, []);
 
   if (erro) return <Alerta>{erro}</Alerta>;
-  if (!perfil || !badges || !historico) return <Spinner texto="Carregando perfil..." />;
+  if (!perfil || !badges || !historico || !revisao) return <Spinner texto="Carregando perfil..." />;
 
   const conquistadas = badges.filter((b) => b.conquistada).length;
 
@@ -131,6 +133,46 @@ export default function Perfil() {
           ))}
         </div>
       </section>
+
+      {/* revisão de erros — reforço espaçado */}
+      {revisao.length > 0 && (
+        <section>
+          <h2 className="flex items-center gap-2 font-pixel text-sm text-slate-100">
+            <PixelIcon nome="reload" className="h-5 w-5 text-red-400" />
+            Revisão de erros
+          </h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Suas últimas respostas erradas, com a explicação da alternativa certa.
+          </p>
+          <div className="mt-4 space-y-3">
+            {revisao.map((r) => (
+              <div key={r.resposta_id} className="card-pixel border-2 border-slate-800 bg-slate-900/60 p-4">
+                <p className="text-sm text-slate-200">{r.questao.enunciado}</p>
+                {r.questao.codigo_snippet && (
+                  <pre className="mt-3 overflow-x-auto border-2 border-slate-800 bg-slate-950 p-3 text-xs text-emerald-300">
+                    <code>{r.questao.codigo_snippet}</code>
+                  </pre>
+                )}
+                <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                  <p className="border-2 border-red-500/30 bg-red-500/10 p-2 text-red-300">
+                    {r.sua_alternativa
+                      ? <>Você marcou <strong>{r.sua_alternativa.letra}</strong>: {r.sua_alternativa.texto}</>
+                      : 'Tempo esgotado — sem resposta'}
+                  </p>
+                  {r.alternativa_correta && (
+                    <p className="border-2 border-emerald-500/30 bg-emerald-500/10 p-2 text-emerald-300">
+                      Certa era <strong>{r.alternativa_correta.letra}</strong>: {r.alternativa_correta.texto}
+                    </p>
+                  )}
+                </div>
+                {r.alternativa_correta?.explicacao && (
+                  <p className="mt-2 text-xs text-slate-400">{r.alternativa_correta.explicacao}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* histórico */}
       <section>

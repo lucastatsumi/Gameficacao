@@ -90,3 +90,44 @@ export async function historicoDeTentativas(userId, limite = 50) {
     finalizada_em: t.finalizada_em,
   }));
 }
+
+// Modo de revisão de erros: últimas respostas ERRADAS do aluno (qualquer
+// tentativa, finalizada ou não), com a alternativa que ele escolheu (ou
+// null se o tempo esgotou), a correta e a explicação — para reforço
+// espaçado. Como é revisão pós-jogo, expor o gabarito aqui não fere a
+// regra de "resposta correta só no servidor durante o quiz".
+export async function errosRecentes(userId, limite = 20) {
+  const { data, error } = await db
+    .from('respostas')
+    .select(
+      'id, alternativa_id, respondida_em, tentativas!inner ( user_id ), questoes ( id, enunciado, codigo_snippet, dificuldade, alternativas ( id, letra, texto, correta, explicacao ) )'
+    )
+    .eq('correta', false)
+    .eq('tentativas.user_id', userId)
+    .order('respondida_em', { ascending: false })
+    .limit(limite);
+  if (error) throw error;
+
+  return data
+    .filter((r) => r.questoes) // defensivo: questão pode ter sido removida
+    .map((r) => {
+      const escolhida = r.questoes.alternativas.find((a) => a.id === r.alternativa_id) ?? null;
+      const correta = r.questoes.alternativas.find((a) => a.correta) ?? null;
+      return {
+        resposta_id: r.id,
+        respondida_em: r.respondida_em,
+        questao: {
+          id: r.questoes.id,
+          enunciado: r.questoes.enunciado,
+          codigo_snippet: r.questoes.codigo_snippet,
+          dificuldade: r.questoes.dificuldade,
+        },
+        sua_alternativa: escolhida && { letra: escolhida.letra, texto: escolhida.texto },
+        alternativa_correta: correta && {
+          letra: correta.letra,
+          texto: correta.texto,
+          explicacao: correta.explicacao,
+        },
+      };
+    });
+}

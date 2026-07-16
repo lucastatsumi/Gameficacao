@@ -4,7 +4,7 @@ import { makeDb, ok } from '../test/dbMock.js';
 vi.mock('../config/supabase.js', () => ({ db: { from: vi.fn() } }));
 
 const { db } = await import('../config/supabase.js');
-const { obterPerfil, historicoDeTentativas } = await import('./perfilService.js');
+const { obterPerfil, historicoDeTentativas, errosRecentes } = await import('./perfilService.js');
 
 function configurarDb(filas) {
   db.from.mockImplementation(makeDb(filas).from);
@@ -88,5 +88,79 @@ describe('historicoDeTentativas', () => {
         finalizada_em: '2026-01-02',
       },
     ]);
+  });
+});
+
+describe('errosRecentes', () => {
+  it('monta a alternativa escolhida e a correta a partir do id armazenado', async () => {
+    configurarDb({
+      respostas: [
+        ok([
+          {
+            id: 'r1',
+            alternativa_id: 'a-errada',
+            respondida_em: '2026-01-03',
+            questoes: {
+              id: 'q1',
+              enunciado: 'Qual estrutura...',
+              codigo_snippet: null,
+              dificuldade: 'media',
+              alternativas: [
+                { id: 'a-certa', letra: 'B', texto: 'Lista ligada', correta: true, explicacao: 'O(1) no início' },
+                { id: 'a-errada', letra: 'A', texto: 'Array', correta: false, explicacao: 'O(n) no início' },
+              ],
+            },
+          },
+        ]),
+      ],
+    });
+
+    const revisao = await errosRecentes('user-1');
+    expect(revisao).toEqual([
+      {
+        resposta_id: 'r1',
+        respondida_em: '2026-01-03',
+        questao: { id: 'q1', enunciado: 'Qual estrutura...', codigo_snippet: null, dificuldade: 'media' },
+        sua_alternativa: { letra: 'A', texto: 'Array' },
+        alternativa_correta: { letra: 'B', texto: 'Lista ligada', explicacao: 'O(1) no início' },
+      },
+    ]);
+  });
+
+  it('sua_alternativa é null quando o tempo esgotou (alternativa_id null)', async () => {
+    configurarDb({
+      respostas: [
+        ok([
+          {
+            id: 'r2',
+            alternativa_id: null,
+            respondida_em: '2026-01-03',
+            questoes: {
+              id: 'q2',
+              enunciado: 'Enunciado',
+              codigo_snippet: null,
+              dificuldade: 'facil',
+              alternativas: [
+                { id: 'a1', letra: 'A', texto: 'x', correta: true, explicacao: 'exp' },
+                { id: 'a2', letra: 'B', texto: 'y', correta: false, explicacao: 'exp2' },
+              ],
+            },
+          },
+        ]),
+      ],
+    });
+
+    const revisao = await errosRecentes('user-1');
+    expect(revisao[0].sua_alternativa).toBeNull();
+    expect(revisao[0].alternativa_correta.letra).toBe('A');
+  });
+
+  it('ignora respostas cuja questão não existe mais (defensivo)', async () => {
+    configurarDb({
+      respostas: [ok([{ id: 'r3', alternativa_id: 'x', respondida_em: '2026-01-01', questoes: null }])],
+    });
+
+    const revisao = await errosRecentes('user-1');
+    expect(revisao).toEqual([]);
   });
 });
