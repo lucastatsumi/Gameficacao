@@ -6,7 +6,7 @@ estudantes primeiro.
 
 ## ✅ Implementado nesta rodada
 
-- **Testes automatizados no backend** (vitest) — 117 testes cobrindo a lógica
+- **Testes automatizados no backend** (vitest) — 122 testes cobrindo a lógica
   mais crítica do jogo: `nivel.js`, `streak.js`, `badgeService` (todas as
   condições de badge), `quizCustomService.validarPayload`,
   `relatorioService` (CSV), `poderService` e os fluxos centrais de
@@ -188,10 +188,24 @@ endpoint `POST /quiz/poder`, e UI em `Quiz.jsx`/`Perfil.jsx`.
   SQL/MCP por enquanto, pois exigiria uma UI bem diferente (lista dinâmica
   de passos + construtor de ordem correta). Poderes (`eliminar_alternativa`,
   `tempo_extra`) também não se aplicam a este formato ainda.
-- **Boss fight a cada N fases**: quiz relâmpago misturando questões de fases
-  anteriores, com "vidas" (N erros = fim da tentativa) — reaproveita
-  `quizCustomService.js` (já monta quizzes sob medida) para selecionar o
-  pool de questões.
+- ✅ **Boss fight (vidas)** — implementado sem NENHUMA mudança na lógica de
+  correção/XP/aprovação existente: `quizzes_custom.vidas` (nullable,
+  `database/15_boss_fight.sql`) é só metadado de configuração; quem decide
+  encerrar a tentativa mais cedo é o **frontend**, chamando
+  `/quiz/finalizar` assim que o número de erros acumulados atinge o limite
+  — `finalizarQuiz` já calcula `acertos`/aprovação sobre o que foi de fato
+  respondido, então terminar cedo com poucos acertos naturalmente resulta
+  em reprovação, sem precisar mexer no back. Corações (vidas restantes) no
+  cabeçalho do `Quiz.jsx`; opção "Boss fight (vidas)" no `FormQuiz` da
+  página pública `/quizzes` (qualquer jogador pode montar um). Já dá pra
+  misturar questões de fases diferentes porque `quizCustomService` nunca
+  restringiu a seleção por fase.
+- **De brinde**: corrigido outro bug real descoberto ao investigar essa
+  feature — a aba "Quizzes" do painel do professor (`Admin.jsx`) chamava
+  endpoints `/admin/quizzes*` que **nunca existiram no backend** (mesma
+  categoria do bug já corrigido em `Ranking.jsx`: código morto do modelo
+  antigo de "quiz por turma", pré-migration 07). Removida — a página
+  pública `/quizzes` já cobre a função e já está no menu para professores.
 
 ### 4. Retenção contínua
 

@@ -44,6 +44,7 @@ export default function FormQuiz({ form, aoFechar, aoSalvar }) {
         tempo_limite_seg: dados.tempo_fixo ? Number(dados.tempo_limite_seg) : null,
         sons: dados.sons,
         permitir_dicas: dados.permitir_dicas,
+        vidas: dados.boss_fight ? Number(dados.vidas) : null,
         questao_ids: dados.questao_ids,
       };
       if (form.editandoId) await api.put(`/quizzes/${form.editandoId}`, payload);
@@ -125,6 +126,27 @@ export default function FormQuiz({ form, aoFechar, aoSalvar }) {
             onChange={(e) => mudar('permitir_dicas', e.target.checked)}
           />
           Permitir dicas (-50% XP)
+        </label>
+        <label
+          className="flex items-center gap-2 text-sm text-slate-300"
+          title='"Boss fight": errar essa quantidade de questões encerra o desafio na hora'
+        >
+          <input
+            type="checkbox"
+            checked={dados.boss_fight}
+            onChange={(e) => mudar('boss_fight', e.target.checked)}
+          />
+          Boss fight (vidas)
+          {dados.boss_fight && (
+            <input
+              type="number"
+              min={1}
+              value={dados.vidas}
+              onChange={(e) => mudar('vidas', e.target.value)}
+              className={`${inputCls} w-16`}
+              title="número de erros permitidos"
+            />
+          )}
         </label>
       </div>
 

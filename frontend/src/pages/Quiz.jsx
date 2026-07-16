@@ -44,6 +44,11 @@ export default function Quiz() {
   const [ordemEscolhida, setOrdemEscolhida] = useState([]);
   const [feedbackSeq, setFeedbackSeq] = useState(null); // resposta de /quiz/responder-sequencia
 
+  // "boss fight" (quiz.quiz.vidas definido): contador de erros ACUMULADO
+  // na tentativa inteira (não reseta por questão) — estoura o limite e o
+  // desafio acaba ali, sem precisar responder o resto das questões
+  const [errosCount, setErrosCount] = useState(0);
+
   const [tempoRestante, setTempoRestante] = useState(0);
   const inicioQuestaoRef = useRef(Date.now());
   const ultimoTickRef = useRef(null); // evita tocar o tick 2x no mesmo segundo
@@ -85,7 +90,10 @@ export default function Quiz() {
         });
         setFeedback(fb);
         if (fb.correta) som(tocarAcerto);
-        else som(tocarErro);
+        else {
+          som(tocarErro);
+          setErrosCount((n) => n + 1);
+        }
       } catch (err) {
         setErro(err.message);
       } finally {
@@ -109,7 +117,10 @@ export default function Quiz() {
         });
         setFeedbackSeq(fb);
         if (fb.correta) som(tocarAcerto);
-        else som(tocarErro);
+        else {
+          som(tocarErro);
+          setErrosCount((n) => n + 1);
+        }
       } catch (err) {
         setErro(err.message);
       } finally {
@@ -184,10 +195,13 @@ export default function Quiz() {
     return () => clearInterval(intervalo);
   }, [questao, feedback, feedbackSeq, resultado, responder, responderSeq, ordemEscolhida]);
 
+  const vidasMax = quiz?.quiz?.vidas ?? null;
+  const gameOver = vidasMax != null && errosCount >= vidasMax;
+
   // ---------- avançar / finalizar ----------
   async function proxima() {
     som(tocarClique);
-    if (ultima) {
+    if (ultima || gameOver) {
       setEnviando(true);
       try {
         const res = await api.post('/quiz/finalizar', { tentativa_id: quiz.tentativa_id });
@@ -257,6 +271,17 @@ export default function Quiz() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {vidasMax != null && (
+            <div className="flex items-center gap-1" title={`${Math.max(0, vidasMax - errosCount)} de ${vidasMax} vidas`}>
+              {Array.from({ length: vidasMax }, (_, i) => (
+                <PixelIcon
+                  key={i}
+                  nome="heart"
+                  className={`h-5 w-5 ${i < vidasMax - errosCount ? 'text-red-400' : 'text-slate-700'}`}
+                />
+              ))}
+            </div>
+          )}
           <button
             onClick={() => {
               const ligado = alternarSom();
@@ -558,8 +583,8 @@ export default function Quiz() {
             disabled={enviando}
             className="btn-pixel flex w-full items-center justify-center gap-2 bg-indigo-600 py-3 font-pixel text-[11px] text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
           >
-            <PixelIcon nome={ultima ? 'flag' : 'arrow-right'} className="h-4 w-4" />
-            {enviando ? 'AGUARDE...' : ultima ? 'VER RESULTADO' : 'PRÓXIMA'}
+            <PixelIcon nome={ultima || gameOver ? 'flag' : 'arrow-right'} className="h-4 w-4" />
+            {enviando ? 'AGUARDE...' : gameOver ? 'FIM DE JOGO — VER RESULTADO' : ultima ? 'VER RESULTADO' : 'PRÓXIMA'}
           </button>
         </div>
       )}
@@ -606,8 +631,8 @@ export default function Quiz() {
             disabled={enviando}
             className="btn-pixel flex w-full items-center justify-center gap-2 bg-indigo-600 py-3 font-pixel text-[11px] text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
           >
-            <PixelIcon nome={ultima ? 'flag' : 'arrow-right'} className="h-4 w-4" />
-            {enviando ? 'AGUARDE...' : ultima ? 'VER RESULTADO' : 'PRÓXIMA'}
+            <PixelIcon nome={ultima || gameOver ? 'flag' : 'arrow-right'} className="h-4 w-4" />
+            {enviando ? 'AGUARDE...' : gameOver ? 'FIM DE JOGO — VER RESULTADO' : ultima ? 'VER RESULTADO' : 'PRÓXIMA'}
           </button>
         </div>
       )}

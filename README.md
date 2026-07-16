@@ -58,7 +58,8 @@ fases desbloqueável e ranking.
 │   ├── 11_batalha_complexidade.sql # Minigame de comparação de Big-O
 │   ├── 12_mais_questoes.sql      #   +15 questões (3 por fase, mais variedade)
 │   ├── 13_eventos_temporarios.sql #  XP multiplicado por período
-│   └── 14_reordenar_algoritmo.sql #  Minigame de ordenar passos de algoritmo
+│   ├── 14_reordenar_algoritmo.sql #  Minigame de ordenar passos de algoritmo
+│   └── 15_boss_fight.sql         #   Vidas em quizzes customizados
 ├── backend/
 │   └── src/
 │       ├── config/               # Cliente Supabase, variáveis de ambiente

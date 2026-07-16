@@ -130,6 +130,7 @@ export async function iniciarQuizCustom(usuario, quizId) {
       descricao: quiz.descricao,
       sons: quiz.sons,
       permitir_dicas: quiz.permitir_dicas,
+      vidas: quiz.vidas,
     },
     questoes,
   };

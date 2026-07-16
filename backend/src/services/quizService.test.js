@@ -5,9 +5,8 @@ vi.mock('../config/supabase.js', () => ({ db: { from: vi.fn() } }));
 vi.mock('./badgeService.js', () => ({ verificarBadges: vi.fn().mockResolvedValue([]) }));
 
 const { db } = await import('../config/supabase.js');
-const { iniciarQuiz, responderQuestao, responderSequencia, finalizarQuiz } = await import(
-  './quizService.js'
-);
+const { iniciarQuiz, iniciarQuizCustom, responderQuestao, responderSequencia, finalizarQuiz } =
+  await import('./quizService.js');
 const { HttpError } = await import('../utils/httpError.js');
 
 function configurarDb(filas) {
@@ -93,6 +92,33 @@ describe('iniciarQuiz', () => {
 
     expect(resultado.questoes).toHaveLength(5);
     expect(resultado.questoes.every((q) => q.formato === 'batalha_complexidade')).toBe(true);
+  });
+});
+
+describe('iniciarQuizCustom', () => {
+  it('repassa "vidas" (boss fight) no objeto quiz devolvido ao cliente', async () => {
+    configurarDb({
+      quizzes_custom: [ok({ id: 'quiz-1', criador_id: 'prof-1', ativo: true, vidas: 3, permitir_dicas: true })],
+      tentativas: [ok(null), ok({ id: 'tent-1' })],
+      quiz_custom_questoes: [
+        ok([
+          {
+            ordem: 0,
+            questoes: {
+              id: 'q1',
+              enunciado: 'Enunciado',
+              tempo_limite_seg: 30,
+              dica: null,
+              ativa: true,
+              alternativas: [{ id: 'a1', letra: 'A', texto: 'x' }],
+            },
+          },
+        ]),
+      ],
+    });
+
+    const resultado = await iniciarQuizCustom({ id: 'user-1' }, 'quiz-1');
+    expect(resultado.quiz.vidas).toBe(3);
   });
 });
 

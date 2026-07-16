@@ -8,7 +8,9 @@ const { db } = await import('../config/supabase.js');
 const { criarQuiz } = await import('./quizCustomService.js');
 
 function configurarDb(filas) {
-  db.from.mockImplementation(makeDb(filas).from);
+  const mock = makeDb(filas);
+  db.from.mockImplementation(mock.from);
+  return mock;
 }
 
 const DADOS_BASE = {
@@ -64,6 +66,40 @@ describe('quizCustomService.criarQuiz — validação', () => {
     const criado = await criarQuiz('user-1', DADOS_BASE);
     expect(criado.id).toBe('quiz-1');
     expect(criado.total_questoes).toBe(2);
+  });
+
+  it('rejeita vidas menor que 1', async () => {
+    await expect(criarQuiz('user-1', { ...DADOS_BASE, vidas: 0 })).rejects.toThrow(/vidas/);
+  });
+
+  it('rejeita vidas não inteiro', async () => {
+    await expect(criarQuiz('user-1', { ...DADOS_BASE, vidas: 2.5 })).rejects.toThrow(/vidas/);
+  });
+
+  it('cria "boss fight" com vidas definidas e grava no insert', async () => {
+    const mock = configurarDb({
+      questoes: [ok([{ id: 'q1' }, { id: 'q2' }])],
+      quizzes_custom: [ok({ id: 'quiz-1', criador_id: 'user-1' })],
+      quiz_custom_questoes: [ok(null)],
+    });
+
+    await criarQuiz('user-1', { ...DADOS_BASE, vidas: 3 });
+
+    const insertChain = mock.chainsPara('quizzes_custom')[0];
+    expect(insertChain.insert).toHaveBeenCalledWith(expect.objectContaining({ vidas: 3 }));
+  });
+
+  it('vidas fica null (sem limite) quando não informado', async () => {
+    const mock = configurarDb({
+      questoes: [ok([{ id: 'q1' }, { id: 'q2' }])],
+      quizzes_custom: [ok({ id: 'quiz-1', criador_id: 'user-1' })],
+      quiz_custom_questoes: [ok(null)],
+    });
+
+    await criarQuiz('user-1', DADOS_BASE);
+
+    const insertChain = mock.chainsPara('quizzes_custom')[0];
+    expect(insertChain.insert).toHaveBeenCalledWith(expect.objectContaining({ vidas: null }));
   });
 
   it('desfaz a criação (compensação) se a inserção das questões falhar', async () => {

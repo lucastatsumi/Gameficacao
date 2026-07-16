@@ -13,6 +13,8 @@ const QUIZ_VAZIO = {
   tempo_limite_seg: 30,
   sons: true,
   permitir_dicas: true,
+  boss_fight: false,
+  vidas: 3,
   questao_ids: [],
 };
 
