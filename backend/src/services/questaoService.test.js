@@ -114,6 +114,54 @@ describe('criarQuestao — validação', () => {
 
     await expect(criarQuestao('prof-1', DADOS_BASE)).rejects.toThrow('falhou');
   });
+
+  it('reordenar_algoritmo: rejeita com menos de 2 passos', async () => {
+    await expect(
+      criarQuestao('prof-1', {
+        ...DADOS_BASE,
+        formato: 'reordenar_algoritmo',
+        passos: [{ texto: 'único passo' }],
+      })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('reordenar_algoritmo: rejeita passo sem texto', async () => {
+    await expect(
+      criarQuestao('prof-1', {
+        ...DADOS_BASE,
+        formato: 'reordenar_algoritmo',
+        passos: [{ texto: 'primeiro' }, { texto: '  ' }],
+      })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('reordenar_algoritmo: gera ids em sequência e ordem_correta igual à ordem digitada, sem tocar em alternativas', async () => {
+    const mock = configurarDb({
+      questoes: [ok({ id: 'q1' })],
+    });
+
+    const criada = await criarQuestao('prof-1', {
+      ...DADOS_BASE,
+      formato: 'reordenar_algoritmo',
+      passos: [{ texto: 'Primeiro' }, { texto: 'Segundo' }, { texto: 'Terceiro' }],
+    });
+
+    expect(criada.alternativas).toEqual([]);
+    expect(mock.chainsPara('alternativas')).toHaveLength(0);
+
+    const insertChain = mock.chainsPara('questoes')[0];
+    expect(insertChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        formato: 'reordenar_algoritmo',
+        passos: [
+          { id: 'p1', texto: 'Primeiro' },
+          { id: 'p2', texto: 'Segundo' },
+          { id: 'p3', texto: 'Terceiro' },
+        ],
+        ordem_correta: ['p1', 'p2', 'p3'],
+      })
+    );
+  });
 });
 
 describe('atualizarQuestao', () => {
@@ -182,6 +230,33 @@ describe('atualizarQuestao', () => {
     const res = await atualizarQuestao('q1', DADOS_BASE);
     expect(res.id).toBe('q1');
     expect(mock.chainsPara('alternativas')).toHaveLength(5);
+  });
+
+  it('reordenar_algoritmo: atualiza passos/ordem_correta sem tocar na tabela alternativas', async () => {
+    const mock = configurarDb({
+      questoes: [
+        ok({ id: 'q1', formato: 'reordenar_algoritmo', alternativas: [] }),
+        ok(null), // update questoes
+      ],
+    });
+
+    const res = await atualizarQuestao('q1', {
+      ...DADOS_BASE,
+      passos: [{ texto: 'Novo primeiro' }, { texto: 'Novo segundo' }],
+    });
+
+    expect(res.id).toBe('q1');
+    expect(mock.chainsPara('alternativas')).toHaveLength(0);
+    const updateChain = mock.chainsPara('questoes')[1];
+    expect(updateChain.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        passos: [
+          { id: 'p1', texto: 'Novo primeiro' },
+          { id: 'p2', texto: 'Novo segundo' },
+        ],
+        ordem_correta: ['p1', 'p2'],
+      })
+    );
   });
 });
 

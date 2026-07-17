@@ -288,9 +288,14 @@ mecanismos redundantes e mal cobertos.
   4) — seletor de formato no momento da criação (não pode mudar depois de
   criada: `questaoService.atualizarQuestao` ignora o formato do payload e
   usa sempre o já salvo, já que as alternativas existentes têm um número
-  fixo de letras). `questaoService` ganhou testes (16 casos). O formato
-  `reordenar_algoritmo` (passos + ordem correta) ainda não tem editor
-  visual — só via SQL/MCP (ver seção de minigames).
+  fixo de letras). `questaoService` ganhou testes (16 casos). ✅ **O formato
+  `reordenar_algoritmo` também ganhou editor visual**: `AbaQuestoes.jsx`
+  mostra uma lista dinâmica de passos (adicionar/remover/reordenar com
+  ▲/▼) em vez do editor de alternativas quando esse formato é escolhido —
+  a ORDEM DIGITADA vira o gabarito, sem precisar de um construtor de
+  ordem-correta separado. `questaoService.validarPayload` foi dividido em
+  `validarAlternativas`/`validarPassos`; os ids dos passos (`p1`, `p2`...)
+  são sempre gerados no backend, nunca confiados ao payload do cliente.
 - ~~Exportação de relatórios (CSV/PDF)~~ **CSV já existia antes desta
   rodada** (`GET /admin/turmas/:id/relatorio.csv`, botão "CSV" na aba
   Turmas). ✅ **PDF implementado nesta rodada** — sem biblioteca nova nem

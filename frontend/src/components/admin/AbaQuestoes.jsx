@@ -8,14 +8,20 @@ import { inputCls } from './inputCls.js';
 // Cada formato de questão exige um conjunto fixo de letras — precisa bater
 // com LETRAS_POR_FORMATO em backend/src/services/questaoService.js.
 const LETRAS_POR_FORMATO = { padrao: ['A', 'B', 'C', 'D'], batalha_complexidade: ['A', 'B'] };
+const FORMATO_SEQUENCIA = 'reordenar_algoritmo';
 
 function alternativasVazias(formato) {
+  if (!LETRAS_POR_FORMATO[formato]) return [];
   return LETRAS_POR_FORMATO[formato].map((letra) => ({
     letra,
     texto: '',
     correta: letra === 'A',
     explicacao: '',
   }));
+}
+
+function passosVazios(formato) {
+  return formato === FORMATO_SEQUENCIA ? [{ texto: '' }, { texto: '' }] : [];
 }
 
 function questaoVazia(formato = 'padrao') {
@@ -30,6 +36,7 @@ function questaoVazia(formato = 'padrao') {
     dica: '',
     formato,
     alternativas: alternativasVazias(formato),
+    passos: passosVazios(formato),
   };
 }
 
@@ -122,6 +129,11 @@ export default function AbaQuestoes() {
                         batalha
                       </span>
                     )}
+                    {q.formato === FORMATO_SEQUENCIA && (
+                      <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-300">
+                        reordenar
+                      </span>
+                    )}
                     <span className="rounded-full bg-slate-800 px-2 py-0.5 text-slate-400">
                       {fases.find((f) => f.id === q.fase_id)?.nome ?? `Fase ${q.fase_id}`}
                     </span>
@@ -159,6 +171,16 @@ export default function AbaQuestoes() {
                             correta: a.correta,
                             explicacao: a.explicacao,
                           })),
+                          passos:
+                            q.formato === FORMATO_SEQUENCIA && q.passos
+                              ? [...q.passos]
+                                  .sort(
+                                    (a, b) =>
+                                      (q.ordem_correta ?? []).indexOf(a.id) -
+                                      (q.ordem_correta ?? []).indexOf(b.id)
+                                  )
+                                  .map((p) => ({ texto: p.texto }))
+                              : passosVazios(q.formato),
                         },
                         editandoId: q.id,
                       })
@@ -197,7 +219,12 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
   }
 
   function mudarFormato(formato) {
-    setDados((d) => ({ ...d, formato, alternativas: alternativasVazias(formato) }));
+    setDados((d) => ({
+      ...d,
+      formato,
+      alternativas: alternativasVazias(formato),
+      passos: passosVazios(formato),
+    }));
   }
 
   function mudarAlternativa(letra, campo, valor) {
@@ -211,6 +238,31 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
             : a
       ),
     }));
+  }
+
+  function mudarPasso(indice, texto) {
+    setDados((d) => ({
+      ...d,
+      passos: d.passos.map((p, i) => (i === indice ? { texto } : p)),
+    }));
+  }
+
+  function adicionarPasso() {
+    setDados((d) => ({ ...d, passos: [...d.passos, { texto: '' }] }));
+  }
+
+  function removerPasso(indice) {
+    setDados((d) => ({ ...d, passos: d.passos.filter((_, i) => i !== indice) }));
+  }
+
+  function moverPasso(indice, direcao) {
+    setDados((d) => {
+      const alvo = indice + direcao;
+      if (alvo < 0 || alvo >= d.passos.length) return d;
+      const passos = [...d.passos];
+      [passos[indice], passos[alvo]] = [passos[alvo], passos[indice]];
+      return { ...d, passos };
+    });
   }
 
   async function salvar(e) {
@@ -273,6 +325,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
         >
           <option value="padrao">Múltipla escolha (4 alternativas)</option>
           <option value="batalha_complexidade">Batalha de Complexidade (2 alternativas)</option>
+          <option value={FORMATO_SEQUENCIA}>Reordenar algoritmo (passos em sequência)</option>
         </select>
         <select
           value={dados.dificuldade}
@@ -323,42 +376,100 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
         className={inputCls}
       />
 
-      <div className="space-y-3">
-        {dados.alternativas.map((alt) => (
-          <div key={alt.letra} className="rounded-lg border border-slate-800 p-3">
-            <div className="flex items-center gap-3">
-              <label className="flex cursor-pointer items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="correta"
-                  checked={alt.correta}
-                  onChange={() => mudarAlternativa(alt.letra, 'correta', true)}
-                />
-                <span className="flex h-6 w-6 items-center justify-center rounded bg-slate-800 text-xs font-bold text-indigo-300">
-                  {alt.letra}
-                </span>
-              </label>
+      {dados.formato === FORMATO_SEQUENCIA ? (
+        <div className="space-y-2">
+          <p className="text-xs text-slate-500">
+            Digite os passos do algoritmo NA ORDEM CERTA — essa ordem vira o gabarito. O
+            jogo embaralha a exibição a cada tentativa.
+          </p>
+          {dados.passos.map((passo, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-slate-800 text-xs font-bold text-emerald-300">
+                {i + 1}
+              </span>
               <input
-                value={alt.texto}
-                onChange={(e) => mudarAlternativa(alt.letra, 'texto', e.target.value)}
-                placeholder={`Texto da alternativa ${alt.letra}`}
+                value={passo.texto}
+                onChange={(e) => mudarPasso(i, e.target.value)}
+                placeholder={`Passo ${i + 1}`}
                 className={inputCls}
                 required
               />
+              <button
+                type="button"
+                onClick={() => moverPasso(i, -1)}
+                disabled={i === 0}
+                title="Mover para cima"
+                className="shrink-0 rounded border border-slate-700 px-2 py-1.5 text-xs leading-none text-slate-300 hover:bg-slate-800 disabled:opacity-30"
+              >
+                ▲
+              </button>
+              <button
+                type="button"
+                onClick={() => moverPasso(i, 1)}
+                disabled={i === dados.passos.length - 1}
+                title="Mover para baixo"
+                className="shrink-0 rounded border border-slate-700 px-2 py-1.5 text-xs leading-none text-slate-300 hover:bg-slate-800 disabled:opacity-30"
+              >
+                ▼
+              </button>
+              <button
+                type="button"
+                onClick={() => removerPasso(i)}
+                disabled={dados.passos.length <= 2}
+                title="Remover passo"
+                className="shrink-0 rounded border border-red-500/30 p-1.5 text-red-300 hover:bg-red-500/10 disabled:opacity-30"
+              >
+                <PixelIcon nome="trash" className="h-3.5 w-3.5" />
+              </button>
             </div>
-            <input
-              value={alt.explicacao}
-              onChange={(e) => mudarAlternativa(alt.letra, 'explicacao', e.target.value)}
-              placeholder="Explicação (feedback pedagógico mostrado após a resposta)"
-              className={`${inputCls} mt-2`}
-              required
-            />
-          </div>
-        ))}
-        <p className="text-xs text-slate-500">
-          Marque o círculo da alternativa correta. Todas precisam de explicação.
-        </p>
-      </div>
+          ))}
+          <button
+            type="button"
+            onClick={adicionarPasso}
+            className="btn-pixel flex items-center gap-1 bg-slate-800 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-700"
+          >
+            <PixelIcon nome="plus" className="h-3.5 w-3.5" />
+            Adicionar passo
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {dados.alternativas.map((alt) => (
+            <div key={alt.letra} className="rounded-lg border border-slate-800 p-3">
+              <div className="flex items-center gap-3">
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="correta"
+                    checked={alt.correta}
+                    onChange={() => mudarAlternativa(alt.letra, 'correta', true)}
+                  />
+                  <span className="flex h-6 w-6 items-center justify-center rounded bg-slate-800 text-xs font-bold text-indigo-300">
+                    {alt.letra}
+                  </span>
+                </label>
+                <input
+                  value={alt.texto}
+                  onChange={(e) => mudarAlternativa(alt.letra, 'texto', e.target.value)}
+                  placeholder={`Texto da alternativa ${alt.letra}`}
+                  className={inputCls}
+                  required
+                />
+              </div>
+              <input
+                value={alt.explicacao}
+                onChange={(e) => mudarAlternativa(alt.letra, 'explicacao', e.target.value)}
+                placeholder="Explicação (feedback pedagógico mostrado após a resposta)"
+                className={`${inputCls} mt-2`}
+                required
+              />
+            </div>
+          ))}
+          <p className="text-xs text-slate-500">
+            Marque o círculo da alternativa correta. Todas precisam de explicação.
+          </p>
+        </div>
+      )}
 
       <Alerta>{erro}</Alerta>
 

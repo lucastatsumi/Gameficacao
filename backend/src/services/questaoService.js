@@ -34,19 +34,25 @@ export async function criarQuestao(professorId, dados) {
       xp_valor: questao.xp_valor,
       dica: questao.dica,
       formato: questao.formato,
+      passos: questao.passos,
+      ordem_correta: questao.ordem_correta,
       criada_por: professorId,
     })
     .select()
     .single();
   if (error) throw error;
 
-  const { error: erroAlt } = await db
-    .from('alternativas')
-    .insert(questao.alternativas.map((a) => ({ ...a, questao_id: criada.id })));
-  if (erroAlt) {
-    // Compensação: não deixa questão órfã sem alternativas
-    await db.from('questoes').delete().eq('id', criada.id);
-    throw erroAlt;
+  // Formato 'reordenar_algoritmo' não usa a tabela `alternativas` — o
+  // gabarito já foi salvo em `ordem_correta` acima.
+  if (questao.alternativas.length) {
+    const { error: erroAlt } = await db
+      .from('alternativas')
+      .insert(questao.alternativas.map((a) => ({ ...a, questao_id: criada.id })));
+    if (erroAlt) {
+      // Compensação: não deixa questão órfã sem alternativas
+      await db.from('questoes').delete().eq('id', criada.id);
+      throw erroAlt;
+    }
   }
 
   return { ...criada, alternativas: questao.alternativas };
@@ -61,10 +67,11 @@ export async function atualizarQuestao(questaoId, dados) {
   if (erroBusca) throw erroBusca;
   if (!existente) throw new HttpError(404, 'Questão não encontrada');
 
-  // O formato (padrão x batalha_complexidade) não pode mudar na edição:
-  // as alternativas já criadas (e possivelmente já respondidas por algum
-  // aluno) têm um número fixo de letras que não muda depois. Ignora
-  // qualquer "formato" vindo do payload e usa sempre o já salvo.
+  // O formato (padrão x batalha_complexidade x reordenar_algoritmo) não pode
+  // mudar na edição: as alternativas já criadas (e possivelmente já
+  // respondidas por algum aluno) têm um número fixo de letras que não muda
+  // depois. Ignora qualquer "formato" vindo do payload e usa sempre o já
+  // salvo.
   const questao = validarPayload({ ...dados, formato: existente.formato });
 
   const { error } = await db
@@ -78,27 +85,34 @@ export async function atualizarQuestao(questaoId, dados) {
       tempo_limite_seg: questao.tempo_limite_seg,
       xp_valor: questao.xp_valor,
       dica: questao.dica,
+      passos: questao.passos,
+      ordem_correta: questao.ordem_correta,
     })
     .eq('id', questaoId);
   if (error) throw error;
 
-  // Alternativas são ATUALIZADAS pela letra (nunca deletadas): respostas
-  // antigas referenciam esses ids e o histórico não pode quebrar.
-  // Passo 1: zera todas as corretas para não violar o índice único parcial.
-  const { error: erroReset } = await db
-    .from('alternativas')
-    .update({ correta: false })
-    .eq('questao_id', questaoId);
-  if (erroReset) throw erroReset;
-
-  for (const alt of questao.alternativas) {
-    const alvo = existente.alternativas.find((a) => a.letra === alt.letra);
-    if (!alvo) throw new HttpError(400, `Alternativa ${alt.letra} não existe nesta questão`);
-    const { error: erroAlt } = await db
+  // 'reordenar_algoritmo' não usa a tabela `alternativas` — passos/gabarito
+  // já foram sobrescritos inteiros no update acima (nada referencia o id de
+  // um passo específico fora da própria questão, então pode regerar à vontade).
+  if (questao.alternativas.length) {
+    // Alternativas são ATUALIZADAS pela letra (nunca deletadas): respostas
+    // antigas referenciam esses ids e o histórico não pode quebrar.
+    // Passo 1: zera todas as corretas para não violar o índice único parcial.
+    const { error: erroReset } = await db
       .from('alternativas')
-      .update({ texto: alt.texto, explicacao: alt.explicacao, correta: alt.correta })
-      .eq('id', alvo.id);
-    if (erroAlt) throw erroAlt;
+      .update({ correta: false })
+      .eq('questao_id', questaoId);
+    if (erroReset) throw erroReset;
+
+    for (const alt of questao.alternativas) {
+      const alvo = existente.alternativas.find((a) => a.letra === alt.letra);
+      if (!alvo) throw new HttpError(400, `Alternativa ${alt.letra} não existe nesta questão`);
+      const { error: erroAlt } = await db
+        .from('alternativas')
+        .update({ texto: alt.texto, explicacao: alt.explicacao, correta: alt.correta })
+        .eq('id', alvo.id);
+      if (erroAlt) throw erroAlt;
+    }
   }
 
   return { id: questaoId, ...questao };
@@ -128,7 +142,11 @@ const LETRAS_POR_FORMATO = {
   batalha_complexidade: ['A', 'B'],
 };
 
-function validarPayload(dados) {
+// 'reordenar_algoritmo' não usa `alternativas` — ver database/14_reordenar_algoritmo.sql.
+const FORMATO_SEQUENCIA = 'reordenar_algoritmo';
+const FORMATOS_VALIDOS = [...Object.keys(LETRAS_POR_FORMATO), FORMATO_SEQUENCIA];
+
+function validarCamposComuns(dados) {
   const {
     fase_id,
     enunciado,
@@ -139,7 +157,6 @@ function validarPayload(dados) {
     xp_valor = 10,
     dica = null,
     formato = 'padrao',
-    alternativas,
   } = dados ?? {};
 
   if (!fase_id) throw new HttpError(400, 'fase_id é obrigatório');
@@ -153,10 +170,25 @@ function validarPayload(dados) {
   if (!Number.isInteger(xp_valor) || xp_valor < 1) {
     throw new HttpError(400, 'xp_valor deve ser um inteiro >= 1');
   }
-  const letrasEsperadas = LETRAS_POR_FORMATO[formato];
-  if (!letrasEsperadas) {
-    throw new HttpError(400, `formato deve ser um de: ${Object.keys(LETRAS_POR_FORMATO).join(', ')}`);
+  if (!FORMATOS_VALIDOS.includes(formato)) {
+    throw new HttpError(400, `formato deve ser um de: ${FORMATOS_VALIDOS.join(', ')}`);
   }
+
+  return {
+    fase_id,
+    enunciado: enunciado.trim(),
+    codigo_snippet,
+    linguagem,
+    dificuldade,
+    tempo_limite_seg,
+    xp_valor,
+    dica: dica?.trim() || null,
+    formato,
+  };
+}
+
+function validarAlternativas(formato, alternativas) {
+  const letrasEsperadas = LETRAS_POR_FORMATO[formato];
   if (!Array.isArray(alternativas) || alternativas.length !== letrasEsperadas.length) {
     throw new HttpError(
       400,
@@ -178,21 +210,37 @@ function validarPayload(dados) {
     }
   }
 
-  return {
-    fase_id,
-    enunciado: enunciado.trim(),
-    codigo_snippet,
-    linguagem,
-    dificuldade,
-    tempo_limite_seg,
-    xp_valor,
-    dica: dica?.trim() || null,
-    formato,
-    alternativas: alternativas.map((a) => ({
-      letra: a.letra,
-      texto: a.texto.trim(),
-      correta: a.correta === true,
-      explicacao: a.explicacao.trim(),
-    })),
-  };
+  return alternativas.map((a) => ({
+    letra: a.letra,
+    texto: a.texto.trim(),
+    correta: a.correta === true,
+    explicacao: a.explicacao.trim(),
+  }));
+}
+
+// `passos` chega como [{ texto }, ...] — a ORDEM DO ARRAY é o gabarito
+// (o professor digita os passos já na sequência certa). Os ids (p1, p2, ...)
+// são gerados aqui, não confiamos em nada vindo do cliente para o gabarito.
+function validarPassos(passos) {
+  if (!Array.isArray(passos) || passos.length < 2) {
+    throw new HttpError(400, 'Questões no formato "reordenar_algoritmo" precisam de pelo menos 2 passos');
+  }
+  for (const p of passos) {
+    if (!p.texto?.trim()) throw new HttpError(400, 'Todo passo precisa de um texto');
+  }
+
+  const passosComId = passos.map((p, i) => ({ id: `p${i + 1}`, texto: p.texto.trim() }));
+  return { passos: passosComId, ordem_correta: passosComId.map((p) => p.id) };
+}
+
+function validarPayload(dados) {
+  const comuns = validarCamposComuns(dados);
+
+  if (comuns.formato === FORMATO_SEQUENCIA) {
+    const { passos, ordem_correta } = validarPassos(dados?.passos);
+    return { ...comuns, passos, ordem_correta, alternativas: [] };
+  }
+
+  const alternativas = validarAlternativas(comuns.formato, dados?.alternativas);
+  return { ...comuns, passos: null, ordem_correta: null, alternativas };
 }
