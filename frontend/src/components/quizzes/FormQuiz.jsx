@@ -12,6 +12,7 @@ export default function FormQuiz({ form, aoFechar, aoSalvar }) {
   const [banco, setBanco] = useState(null); // questões sem gabarito
   const [fases, setFases] = useState([]);
   const [filtroFase, setFiltroFase] = useState('');
+  const [qtdTemplate, setQtdTemplate] = useState(10);
   const [erro, setErro] = useState(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -62,6 +63,15 @@ export default function FormQuiz({ form, aoFechar, aoSalvar }) {
       ? banco.filter((q) => q.fase_id === Number(filtroFase))
       : banco
     : [];
+
+  // "Template rápido": sorteia N questões da fase filtrada e substitui a
+  // seleção atual — atalho para montar um quiz de tópico único sem marcar
+  // uma por uma.
+  function aplicarTemplateAleatorio() {
+    const qtd = Math.max(1, Math.min(20, Number(qtdTemplate) || 0));
+    const embaralhadas = [...visiveis].sort(() => Math.random() - 0.5);
+    mudar('questao_ids', embaralhadas.slice(0, qtd).map((q) => q.id));
+  }
 
   return (
     <form onSubmit={salvar} className="card-pixel space-y-4 border-2 border-indigo-500/40 bg-slate-900/80 p-5">
@@ -169,6 +179,29 @@ export default function FormQuiz({ form, aoFechar, aoSalvar }) {
             ))}
           </select>
         </div>
+        {filtroFase && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 border-2 border-dashed border-indigo-500/30 bg-indigo-500/5 p-2">
+            <PixelIcon nome="reload" className="h-4 w-4 text-indigo-300" />
+            <span className="text-xs text-slate-300">Template rápido: sortear</span>
+            <input
+              type="number"
+              min={1}
+              max={20}
+              value={qtdTemplate}
+              onChange={(e) => setQtdTemplate(e.target.value)}
+              className={`${inputCls} w-16 py-1`}
+            />
+            <span className="text-xs text-slate-300">questões desta fase</span>
+            <button
+              type="button"
+              onClick={aplicarTemplateAleatorio}
+              disabled={visiveis.length === 0}
+              className="btn-pixel ml-auto bg-indigo-600/80 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+            >
+              Aplicar
+            </button>
+          </div>
+        )}
         <div className="mt-2 max-h-64 space-y-1 overflow-y-auto border-2 border-slate-800 p-2">
           {!banco && <Spinner texto="Carregando banco de questões..." />}
           {banco &&

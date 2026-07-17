@@ -111,10 +111,12 @@ estudantes primeiro.
   desempenho por questão e exportação CSV da turma; falta uma visão agregada
   por fase (não só por questão individual) e gráfico de evolução ao longo do
   tempo.
-- **Quizzes customizados com mais opções** — `quizCustomService.js` e
-  `06_quiz_custom_dicas.sql`/`07_quizzes_abertos.sql` já dão base para
-  quizzes abertos com dicas; adicionar templates prontos por tópico para o
-  professor montar quiz rápido.
+- ✅ **Templates de quiz (seleção rápida por fase)** — implementado em
+  `FormQuiz.jsx`: ao filtrar o banco de questões por fase, aparece um atalho
+  "Template rápido" que sorteia N questões daquela fase (1-20, campo
+  editável) e substitui a seleção atual — o professor ainda pode ajustar
+  manualmente depois. Só frontend, sem mudança de backend (usa o mesmo
+  `questao_ids` que a seleção manual já preenchia).
 
 ## Engajamento e retenção — RPG, poderes e minigames
 
