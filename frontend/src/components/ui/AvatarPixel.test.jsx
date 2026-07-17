@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { axe } from 'vitest-axe';
 import AvatarPixel from './AvatarPixel.jsx';
 
 describe('AvatarPixel', () => {
@@ -26,5 +27,10 @@ describe('AvatarPixel', () => {
     const rects = [...container.querySelectorAll('rect')];
     const temOmbreira = rects.some((r) => Number(r.getAttribute('x')) < 0);
     expect(temOmbreira).toBe(true);
+  });
+
+  it('não tem violações de acessibilidade detectáveis automaticamente (axe-core)', async () => {
+    const { container } = render(<AvatarPixel nivel={12} />);
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

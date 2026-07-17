@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { axe } from 'vitest-axe';
 import CartaoStat from './CartaoStat.jsx';
 
 describe('CartaoStat', () => {
@@ -7,6 +8,11 @@ describe('CartaoStat', () => {
     render(<CartaoStat rotulo="XP total" valor={150} />);
     expect(screen.getByText('XP total')).toBeInTheDocument();
     expect(screen.getByText('150')).toBeInTheDocument();
+  });
+
+  it('não tem violações de acessibilidade detectáveis automaticamente (axe-core)', async () => {
+    const { container } = render(<CartaoStat rotulo="XP total" valor={150} />);
+    expect(await axe(container)).toHaveNoViolations();
   });
 
   it('aplica o estilo de destaque quando destaque=true', () => {

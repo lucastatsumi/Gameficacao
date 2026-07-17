@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { axe } from 'vitest-axe';
 import BotaoAlternativa from './BotaoAlternativa.jsx';
 
 const ALT_A = { id: 'a1', letra: 'A', texto: 'Pilha (LIFO)' };
@@ -45,5 +46,12 @@ describe('BotaoAlternativa', () => {
       <BotaoAlternativa alt={ALT_A} feedback={feedback} selecionada="algum-outro-id" aoClicar={() => {}} />
     );
     expect(screen.queryByText('Não deveria aparecer.')).not.toBeInTheDocument();
+  });
+
+  it('não tem violações de acessibilidade detectáveis automaticamente (axe-core)', async () => {
+    const { container } = render(
+      <BotaoAlternativa alt={ALT_A} feedback={null} selecionada={null} aoClicar={() => {}} />
+    );
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

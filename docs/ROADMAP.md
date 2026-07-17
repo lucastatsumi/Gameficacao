@@ -367,13 +367,16 @@ mecanismos redundantes e mal cobertos.
 Estes itens não são "esquecidos" — são categoricamente diferentes do resto
 deste roadmap: não dá pra implementá-los bem só com julgamento de
 engenharia, porque dependem de uma escolha de produto, arte nova, revisão
-humana especializada, ou ferramenta que este ambiente não tem. Três itens
-que estavam aqui (multiplayer/desafio, avatar visual e internacionalização)
-tinham um subconjunto genuinamente implementável sem esses recursos —
-foram movidos pra "Curto/médio prazo" como ✅ **feito**, com o que ainda
-falta (a parte que exige mesmo decisão de produto, arte nova, ou revisor
-nativo) explicitado ali. O que sobrou aqui é o que realmente não tem
-subconjunto implementável sem o recurso externo.
+humana especializada, ou ferramenta que este ambiente não tem. Todos os
+quatro itens que estavam aqui (multiplayer/desafio, avatar visual,
+internacionalização e acessibilidade) tinham um subconjunto genuinamente
+implementável sem esses recursos, e foi implementado — multiplayer, avatar
+e i18n ganharam seções próprias ✅ **feito (parcial)** em "Curto/médio
+prazo"; a parte implementável de acessibilidade (auditoria automatizada)
+está em "Infraestrutura / qualidade". Nenhum dos quatro chegou a 100% —
+cada um tem uma fração residual que só é resolvível com o recurso externo
+específico (arte, revisor nativo, decisão de produto, ou hardware
+assistivo real), documentada abaixo em cada item.
 
 - ✅ **Infra de internacionalização (parcial, sem revisão nativa)** —
   `frontend/src/i18n/translations.js` (dicionário pt/en) +
@@ -393,11 +396,18 @@ subconjunto implementável sem o recurso externo.
   internacional sem essa revisão. Isso é exatamente o risco que motivou o
   item ficar fora de escopo nas rodadas anteriores — a infra em si não
   tinha esse problema, só a qualidade da tradução tem.
-- **Acessibilidade avançada com leitor de tela** — dá pra fazer uma
-  auditoria de código (ARIA labels, ordem de foco, contraste calculado),
-  mas validar de verdade exige testar com um leitor de tela real
-  (NVDA/JAWS/VoiceOver), que não está disponível neste ambiente. Declarar
-  "acessível" sem esse teste seria enganoso.
+- **Acessibilidade avançada com leitor de tela real** — ✅ agora existe
+  auditoria AUTOMATIZADA (`vitest-axe`/`axe-core`, ver "Infraestrutura /
+  qualidade" abaixo), o que é um avanço real sobre a leitura manual de
+  código que havia antes. Mas isso continua sendo diferente de validar
+  com um leitor de tela de verdade: `axe-core` analisa a árvore DOM
+  estaticamente, não simula navegação só de teclado nem lê o conteúdo em
+  voz alta, e não pega problemas de UX que só aparecem em uso real (ordem
+  de leitura confusa, anúncios repetitivos, foco que "some" visualmente
+  mas continua no DOM). Isso exige NVDA/JAWS/VoiceOver, que não está
+  disponível neste ambiente — declarar "100% acessível" sem esse teste
+  continuaria sendo enganoso. Este É o resíduo genuinamente fora de
+  escopo, não o item inteiro.
 
 ## Infraestrutura / qualidade
 
@@ -409,11 +419,24 @@ subconjunto implementável sem o recurso externo.
 - ✅ **Infra de testes de componente no frontend** — `vitest` +
   `@testing-library/react` + `@testing-library/jest-dom` + `jsdom`
   instalados (`cd frontend && npm test`); `vite.config.js` ganhou o bloco
-  `test` (ambiente jsdom, setup file). Dois componentes puros cobertos como
-  ponto de partida: `CartaoStat` e `BotaoAlternativa` (7 testes) — mostram
-  o padrão para o próximo componente que precisar de teste. CI
+  `test` (ambiente jsdom, setup file). `CartaoStat`, `BotaoAlternativa` e
+  `AvatarPixel` cobertos como ponto de partida (18 testes) — mostram o
+  padrão para o próximo componente que precisar de teste. CI
   (`frontend-build` em `.github/workflows/ci.yml`) roda `npm test` antes do
   `npm run build`.
+- ✅ **Auditoria automatizada de acessibilidade (axe-core)** —
+  `vitest-axe` + `axe-core` instalados e registrados em
+  `src/test/setup.js` (`expect.extend(matchersAxe)`); os 3 componentes
+  acima ganharam um teste `expect(await axe(container)).toHaveNoViolations()`
+  cada, rodando no CI a cada push junto com o resto da suíte. `axe-core` é
+  a mesma engine por trás do Lighthouse e da extensão axe DevTools — pega
+  automaticamente `<label>`/ARIA ausente, contraste insuficiente,
+  atributos ARIA inválidos, hierarquia de heading quebrada, etc. É
+  estritamente mais rigoroso que a leitura manual de código que havia
+  antes, mas NÃO substitui um leitor de tela real (ver nota em "Fora do
+  escopo" — acessibilidade avançada). Cobertura ainda parcial (3
+  componentes); expandir pros demais é mecânico, mesmo padrão dos testes
+  de componente comuns.
 - **Monitoramento de qualidade das questões** — rodar o agente
   `question-researcher` periodicamente em modo de auditoria sobre
   `database/05_seed_questoes.sql` e futuras seeds, para pegar
