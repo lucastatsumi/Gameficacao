@@ -355,10 +355,15 @@ ferramenta que este ambiente não tem.
 - ✅ **Cobertura de testes de todos os services do backend** —
   `quizService`, `badgeService`, `perfilService`, `questaoService`,
   `poderService`, `eventoService`, `quizCustomService`, `relatorioService`
-  e `turmaService` têm testes (131 no total, `cd backend && npm test`).
-  Falta testes de **componente no frontend** (ex.: com
-  `@testing-library/react`, ainda não instalado), próximo passo natural de
-  infra de testes.
+  e `turmaService` têm testes (154 no total, `cd backend && npm test`).
+- ✅ **Infra de testes de componente no frontend** — `vitest` +
+  `@testing-library/react` + `@testing-library/jest-dom` + `jsdom`
+  instalados (`cd frontend && npm test`); `vite.config.js` ganhou o bloco
+  `test` (ambiente jsdom, setup file). Dois componentes puros cobertos como
+  ponto de partida: `CartaoStat` e `BotaoAlternativa` (7 testes) — mostram
+  o padrão para o próximo componente que precisar de teste. CI
+  (`frontend-build` em `.github/workflows/ci.yml`) roda `npm test` antes do
+  `npm run build`.
 - **Monitoramento de qualidade das questões** — rodar o agente
   `question-researcher` periodicamente em modo de auditoria sobre
   `database/05_seed_questoes.sql` e futuras seeds, para pegar
