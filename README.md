@@ -60,7 +60,9 @@ fases desbloqueável e ranking.
 │   ├── 13_eventos_temporarios.sql #  XP multiplicado por período
 │   ├── 14_reordenar_algoritmo.sql #  Minigame de ordenar passos de algoritmo
 │   ├── 15_boss_fight.sql         #   Vidas em quizzes customizados
-│   └── 16_poder_pular.sql        #   Poder "pular sem perder XP"
+│   ├── 16_poder_pular.sql        #   Poder "pular sem perder XP"
+│   ├── 17_badge_sem_dica.sql     #   Valor de enum do badge "sem usar dica"
+│   └── 18_badge_sem_dica_seed.sql #  Seed do badge "sem usar dica"
 ├── backend/
 │   └── src/
 │       ├── config/               # Cliente Supabase, variáveis de ambiente

@@ -37,6 +37,12 @@ const BADGE_STREAK = {
   tipo_condicao: 'streak_dias',
   parametro: { dias: 7 },
 };
+const BADGE_SEM_DICA = {
+  id: 7,
+  nome: 'Sem Ajudinha',
+  tipo_condicao: 'sem_dica',
+  parametro: { min_questoes: 3 },
+};
 
 describe('verificarBadges', () => {
   beforeEach(() => {
@@ -173,6 +179,52 @@ describe('verificarBadges', () => {
       usuario_badges: [ok([]), ok(null)],
     });
     const conquistou = await verificarBadges('user-1', { streakAtual: 7 });
+    expect(conquistou).toHaveLength(1);
+  });
+
+  it('badge "sem dica" exige aprovação, nenhuma dica usada e quantidade mínima de questões', async () => {
+    configurarDb({
+      badges: [ok([BADGE_SEM_DICA])],
+      usuario_badges: [ok([])],
+    });
+    const semAprovar = await verificarBadges('user-1', {
+      aprovada: false,
+      semDica: true,
+      totalQuestoes: 10,
+    });
+    expect(semAprovar).toEqual([]);
+
+    configurarDb({
+      badges: [ok([BADGE_SEM_DICA])],
+      usuario_badges: [ok([])],
+    });
+    const usouDica = await verificarBadges('user-1', {
+      aprovada: true,
+      semDica: false,
+      totalQuestoes: 10,
+    });
+    expect(usouDica).toEqual([]);
+
+    configurarDb({
+      badges: [ok([BADGE_SEM_DICA])],
+      usuario_badges: [ok([])],
+    });
+    const poucasQuestoes = await verificarBadges('user-1', {
+      aprovada: true,
+      semDica: true,
+      totalQuestoes: 2,
+    });
+    expect(poucasQuestoes).toEqual([]);
+
+    configurarDb({
+      badges: [ok([BADGE_SEM_DICA])],
+      usuario_badges: [ok([]), ok(null)],
+    });
+    const conquistou = await verificarBadges('user-1', {
+      aprovada: true,
+      semDica: true,
+      totalQuestoes: 10,
+    });
     expect(conquistou).toHaveLength(1);
   });
 });

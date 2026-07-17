@@ -472,6 +472,11 @@ export async function finalizarQuiz(usuario, tentativaId) {
       ? temposValidos.reduce((soma, t) => soma + t, 0) / temposValidos.length
       : null;
 
+  // "Sem usar dica": só faz sentido avaliar se o quiz foi respondido por
+  // completo (senão questões puladas/pendentes mascarariam o resultado).
+  const semDica =
+    respostas.length === totalEfetivo && respostas.every((r) => !r.usou_dica);
+
   const badgesNovas = await verificarBadges(usuario.id, {
     xpTotal,
     aprovada,
@@ -479,6 +484,8 @@ export async function finalizarQuiz(usuario, tentativaId) {
     quizPerfeito: tentativa.total_questoes > 0 && acertos === tentativa.total_questoes,
     tempoMedioMs,
     streakAtual: streakDias,
+    semDica,
+    totalQuestoes: tentativa.total_questoes,
   });
 
   let titulo = fase?.nome;
@@ -502,6 +509,10 @@ export async function finalizarQuiz(usuario, tentativaId) {
     fase_concluida: progresso.concluida,
     badges_novas: badgesNovas,
     streak_dias: streakDias,
+    // Marco de streak (a cada 5 dias): só true quando ESTE quiz foi o que
+    // efetivamente contou o novo dia — evita conceder o poder de novo se o
+    // aluno finalizar vários quizzes no mesmo dia em que bateu o marco.
+    streak_marco: hoje !== usuario.streak_ultimo_dia && streakDias > 0 && streakDias % 5 === 0,
     evento: evento && { nome: evento.nome, multiplicador_xp: evento.multiplicador_xp },
   };
 }

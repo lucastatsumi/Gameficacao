@@ -617,6 +617,83 @@ describe('finalizarQuiz — regra anti-farming de XP', () => {
     expect(res.bonus_streak).toBe(20); // teto
   });
 
+  it('streak_marco é true só quando o dia novo faz a streak bater múltiplo de 5', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't9',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 2,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([{ correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } }]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: false })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([])],
+    });
+
+    const ontem = new Date();
+    ontem.setUTCDate(ontem.getUTCDate() - 1);
+    const usuario = {
+      id: 'user-1',
+      xp_total: 0,
+      nivel: 1,
+      streak_dias: 4, // ontem -> hoje incrementa para 5 (marco)
+      streak_ultimo_dia: ontem.toISOString().slice(0, 10),
+    };
+    const res = await finalizarQuiz(usuario, 't9');
+
+    expect(res.streak_dias).toBe(5);
+    expect(res.streak_marco).toBe(true);
+  });
+
+  it('streak_marco é false no mesmo dia (evita conceder o poder de novo)', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't10',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 2,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([{ correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } }]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: false })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([])],
+    });
+
+    const hoje = new Date().toISOString().slice(0, 10);
+    const usuario = {
+      id: 'user-1',
+      xp_total: 0,
+      nivel: 1,
+      streak_dias: 5, // já bateu o marco hoje mais cedo
+      streak_ultimo_dia: hoje,
+    };
+    const res = await finalizarQuiz(usuario, 't10');
+
+    expect(res.streak_dias).toBe(5);
+    expect(res.streak_marco).toBe(false);
+  });
+
   it('questão pulada com o poder não conta contra a aprovação (denominador efetivo)', async () => {
     // 3 questões no total: 1 pulada (poder), 2 respondidas e ambas certas.
     // Sem excluir a pulada, 2/3 = 67% reprovaria (precisa de 70%); excluindo,

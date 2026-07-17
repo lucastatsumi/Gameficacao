@@ -87,11 +87,14 @@ estudantes primeiro.
 
 ## Médio prazo (features de jogo)
 
-- **Sistema de badges mais rico** — `badgeService.js` já cobre XP acumulado,
-  fase concluída, quiz perfeito, velocidade, sequência de acertos e (nesta
-  rodada) streak diário; falta celebração visual mais elaborada ao
-  desbloquear (hoje é um card estático na tela de resultado) e critérios
-  novos como "sem usar dica".
+- ✅ **Sistema de badges mais rico (critério "sem usar dica")** — novo
+  `tipo_condicao_badge = 'sem_dica'` (`database/17_badge_sem_dica.sql` +
+  `18_badge_sem_dica_seed.sql`, badge "Sem Ajudinha"): concedido quando o
+  aluno aprova um quiz de pelo menos 3 questões sem usar dica em nenhuma
+  delas. `quizService.finalizarQuiz` calcula `semDica` a partir de
+  `respostas.usou_dica` só quando o quiz foi respondido por completo. A
+  celebração visual (confete, som, cards com animação `anim-pular`) já
+  existia em `TelaResultado.jsx` e cobre badges novas de qualquer critério.
 - ✅ **Modo de revisão de erros** — implementado: `GET /perfil/revisao`
   (`perfilService.errosRecentes`) traz as últimas respostas erradas com a
   alternativa escolhida, a correta e a explicação; exibido como nova seção
@@ -187,8 +190,13 @@ mecanismos redundantes e mal cobertos.
   cravar um quiz 100% concede 1 uso de "tempo_extra"; concluir uma fase
   pela primeira vez concede 1 uso de "pular_questao" (regra em
   `quizController.finalizar`, fora de `quizService` para não criar
-  dependência circular entre os dois serviços). Ainda não há concessão
-  ligada a streak — próximo passo natural.
+  dependência circular entre os dois serviços). ✅ **Concessão ligada a
+  streak**: `quizService.finalizarQuiz` calcula `streak_marco` (true
+  quando o dia contado por ESTE quiz faz a streak bater um múltiplo de 5
+  — comparando `hoje` com `usuario.streak_ultimo_dia` para não conceder de
+  novo se o aluno finalizar vários quizzes no mesmo dia); o controller
+  sorteia 1 dos 3 poderes e concede, avisando o aluno na tela de resultado
+  (`resultado.poder_concedido`).
 
 ### 3. Minigames entre fases
 

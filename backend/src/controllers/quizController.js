@@ -64,6 +64,14 @@ export async function finalizar(req, res, next) {
     if (resultado.fase_concluida) {
       await poderService.concederPoder(req.usuario.id, 'pular_questao', 1);
     }
+    // Marco de streak (a cada 5 dias seguidos jogando): sorteia 1 poder
+    // qualquer como recompensa por persistência.
+    if (resultado.streak_marco) {
+      const poderes = poderService.PODERES_VALIDOS;
+      const sorteado = poderes[Math.floor(Math.random() * poderes.length)];
+      await poderService.concederPoder(req.usuario.id, sorteado, 1);
+      resultado.poder_concedido = sorteado;
+    }
 
     res.json(resultado);
   } catch (err) {

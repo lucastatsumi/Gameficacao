@@ -7,6 +7,12 @@ import pixelTrofeu from '../../assets/img/pixel-trofeu.svg';
 import pixelTriste from '../../assets/img/pixel-triste.svg';
 import { tocarVitoria, tocarDerrota, tocarBadge } from '../../lib/sons.js';
 
+const NOMES_PODER = {
+  eliminar_alternativa: '50/50',
+  tempo_extra: '+15s',
+  pular_questao: 'Pular questão',
+};
+
 export default function TelaResultado({ resultado, sons = true }) {
   const pct = Math.round((100 * resultado.acertos) / resultado.total_questoes);
 
@@ -62,6 +68,14 @@ export default function TelaResultado({ resultado, sons = true }) {
           {resultado.bonus_streak > 0 && (
             <span className="text-amber-300">(+{resultado.bonus_streak} XP de bônus)</span>
           )}
+        </div>
+      )}
+
+      {resultado.poder_concedido && (
+        <div className="anim-pop card-pixel mt-4 flex items-center justify-center gap-2 border-2 border-emerald-500/40 bg-emerald-500/10 p-3 text-emerald-300">
+          <PixelIcon nome="star" className="h-5 w-5" />
+          Marco de {resultado.streak_dias} dias seguidos: você ganhou 1 poder{' '}
+          {NOMES_PODER[resultado.poder_concedido] ?? resultado.poder_concedido}!
         </div>
       )}
 
