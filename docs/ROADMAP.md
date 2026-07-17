@@ -97,9 +97,13 @@ estudantes primeiro.
   alternativa escolhida, a correta e a explicação; exibido como nova seção
   no `Perfil`. Ainda dá pra evoluir para repetição espaçada de verdade
   (hoje é só uma lista cronológica, sem lembrar o aluno de revisar depois).
-- **Dificuldade adaptativa** — ajustar mix de questões fácil/média/difícil
-  por fase com base no desempenho recente do aluno (mantendo lógica no
-  backend).
+- ✅ **Dificuldade adaptativa** — implementado (`backend/src/utils/dificuldadeAdaptativa.js`
+  + `quizService.iniciarQuiz`): antes de sortear as questões, o backend calcula
+  a taxa de acerto do aluno nas últimas 5 tentativas finalizadas naquela fase
+  e pondera a seleção por dificuldade — reforça o básico (60% fácil) se a taxa
+  recente for baixa (<40%), aumenta o desafio (60% difícil) se for alta
+  (≥80%), e mantém o mix equilibrado de antes (30/50/20) sem histórico. Toda a
+  lógica é server-side; o frontend não sabe de nada disso.
 - **Notificações/lembretes de retomada** — para alunos que abandonaram uma
   fase ou não acessam há X dias (o campo `abandonarTentativasAbertas` já
   existe em `quizService.js` como base).

@@ -5,10 +5,23 @@ import { nivelPorXp } from '../utils/nivel.js';
 import { dataDeHoje, proximoStreak } from '../utils/streak.js';
 import { verificarBadges } from './badgeService.js';
 import { eventoAtivoParaFase } from './eventoService.js';
+import { selecionarAdaptativo } from '../utils/dificuldadeAdaptativa.js';
+
+const TENTATIVAS_PARA_DIFICULDADE = 5; // janela recente usada para medir desempenho na fase
 
 const QUESTOES_POR_QUIZ = 10;
 const PCT_APROVACAO = 0.7; // acertar 70% conclui a fase / aprova o quiz
 const TOLERANCIA_REDE_MS = 5000; // folga sobre o timer para latência de rede
+
+// Taxa de acerto (%) nas últimas tentativas finalizadas do aluno na fase —
+// alimenta a dificuldade adaptativa. null quando não há histórico ainda.
+function taxaAcertoRecente(tentativas) {
+  if (!tentativas?.length) return null;
+  const totalQuestoes = tentativas.reduce((soma, t) => soma + t.total_questoes, 0);
+  if (totalQuestoes === 0) return null;
+  const totalAcertos = tentativas.reduce((soma, t) => soma + t.acertos, 0);
+  return Math.round((totalAcertos / totalQuestoes) * 100);
+}
 
 // ---------------------------------------------------------------
 // POST /quiz/iniciar — valida desbloqueio, sorteia questões e abre
@@ -50,8 +63,18 @@ export async function iniciarQuiz(userId, faseId) {
   if (erroQuestoes) throw erroQuestoes;
   if (!questoes?.length) throw new HttpError(404, 'Esta fase ainda não possui questões');
 
-  const sorteadas = embaralhar(questoes)
-    .slice(0, QUESTOES_POR_QUIZ)
+  const { data: tentativasRecentes } = await db
+    .from('tentativas')
+    .select('acertos, total_questoes')
+    .eq('user_id', userId)
+    .eq('fase_id', faseId)
+    .not('finalizada_em', 'is', null)
+    .order('finalizada_em', { ascending: false })
+    .limit(TENTATIVAS_PARA_DIFICULDADE);
+
+  const taxaAcertoPct = taxaAcertoRecente(tentativasRecentes);
+
+  const sorteadas = selecionarAdaptativo(questoes, taxaAcertoPct, QUESTOES_POR_QUIZ)
     .map((q) => ({
       ...q,
       tem_dica: false, // dicas são exclusivas dos quizzes customizados

@@ -56,7 +56,7 @@ describe('iniciarQuiz', () => {
 
     configurarDb({
       fases: [ok({ id: 1, fase_requisito_id: null, nome: 'Listas' })],
-      tentativas: [ok(null), ok({ id: 'tent-1' })],
+      tentativas: [ok(null), ok([]), ok({ id: 'tent-1' })],
       questoes: [ok(questoesBrutas)],
     });
 
@@ -84,7 +84,7 @@ describe('iniciarQuiz', () => {
 
     configurarDb({
       fases: [ok({ id: 6, fase_requisito_id: null, nome: 'Batalha de Complexidade' })],
-      tentativas: [ok(null), ok({ id: 'tent-2' })],
+      tentativas: [ok(null), ok([]), ok({ id: 'tent-2' })],
       questoes: [ok(questoesBrutas)],
     });
 
@@ -92,6 +92,50 @@ describe('iniciarQuiz', () => {
 
     expect(resultado.questoes).toHaveLength(5);
     expect(resultado.questoes.every((q) => q.formato === 'batalha_complexidade')).toBe(true);
+  });
+
+  it('dificuldade adaptativa: com desempenho recente baixo, prioriza questões fáceis', async () => {
+    const questoesBrutas = [
+      ...Array.from({ length: 5 }, (_, i) => ({
+        id: `f${i}`,
+        dificuldade: 'facil',
+        alternativas: [{ id: 'a1', letra: 'A', texto: 'x' }],
+      })),
+      ...Array.from({ length: 5 }, (_, i) => ({
+        id: `m${i}`,
+        dificuldade: 'media',
+        alternativas: [{ id: 'a1', letra: 'A', texto: 'x' }],
+      })),
+      ...Array.from({ length: 5 }, (_, i) => ({
+        id: `d${i}`,
+        dificuldade: 'dificil',
+        alternativas: [{ id: 'a1', letra: 'A', texto: 'x' }],
+      })),
+    ];
+
+    configurarDb({
+      fases: [ok({ id: 1, fase_requisito_id: null, nome: 'Listas' })],
+      // 2 tentativas recentes com baixo aproveitamento (2/10 = 20%)
+      tentativas: [
+        ok(null),
+        ok([
+          { acertos: 1, total_questoes: 5 },
+          { acertos: 1, total_questoes: 5 },
+        ]),
+        ok({ id: 'tent-3' }),
+      ],
+      questoes: [ok(questoesBrutas)],
+    });
+
+    const resultado = await iniciarQuiz('user-1', 1);
+    const porDificuldade = resultado.questoes.reduce((acc, q) => {
+      const dif = questoesBrutas.find((qb) => qb.id === q.id).dificuldade;
+      acc[dif] = (acc[dif] ?? 0) + 1;
+      return acc;
+    }, {});
+
+    expect(resultado.questoes).toHaveLength(10);
+    expect(porDificuldade.facil).toBeGreaterThan(porDificuldade.dificil);
   });
 });
 
