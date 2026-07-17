@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { useI18n } from '../contexts/I18nContext.jsx';
 import Alerta from '../components/ui/Alerta.jsx';
 import PixelIcon from '../components/ui/PixelIcon.jsx';
 
@@ -15,6 +16,7 @@ const inputCls =
 
 export default function Login() {
   const { sessao, login, cadastrar } = useAuth();
+  const { t } = useI18n();
   const [modo, setModo] = useState('login'); // 'login' | 'cadastro'
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -32,11 +34,9 @@ export default function Login() {
     setEnviando(true);
     try {
       if (modo === 'cadastro') {
-        if (!nome.trim()) throw new Error('Informe seu nome');
+        if (!nome.trim()) throw new Error(t('login.nomeObrigatorio'));
         await cadastrar(nome.trim(), email, senha);
-        setAviso(
-          'Conta criada! Se a confirmação por e-mail estiver ativa no projeto, confirme antes de entrar.'
-        );
+        setAviso(t('login.contaCriada'));
         setModo('login');
       } else {
         await login(email, senha);
@@ -73,11 +73,7 @@ export default function Login() {
             </h1>
           </div>
 
-          <p className="mt-4 text-lg text-slate-300">
-            Domine <span className="font-semibold text-indigo-300">Estruturas de Dados</span>{' '}
-            jogando: resolva cenários reais de programação, ganhe XP, desbloqueie fases e dispute o
-            ranking com a sua turma.
-          </p>
+          <p className="mt-4 text-lg text-slate-300">{t('login.subtitulo')}</p>
 
           <img
             src={heroTrilha}
@@ -88,15 +84,15 @@ export default function Login() {
           <ul className="mt-6 grid gap-3 text-left text-sm text-slate-400 sm:grid-cols-3">
             <li className="card-pixel flex items-center gap-2 border-2 border-slate-800 bg-slate-900/60 px-3 py-2">
               <PixelIcon nome="map-pin" className="h-5 w-5 shrink-0 text-indigo-400" />
-              5 fases: de Listas a Ordenação
+              {t('login.feature1')}
             </li>
             <li className="card-pixel flex items-center gap-2 border-2 border-slate-800 bg-slate-900/60 px-3 py-2">
               <PixelIcon nome="clock" className="h-5 w-5 shrink-0 text-amber-300" />
-              Quiz com timer e feedback
+              {t('login.feature2')}
             </li>
             <li className="card-pixel flex items-center gap-2 border-2 border-slate-800 bg-slate-900/60 px-3 py-2">
               <PixelIcon nome="trophy" className="h-5 w-5 shrink-0 text-yellow-400" />
-              XP, níveis e 10 conquistas
+              {t('login.feature3')}
             </li>
           </ul>
         </div>
@@ -106,8 +102,8 @@ export default function Login() {
           <div className="card-pixel border-2 border-indigo-900 bg-slate-900/80 p-6 backdrop-blur">
             <div className="mb-6 grid grid-cols-2 gap-1 bg-slate-800 p-1">
               {[
-                ['login', 'Entrar'],
-                ['cadastro', 'Criar conta'],
+                ['login', t('login.entrar')],
+                ['cadastro', t('login.criarConta')],
               ].map(([valor, rotulo]) => (
                 <button
                   key={valor}
@@ -130,7 +126,7 @@ export default function Login() {
               {modo === 'cadastro' && (
                 <input
                   className={inputCls}
-                  placeholder="Seu nome"
+                  placeholder={t('login.nome')}
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   autoComplete="name"
@@ -139,7 +135,7 @@ export default function Login() {
               <input
                 className={inputCls}
                 type="email"
-                placeholder="E-mail"
+                placeholder={t('login.email')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
@@ -148,7 +144,7 @@ export default function Login() {
               <input
                 className={inputCls}
                 type="password"
-                placeholder="Senha (mín. 6 caracteres)"
+                placeholder={t('login.senha')}
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 autoComplete={modo === 'login' ? 'current-password' : 'new-password'}
@@ -165,13 +161,13 @@ export default function Login() {
                 className="btn-pixel flex w-full items-center justify-center gap-2 bg-indigo-600 py-3 font-pixel text-[11px] text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
               >
                 <PixelIcon nome={modo === 'login' ? 'play' : 'star'} className="h-4 w-4" />
-                {enviando ? 'AGUARDE...' : modo === 'login' ? 'PRESS START' : 'NEW GAME'}
+                {enviando ? t('login.aguarde') : modo === 'login' ? t('login.pressStart') : t('login.newGame')}
               </button>
             </form>
           </div>
 
           <p className="anim-piscar mt-4 text-center font-pixel text-[9px] text-slate-500">
-            ▼ INSERT COIN ▼
+            {t('login.insertCoin')}
           </p>
 
           <p className="mt-3 text-center text-xs text-slate-600">

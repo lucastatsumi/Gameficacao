@@ -5,24 +5,27 @@ import Spinner from '../components/ui/Spinner.jsx';
 import Alerta from '../components/ui/Alerta.jsx';
 import BarraXp from '../components/ui/BarraXp.jsx';
 import PixelIcon from '../components/ui/PixelIcon.jsx';
+import AvatarPixel from '../components/ui/AvatarPixel.jsx';
 
 export default function Perfil() {
   const { perfil } = useAuth();
   const [badges, setBadges] = useState(null);
   const [historico, setHistorico] = useState(null);
+  const [revisao, setRevisao] = useState(null);
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
-    Promise.all([api.get('/perfil/badges'), api.get('/perfil/historico')])
-      .then(([b, h]) => {
+    Promise.all([api.get('/perfil/badges'), api.get('/perfil/historico'), api.get('/perfil/revisao')])
+      .then(([b, h, r]) => {
         setBadges(b);
         setHistorico(h);
+        setRevisao(r);
       })
       .catch((err) => setErro(err.message));
   }, []);
 
   if (erro) return <Alerta>{erro}</Alerta>;
-  if (!perfil || !badges || !historico) return <Spinner texto="Carregando perfil..." />;
+  if (!perfil || !badges || !historico || !revisao) return <Spinner texto="Carregando perfil..." />;
 
   const conquistadas = badges.filter((b) => b.conquistada).length;
 
@@ -32,13 +35,29 @@ export default function Perfil() {
       <div className="card-pixel border-2 border-slate-800 bg-slate-900/60 p-6">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center border-2 border-indigo-500/40 bg-indigo-950 text-indigo-300">
-            <PixelIcon nome={perfil.role === 'professor' ? 'book-open' : 'gamepad'} className="h-9 w-9" />
+            {perfil.role === 'professor' ? (
+              <PixelIcon nome="book-open" className="h-9 w-9" />
+            ) : (
+              <AvatarPixel nivel={perfil.nivel} className="h-12 w-12" />
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="font-pixel text-base text-slate-100">{perfil.nome}</h1>
             <p className="mt-1 text-sm text-slate-400">{perfil.email}</p>
-            <p className="mt-1 text-xs uppercase tracking-wide text-indigo-300">
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-indigo-300">
               {perfil.role === 'professor' ? 'Professor' : 'Aluno'}
+              {perfil.role !== 'professor' && (
+                <>
+                  <span className="text-slate-600">·</span>
+                  <span className="text-violet-300">{perfil.titulo_nivel}</span>
+                  {perfil.classe && (
+                    <>
+                      <span className="text-slate-600">·</span>
+                      <span className="text-emerald-300">{perfil.classe}</span>
+                    </>
+                  )}
+                </>
+              )}
             </p>
           </div>
           <div className="text-right">
@@ -48,6 +67,20 @@ export default function Perfil() {
             </p>
             <p className="mt-1 text-xs text-slate-400">XP total</p>
           </div>
+          {perfil.streak_dias > 0 && (
+            <div
+              title="Dias seguidos jogando"
+              className="card-pixel flex items-center gap-2 border-2 border-orange-500/40 bg-orange-500/10 px-3 py-2"
+            >
+              <PixelIcon nome="fire" className="h-6 w-6 text-orange-400" />
+              <div>
+                <p className="font-pixel text-sm text-orange-300">{perfil.streak_dias}</p>
+                <p className="text-[10px] uppercase tracking-wide text-orange-400/70">
+                  {perfil.streak_dias === 1 ? 'dia seguido' : 'dias seguidos'}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
         <div className="mt-5">
           <BarraXp perfil={perfil} />
@@ -56,6 +89,58 @@ export default function Perfil() {
             {perfil.nivel + 1}
           </p>
         </div>
+
+        {perfil.atributos && (
+          <div className="mt-4 grid grid-cols-3 gap-3 border-t-2 border-slate-800 pt-4">
+            <div className="text-center">
+              <p className="font-pixel text-sm text-slate-100">
+                {perfil.atributos.precisao_pct != null ? `${perfil.atributos.precisao_pct}%` : '—'}
+              </p>
+              <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-500">Precisão</p>
+            </div>
+            <div className="text-center">
+              <p className="font-pixel text-sm text-slate-100">
+                {perfil.atributos.velocidade_media_ms != null
+                  ? `${(perfil.atributos.velocidade_media_ms / 1000).toFixed(1)}s`
+                  : '—'}
+              </p>
+              <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-500">Velocidade</p>
+            </div>
+            <div className="text-center">
+              <p className="font-pixel text-sm text-slate-100">{perfil.atributos.dias_ativos}</p>
+              <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-500">Persistência</p>
+            </div>
+          </div>
+        )}
+
+        {perfil.poderes &&
+          (perfil.poderes.eliminar_alternativa > 0 ||
+            perfil.poderes.tempo_extra > 0 ||
+            perfil.poderes.pular_questao > 0) && (
+          <div className="mt-4 flex flex-wrap gap-3 border-t-2 border-slate-800 pt-4">
+            <p className="w-full text-xs uppercase tracking-wide text-slate-500">
+              Poderes disponíveis (use durante o quiz)
+            </p>
+            {perfil.poderes.eliminar_alternativa > 0 && (
+              <span className="flex items-center gap-1.5 border-2 border-violet-500/40 bg-violet-500/10 px-3 py-1.5 text-xs text-violet-300">
+                <PixelIcon nome="trash" className="h-4 w-4" />
+                50/50 × {perfil.poderes.eliminar_alternativa}
+              </span>
+            )}
+            {perfil.poderes.tempo_extra > 0 && (
+              <span className="flex items-center gap-1.5 border-2 border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs text-sky-300">
+                <PixelIcon nome="clock" className="h-4 w-4" />
+                +15s × {perfil.poderes.tempo_extra}
+              </span>
+            )}
+            {perfil.poderes.pular_questao > 0 && (
+              <span className="flex items-center gap-1.5 border-2 border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300">
+                <PixelIcon nome="arrow-right" className="h-4 w-4" />
+                Pular × {perfil.poderes.pular_questao}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* estante de badges */}
@@ -85,6 +170,46 @@ export default function Perfil() {
           ))}
         </div>
       </section>
+
+      {/* revisão de erros — reforço espaçado */}
+      {revisao.length > 0 && (
+        <section>
+          <h2 className="flex items-center gap-2 font-pixel text-sm text-slate-100">
+            <PixelIcon nome="reload" className="h-5 w-5 text-red-400" />
+            Revisão de erros
+          </h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Suas últimas respostas erradas, com a explicação da alternativa certa.
+          </p>
+          <div className="mt-4 space-y-3">
+            {revisao.map((r) => (
+              <div key={r.resposta_id} className="card-pixel border-2 border-slate-800 bg-slate-900/60 p-4">
+                <p className="text-sm text-slate-200">{r.questao.enunciado}</p>
+                {r.questao.codigo_snippet && (
+                  <pre className="mt-3 overflow-x-auto border-2 border-slate-800 bg-slate-950 p-3 text-xs text-emerald-300">
+                    <code>{r.questao.codigo_snippet}</code>
+                  </pre>
+                )}
+                <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                  <p className="border-2 border-red-500/30 bg-red-500/10 p-2 text-red-300">
+                    {r.sua_alternativa
+                      ? <>Você marcou <strong>{r.sua_alternativa.letra}</strong>: {r.sua_alternativa.texto}</>
+                      : 'Tempo esgotado — sem resposta'}
+                  </p>
+                  {r.alternativa_correta && (
+                    <p className="border-2 border-emerald-500/30 bg-emerald-500/10 p-2 text-emerald-300">
+                      Certa era <strong>{r.alternativa_correta.letra}</strong>: {r.alternativa_correta.texto}
+                    </p>
+                  )}
+                </div>
+                {r.alternativa_correta?.explicacao && (
+                  <p className="mt-2 text-xs text-slate-400">{r.alternativa_correta.explicacao}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* histórico */}
       <section>

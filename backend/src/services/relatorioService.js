@@ -15,6 +15,15 @@ export async function desempenhoPorQuestao(faseId) {
   return data;
 }
 
+// Visão agregada POR FASE (não por questão individual): taxa de aprovação
+// e média de acerto de todas as tentativas finalizadas em cada fase —
+// mostra ao professor em que ponto da trilha a turma mais trava.
+export async function desempenhoPorFase() {
+  const { data, error } = await db.from('desempenho_fases').select('*').order('ordem');
+  if (error) throw error;
+  return data;
+}
+
 // Exportação CSV do desempenho da turma (separador ';' e BOM p/ Excel pt-BR)
 export async function csvDesempenhoTurma(professorId, turmaId) {
   const turma = await exigirTurmaDoProfessor(professorId, turmaId);

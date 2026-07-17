@@ -50,6 +50,14 @@ function condicaoAtendida(badge, ctx) {
       );
     case 'sequencia_acertos':
       return ctx.sequenciaAtual >= (p.acertos ?? Infinity);
+    case 'streak_dias':
+      return (ctx.streakAtual ?? 0) >= (p.dias ?? Infinity);
+    case 'sem_dica':
+      return (
+        ctx.aprovada &&
+        ctx.semDica === true &&
+        (ctx.totalQuestoes ?? 0) >= (p.min_questoes ?? Infinity)
+      );
     default:
       return false;
   }

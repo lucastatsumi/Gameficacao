@@ -50,7 +50,22 @@ fases desbloqueável e ranking.
 │   ├── 03_seed_fases_badges.sql  #   Fases e badges iniciais
 │   ├── 04_hardening.sql          #   Views security invoker, search_path, revokes
 │   ├── 05_seed_questoes.sql      #   22 questões de exemplo (5 fases)
-│   └── 06_quiz_custom_dicas.sql  #   Quizzes do professor (tempo/sons/dicas)
+│   ├── 06_quiz_custom_dicas.sql  #   Quizzes do professor (tempo/sons/dicas)
+│   ├── 07_quizzes_abertos.sql    #   Quizzes deixam de ser restritos a turma
+│   ├── 08_streak_diario.sql      #   Coluna de streak + valor de enum de badge
+│   ├── 09_streak_badges_seed.sql #   Badges de streak (3/7/30 dias)
+│   ├── 10_poderes.sql            #   Poderes (50/50, tempo extra)
+│   ├── 11_batalha_complexidade.sql # Minigame de comparação de Big-O
+│   ├── 12_mais_questoes.sql      #   +15 questões (3 por fase, mais variedade)
+│   ├── 13_eventos_temporarios.sql #  XP multiplicado por período
+│   ├── 14_reordenar_algoritmo.sql #  Minigame de ordenar passos de algoritmo
+│   ├── 15_boss_fight.sql         #   Vidas em quizzes customizados
+│   ├── 16_poder_pular.sql        #   Poder "pular sem perder XP"
+│   ├── 17_badge_sem_dica.sql     #   Valor de enum do badge "sem usar dica"
+│   ├── 18_badge_sem_dica_seed.sql #  Seed do badge "sem usar dica"
+│   ├── 19_desempenho_fases.sql   #   View de relatório agregado por fase
+│   ├── 20_ranking_classe.sql     #   Classe (Mestre de X) no ranking
+│   └── 21_desafios.sql           #   Desafio assíncrono entre colegas
 ├── backend/
 │   └── src/
 │       ├── config/               # Cliente Supabase, variáveis de ambiente
