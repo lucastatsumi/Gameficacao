@@ -147,9 +147,18 @@ no frontend antes da hora.
   `titulo_nivel`.
 - ✅ **"Classe" pela fase mais avançada concluída** — `perfilService.js`
   calcula `classe` ("Mestre de <fase>") a partir de `progresso_fase`, sem
-  nova tabela. Exibido no cabeçalho do `Perfil`. Ainda não aparece no
-  `Ranking` (a view de ranking não traz essa informação por jogador; exigiria
-  join extra na view ou uma consulta por linha, ainda não feito).
+  nova tabela. Exibido no cabeçalho do `Perfil` e, desde
+  `database/20_ranking_classe.sql`, também no `Ranking` (global e por
+  turma): `ranking_global`/`ranking_turma` ganharam um `left join lateral`
+  trazendo a fase de maior `ordem` concluída por jogador. A coluna nova
+  (`classe_fase`) teve que ser adicionada como a ÚLTIMA da view — Postgres
+  rejeita `CREATE OR REPLACE VIEW` se a ordem das colunas existentes muda.
+  `backend/src/utils/classe.js` centraliza o texto "Mestre de X" (testado),
+  usado tanto por `perfilService` quanto por `rankingService`, pra nunca
+  divergir a formatação entre as duas telas. `ranking_fase` não ganhou
+  classe — é ranking de XP só daquela fase, a informação não faz sentido
+  ali. Migração validada de ponta a ponta contra Postgres local, incluindo
+  uma linha de dado real conferindo o `classe_fase` calculado.
 - **Avatar por nível** (sprite pixel-art que muda visualmente): ainda não
   implementado — hoje só existe o texto do título, sem arte nova. Precisa de
   assets extras que não existem no projeto.
@@ -354,8 +363,9 @@ ferramenta que este ambiente não tem.
 
 - ✅ **Cobertura de testes de todos os services do backend** —
   `quizService`, `badgeService`, `perfilService`, `questaoService`,
-  `poderService`, `eventoService`, `quizCustomService`, `relatorioService`
-  e `turmaService` têm testes (154 no total, `cd backend && npm test`).
+  `poderService`, `eventoService`, `quizCustomService`, `relatorioService`,
+  `turmaService` e (nesta rodada) `rankingService` têm testes (161 no
+  total, `cd backend && npm test`).
 - ✅ **Infra de testes de componente no frontend** — `vitest` +
   `@testing-library/react` + `@testing-library/jest-dom` + `jsdom`
   instalados (`cd frontend && npm test`); `vite.config.js` ganhou o bloco

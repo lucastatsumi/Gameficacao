@@ -1,8 +1,17 @@
 import { db } from '../config/supabase.js';
 import { HttpError } from '../utils/httpError.js';
+import { classeDaFase } from '../utils/classe.js';
 
 // Rankings vêm das views SQL (RANK() OVER) — nada é recalculado aqui.
 // Cada resposta inclui a posição do próprio usuário, mesmo fora do top N.
+
+// As views trazem `classe_fase` (nome cru da fase) — formata pra "Mestre de
+// X" aqui, com a MESMA função que o Perfil usa, pra nunca divergir o texto.
+function comClasseFormatada(linha) {
+  if (!linha) return linha;
+  const { classe_fase, ...resto } = linha;
+  return { ...resto, classe: classeDaFase(classe_fase) };
+}
 
 export async function rankingGlobal(userId, limite = 50) {
   const { data, error } = await db
@@ -12,7 +21,10 @@ export async function rankingGlobal(userId, limite = 50) {
     .limit(limite);
   if (error) throw error;
 
-  return { ranking: data, minha_posicao: await posicaoDoUsuario('ranking_global', userId, data) };
+  return {
+    ranking: data.map(comClasseFormatada),
+    minha_posicao: comClasseFormatada(await posicaoDoUsuario('ranking_global', userId, data)),
+  };
 }
 
 export async function rankingPorTurma(usuario, turmaId, limite = 50) {
@@ -32,7 +44,7 @@ export async function rankingPorTurma(usuario, turmaId, limite = 50) {
   if (error) throw error;
 
   const minha = data.find((r) => r.id === usuario.id) ?? null;
-  return { ranking: data, minha_posicao: minha };
+  return { ranking: data.map(comClasseFormatada), minha_posicao: comClasseFormatada(minha) };
 }
 
 export async function rankingPorFase(userId, faseId, limite = 50) {

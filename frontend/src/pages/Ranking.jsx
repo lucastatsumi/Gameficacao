@@ -264,6 +264,9 @@ function LinhaRanking({ linha, souEu, ehFase }) {
       <td className="px-4 py-3 font-medium">
         {linha.nome}
         {souEu && <span className="ml-2 text-xs text-indigo-300">(você)</span>}
+        {!ehFase && linha.classe && (
+          <span className="ml-2 text-xs font-normal text-emerald-400/80">{linha.classe}</span>
+        )}
       </td>
       {!ehFase && <td className="px-4 py-3 text-slate-400">Nv. {linha.nivel}</td>}
       <td className="px-4 py-3 text-right font-mono text-amber-300">

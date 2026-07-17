@@ -1,6 +1,7 @@
 import { db } from '../config/supabase.js';
 import { xpParaNivel } from '../utils/nivel.js';
 import { tituloPorNivel } from '../utils/titulo.js';
+import { classeDaFase } from '../utils/classe.js';
 import { estoqueDoUsuario } from './poderService.js';
 
 export async function obterPerfil(usuario) {
@@ -77,7 +78,7 @@ async function classeDoJogador(userId) {
   const maisAvancada = data.reduce((maior, atual) =>
     atual.fases.ordem > maior.fases.ordem ? atual : maior
   );
-  return `Mestre de ${maisAvancada.fases.nome}`;
+  return classeDaFase(maisAvancada.fases.nome);
 }
 
 // Todas as badges do jogo, marcando as já conquistadas (para a estante de troféus)
