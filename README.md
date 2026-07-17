@@ -5,6 +5,12 @@ Engenharia de Software / Ciência da Computação. Quiz contextualizado com
 cenários reais de desenvolvimento, sistema de XP, níveis, badges, mapa de
 fases desbloqueável e ranking.
 
+> **Direção do produto**: a próxima fase pivota a plataforma para o mercado
+> corporativo (empresa escolhe os temas, quizzes montados com IA, avaliação
+> com pontuação ponderada e rubricas) — ver [`docs/ROADMAP.md`](docs/ROADMAP.md).
+> O roadmap da fase educacional, já concluído, está arquivado em
+> [`docs/ROADMAP-v1.md`](docs/ROADMAP-v1.md).
+
 ## Sumário
 
 - [Stack](#stack)
