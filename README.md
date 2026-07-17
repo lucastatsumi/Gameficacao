@@ -5,10 +5,6 @@ Engenharia de Software / Ciência da Computação. Quiz contextualizado com
 cenários reais de desenvolvimento, sistema de XP, níveis, badges, mapa de
 fases desbloqueável e ranking.
 
-**Em produção:** [frontend](https://gameficacao-omega.vercel.app) ·
-[API](https://gameficacao-api.vercel.app/health) — detalhes operacionais em
-[`docs/deploy.md`](docs/deploy.md).
-
 ## Sumário
 
 - [Stack](#stack)
@@ -19,19 +15,16 @@ fases desbloqueável e ranking.
   - [2. Backend](#2-backend)
   - [3. Frontend](#3-frontend)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
-- [Qualidade e CI](#qualidade-e-ci)
-- [Deploy](#deploy)
-- [Documentação adicional](#documentação-adicional)
 
 ## Stack
 
-| Camada   | Tecnologia                                      |
-| -------- | ----------------------------------------------- |
-| Frontend | React + Vite + Tailwind CSS                     |
-| Backend  | Node.js + Express                               |
-| Banco    | PostgreSQL (Supabase)                           |
-| Auth     | Supabase Auth (JWT validado pelo Express)       |
-| Deploy   | Vercel (frontend estático + backend serverless) |
+| Camada   | Tecnologia                                   |
+|----------|-----------------------------------------------|
+| Frontend | React + Vite + Tailwind CSS                  |
+| Backend  | Node.js + Express                            |
+| Banco    | PostgreSQL (Supabase)                        |
+| Auth     | Supabase Auth (JWT validado pelo Express)    |
+| Deploy   | Vercel (frontend) + Railway (backend)        |
 
 ## Decisões de arquitetura
 
@@ -58,27 +51,42 @@ fases desbloqueável e ranking.
 │   ├── 04_hardening.sql          #   Views security invoker, search_path, revokes
 │   ├── 05_seed_questoes.sql      #   22 questões de exemplo (5 fases)
 │   ├── 06_quiz_custom_dicas.sql  #   Quizzes do professor (tempo/sons/dicas)
-│   └── 07_quizzes_abertos.sql    #   Quizzes deixam de ser exclusivos do professor/turma
+│   ├── 07_quizzes_abertos.sql    #   Quizzes deixam de ser restritos a turma
+│   ├── 08_streak_diario.sql      #   Coluna de streak + valor de enum de badge
+│   ├── 09_streak_badges_seed.sql #   Badges de streak (3/7/30 dias)
+│   ├── 10_poderes.sql            #   Poderes (50/50, tempo extra)
+│   ├── 11_batalha_complexidade.sql # Minigame de comparação de Big-O
+│   ├── 12_mais_questoes.sql      #   +15 questões (3 por fase, mais variedade)
+│   ├── 13_eventos_temporarios.sql #  XP multiplicado por período
+│   ├── 14_reordenar_algoritmo.sql #  Minigame de ordenar passos de algoritmo
+│   ├── 15_boss_fight.sql         #   Vidas em quizzes customizados
+│   ├── 16_poder_pular.sql        #   Poder "pular sem perder XP"
+│   ├── 17_badge_sem_dica.sql     #   Valor de enum do badge "sem usar dica"
+│   ├── 18_badge_sem_dica_seed.sql #  Seed do badge "sem usar dica"
+│   ├── 19_desempenho_fases.sql   #   View de relatório agregado por fase
+│   ├── 20_ranking_classe.sql     #   Classe (Mestre de X) no ranking
+│   └── 21_desafios.sql           #   Desafio assíncrono entre colegas
 ├── backend/
-│   ├── api/                      # Entrypoint serverless da Vercel (reexporta o app)
 │   └── src/
 │       ├── config/               # Cliente Supabase, variáveis de ambiente
 │       ├── middlewares/          # Autenticação JWT, tratamento de erros
 │       ├── routes/               # Definição de rotas da API
 │       ├── controllers/          # Recebem request, delegam e respondem
 │       ├── services/             # Regras de jogo: quiz, XP, badges, ranking
-│       │   └── *.test.js         # Testes unitários (Vitest) das funções puras
 │       └── utils/
 ├── frontend/
 │   └── src/
 │       ├── pages/                # Login, MapaFases, Quiz, Ranking, Perfil, Admin
 │       ├── components/
-│       │   └── ui/               # Botões, cards, modais genéricos
+│       │   ├── ui/               # Botões, cards, modais genéricos
+│       │   ├── mapa/             # Trilha de fases, nós bloqueados/concluídos
+│       │   ├── quiz/             # Questão, timer, alternativas, feedback
+│       │   └── ranking/          # Tabelas de classificação, pódio
 │       ├── contexts/             # AuthContext (sessão do usuário)
+│       ├── hooks/                # useQuiz, useTimer, useRanking...
 │       ├── services/             # Cliente HTTP da API
 │       └── lib/                  # Cliente Supabase (só auth)
-├── .github/workflows/            # CI (lint + build/test a cada push/PR)
-└── docs/                         # arquitetura.md, modelo-dados.md, deploy.md
+└── docs/                         # Documentação do TCC (diagramas, relatórios)
 ```
 
 ## Como rodar (desenvolvimento)
@@ -114,29 +122,3 @@ As chaves ficam em: **Dashboard do Supabase → Project Settings → API Keys**.
 - A `service_role` vai **somente** no `backend/.env`.
 - A `anon`/`publishable` vai no `frontend/.env` **e** no `backend/.env`
   (usada para validação de JWT).
-
-## Qualidade e CI
-
-```bash
-npm run lint      # backend/ e frontend/ — ESLint (flat config)
-npm run format    # backend/ e frontend/ — Prettier --write
-npm test          # backend/ — Vitest (lógica de badges, XP, nível, sorteio)
-```
-
-O GitHub Actions (`.github/workflows/ci.yml`) roda lint em ambos os projetos,
-testes no backend e build no frontend a cada push/PR para `main`.
-
-## Deploy
-
-Frontend e backend estão publicados na Vercel (ver URLs no topo deste
-README). Passo a passo de deploy, variáveis de ambiente em produção, e
-ressalvas operacionais (pausa do Supabase free-tier, CORS, confirmação de
-e-mail) estão em [`docs/deploy.md`](docs/deploy.md).
-
-## Documentação adicional
-
-- [`docs/arquitetura.md`](docs/arquitetura.md) — diagramas de arquitetura e
-  do fluxo de uma tentativa de quiz.
-- [`docs/modelo-dados.md`](docs/modelo-dados.md) — diagrama entidade-relacionamento
-  do banco e decisões de modelagem não óbvias.
-- [`docs/deploy.md`](docs/deploy.md) — runbook operacional.

@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api.js';
+import { useI18n } from '../contexts/I18nContext.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import Alerta from '../components/ui/Alerta.jsx';
 import PixelIcon from '../components/ui/PixelIcon.jsx';
 import pixelNuvem from '../assets/img/pixel-nuvem.svg';
 import pixelEstrela from '../assets/img/pixel-estrela.svg';
 
-// Ícone pixel de cada fase: Listas, Pilhas, Filas, Árvores, Ordenação
-const ICONES_FASE = ['arrow-right', 'coins', 'users', 'map-pin', 'chart-bar-big'];
+// Ícone pixel de cada fase: Listas, Pilhas, Filas, Árvores, Ordenação,
+// Batalha de Complexidade e Reordenar Algoritmo (fases bônus)
+const ICONES_FASE = ['arrow-right', 'coins', 'users', 'map-pin', 'chart-bar-big', 'fire', 'reload'];
 
 function NoFase({ fase, indice }) {
+  const { t } = useI18n();
   const concluida = fase.progresso?.concluida;
   const bloqueada = !fase.desbloqueada;
 
@@ -41,12 +44,14 @@ function NoFase({ fase, indice }) {
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-pixel text-[10px] text-slate-500">FASE {fase.ordem}</span>
+            <span className="font-pixel text-[10px] text-slate-500">
+              {t('mapa.fase')} {fase.ordem}
+            </span>
             <h3 className="font-semibold text-slate-100">{fase.nome}</h3>
             {concluida && (
               <span className="flex items-center gap-1 bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-300">
                 <PixelIcon nome="check" className="h-3.5 w-3.5" />
-                Concluída
+                {t('mapa.concluida')}
               </span>
             )}
           </div>
@@ -55,18 +60,18 @@ function NoFase({ fase, indice }) {
             <p className="mt-2 flex items-center gap-3 text-xs text-slate-500">
               <span className="flex items-center gap-1">
                 <PixelIcon nome="star" className="h-3.5 w-3.5 text-amber-400/70" />
-                Melhor: {fase.progresso.melhor_pontuacao}
+                {t('mapa.melhor')}: {fase.progresso.melhor_pontuacao}
               </span>
               <span className="flex items-center gap-1">
                 <PixelIcon nome="reload" className="h-3.5 w-3.5" />
-                Tentativas: {fase.progresso.num_tentativas}
+                {t('mapa.tentativas')}: {fase.progresso.num_tentativas}
               </span>
             </p>
           )}
           {bloqueada && (
             <p className="mt-2 flex items-center gap-1 text-xs text-amber-400/80">
               <PixelIcon nome="lock" className="h-3.5 w-3.5" />
-              Conclua a fase anterior para desbloquear
+              {t('mapa.bloqueada')}
             </p>
           )}
         </div>
@@ -74,24 +79,73 @@ function NoFase({ fase, indice }) {
         {!bloqueada && (
           <span className="btn-pixel flex items-center gap-2 self-center bg-indigo-600 px-4 py-2 font-pixel text-[10px] text-white">
             <PixelIcon nome={concluida ? 'reload' : 'play'} className="h-4 w-4" />
-            {concluida ? 'REJOGAR' : 'JOGAR'}
+            {concluida ? t('mapa.rejogar') : t('mapa.jogar')}
           </span>
         )}
       </div>
     </div>
   );
 
-  return bloqueada ? (
-    <div>{conteudo}</div>
-  ) : (
-    <Link to={`/quiz/${fase.id}`} className="block">
-      {conteudo}
-    </Link>
+  return (
+    <div>
+      {bloqueada ? (
+        <div>{conteudo}</div>
+      ) : (
+        <Link to={`/quiz/${fase.id}`} className="block">
+          {conteudo}
+        </Link>
+      )}
+      {/* "Desafio assíncrono": recorte de multiplayer sem infra de tempo
+          real — gera um link com a melhor pontuação do aluno pra um colega
+          tentar bater. Fora do <Link> da fase pra não aninhar elementos
+          clicáveis. */}
+      {concluida && <BotaoDesafiar faseId={fase.id} />}
+    </div>
+  );
+}
+
+function BotaoDesafiar({ faseId }) {
+  const { t } = useI18n();
+  const [estado, setEstado] = useState('idle'); // idle | enviando | copiado | erro
+
+  async function desafiar() {
+    setEstado('enviando');
+    try {
+      const { id } = await api.post('/desafios', { fase_id: faseId });
+      const link = `${window.location.origin}/desafio/${id}`;
+      try {
+        await navigator.clipboard.writeText(link);
+      } catch {
+        window.prompt(t('mapa.copieOLink'), link);
+      }
+      setEstado('copiado');
+      setTimeout(() => setEstado('idle'), 2500);
+    } catch {
+      setEstado('erro');
+      setTimeout(() => setEstado('idle'), 2500);
+    }
+  }
+
+  return (
+    <button
+      onClick={desafiar}
+      disabled={estado === 'enviando'}
+      className="btn-pixel mt-2 flex items-center gap-1.5 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:opacity-50"
+    >
+      <PixelIcon nome={estado === 'copiado' ? 'check' : 'zap'} className="h-3.5 w-3.5" />
+      {estado === 'copiado'
+        ? t('mapa.linkCopiado')
+        : estado === 'erro'
+          ? t('mapa.erroDesafio')
+          : t('mapa.desafiar')}
+    </button>
   );
 }
 
 export default function MapaFases() {
+  const { t } = useI18n();
   const [fases, setFases] = useState(null);
+  const [pendente, setPendente] = useState(null);
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
@@ -99,10 +153,14 @@ export default function MapaFases() {
       .get('/fases')
       .then(setFases)
       .catch((err) => setErro(err.message));
+    api
+      .get('/perfil/pendente')
+      .then(setPendente)
+      .catch(() => {}); // lembrete é cosmético — falha silenciosa não deve travar o mapa
   }, []);
 
   if (erro) return <Alerta>{erro}</Alerta>;
-  if (!fases) return <Spinner texto="Carregando o mapa..." />;
+  if (!fases) return <Spinner texto={t('mapa.carregando')} />;
 
   return (
     <div className="relative">
@@ -128,11 +186,21 @@ export default function MapaFases() {
 
       <div className="flex items-center gap-3">
         <PixelIcon nome="map-pin" className="h-7 w-7 text-indigo-400" />
-        <h1 className="font-pixel text-lg text-slate-100">Mapa de Fases</h1>
+        <h1 className="font-pixel text-lg text-slate-100">{t('mapa.titulo')}</h1>
       </div>
-      <p className="mt-2 text-sm text-slate-400">
-        Acerte pelo menos 70% do quiz para concluir a fase e desbloquear a próxima.
-      </p>
+      <p className="mt-2 text-sm text-slate-400">{t('mapa.subtitulo')}</p>
+
+      {pendente && (
+        <Link
+          to={pendente.quiz_custom_id ? `/quiz/custom/${pendente.quiz_custom_id}` : `/quiz/${pendente.fase_id}`}
+          className="card-pixel mt-4 flex items-center gap-3 border-2 border-amber-500/40 bg-amber-500/10 p-3 text-amber-200 transition-colors hover:border-amber-400"
+        >
+          <PixelIcon nome="clock" className="h-5 w-5 shrink-0" />
+          <span className="text-sm">
+            {t('mapa.pendentePrefixo')} <strong>{pendente.titulo}</strong> {t('mapa.pendenteSufixo')}
+          </span>
+        </Link>
+      )}
 
       <div className="relative mt-6 space-y-5">
         {/* trilha vertical ligando as fases */}

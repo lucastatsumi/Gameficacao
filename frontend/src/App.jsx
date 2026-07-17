@@ -9,6 +9,7 @@ import Quizzes from './pages/Quizzes.jsx';
 import Ranking from './pages/Ranking.jsx';
 import Perfil from './pages/Perfil.jsx';
 import Admin from './pages/Admin.jsx';
+import Desafio from './pages/Desafio.jsx';
 
 function RotaProtegida({ children, apenasProfessor = false }) {
   const { sessao, perfil, carregando } = useAuth();
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/quiz/:faseId" element={<Quiz />} />
         <Route path="/ranking" element={<Ranking />} />
         <Route path="/perfil" element={<Perfil />} />
+        <Route path="/desafio/:desafioId" element={<Desafio />} />
         <Route
           path="/admin"
           element={

@@ -23,3 +23,19 @@ export async function historico(req, res, next) {
     next(err);
   }
 }
+
+export async function revisao(req, res, next) {
+  try {
+    res.json(await perfilService.errosRecentes(req.usuario.id));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function pendente(req, res, next) {
+  try {
+    res.json(await perfilService.tentativaAbertaPendente(req.usuario.id));
+  } catch (err) {
+    next(err);
+  }
+}

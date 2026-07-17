@@ -6,3 +6,5 @@ export const perfilRoutes = Router();
 perfilRoutes.get('/', perfilController.perfil);
 perfilRoutes.get('/badges', perfilController.badges);
 perfilRoutes.get('/historico', perfilController.historico);
+perfilRoutes.get('/revisao', perfilController.revisao);
+perfilRoutes.get('/pendente', perfilController.pendente);

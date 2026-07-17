@@ -1,67 +1,115 @@
-import { describe, it, expect } from 'vitest';
-import { validarCamposQuiz } from './quizCustomService.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { makeDb, ok } from '../test/dbMock.js';
+import { HttpError } from '../utils/httpError.js';
 
-function payloadValido(overrides = {}) {
-  return { titulo: 'Meu Quiz', questao_ids: [1, 2, 3], ...overrides };
+vi.mock('../config/supabase.js', () => ({ db: { from: vi.fn() } }));
+
+const { db } = await import('../config/supabase.js');
+const { criarQuiz } = await import('./quizCustomService.js');
+
+function configurarDb(filas) {
+  const mock = makeDb(filas);
+  db.from.mockImplementation(mock.from);
+  return mock;
 }
 
-describe('validarCamposQuiz', () => {
-  it('aceita o mínimo válido e aplica defaults', () => {
-    const q = validarCamposQuiz(payloadValido());
-    expect(q.titulo).toBe('Meu Quiz');
-    expect(q.descricao).toBe(null);
-    expect(q.tempo_limite_seg).toBe(null);
-    expect(q.sons).toBe(true);
-    expect(q.permitir_dicas).toBe(true);
-    expect(q.questao_ids).toEqual([1, 2, 3]);
+const DADOS_BASE = {
+  titulo: 'Desafio relâmpago',
+  questao_ids: ['q1', 'q2'],
+};
+
+describe('quizCustomService.criarQuiz — validação', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('rejeita título vazio sem consultar o banco', async () => {
+    await expect(criarQuiz('user-1', { ...DADOS_BASE, titulo: '  ' })).rejects.toThrow(HttpError);
+    expect(db.from).not.toHaveBeenCalled();
   });
 
-  it('faz trim do título e normaliza descrição vazia para null', () => {
-    const q = validarCamposQuiz(payloadValido({ titulo: '  Quiz  ', descricao: '   ' }));
-    expect(q.titulo).toBe('Quiz');
-    expect(q.descricao).toBe(null);
+  it('rejeita tempo_limite_seg menor que 10', async () => {
+    await expect(
+      criarQuiz('user-1', { ...DADOS_BASE, tempo_limite_seg: 5 })
+    ).rejects.toThrow(/tempo_limite_seg/);
   });
 
-  it('trata sons e permitir_dicas como opt-out (só false desliga)', () => {
-    expect(validarCamposQuiz(payloadValido({ sons: false })).sons).toBe(false);
-    expect(validarCamposQuiz(payloadValido({ sons: undefined })).sons).toBe(true);
-    expect(validarCamposQuiz(payloadValido({ permitir_dicas: false })).permitir_dicas).toBe(false);
+  it('rejeita lista de questões vazia', async () => {
+    await expect(criarQuiz('user-1', { ...DADOS_BASE, questao_ids: [] })).rejects.toThrow(
+      /Selecione de 1 a/
+    );
   });
 
-  it('exige título', () => {
-    expect(() => validarCamposQuiz(payloadValido({ titulo: '   ' }))).toThrow(/título/);
+  it('rejeita mais de 20 questões', async () => {
+    const ids = Array.from({ length: 21 }, (_, i) => `q${i}`);
+    await expect(criarQuiz('user-1', { ...DADOS_BASE, questao_ids: ids })).rejects.toThrow(
+      /Selecione de 1 a 20/
+    );
   });
 
-  it('aceita tempo_limite_seg null (usa o tempo de cada questão)', () => {
-    expect(validarCamposQuiz(payloadValido({ tempo_limite_seg: null })).tempo_limite_seg).toBe(null);
+  it('rejeita questões repetidas', async () => {
+    await expect(
+      criarQuiz('user-1', { ...DADOS_BASE, questao_ids: ['q1', 'q1'] })
+    ).rejects.toThrow(/repetidas/);
   });
 
-  it('rejeita tempo_limite_seg inválido quando informado', () => {
-    expect(() => validarCamposQuiz(payloadValido({ tempo_limite_seg: 9 }))).toThrow(/tempo_limite_seg/);
-    expect(() => validarCamposQuiz(payloadValido({ tempo_limite_seg: 15.5 }))).toThrow(/tempo_limite_seg/);
+  it('rejeita se alguma questão não existe ou está desativada', async () => {
+    configurarDb({ questoes: [ok([{ id: 'q1' }])] }); // só 1 das 2 veio de volta
+    await expect(criarQuiz('user-1', DADOS_BASE)).rejects.toThrow(/não existe ou está desativada/);
   });
 
-  it('exige de 1 a 20 questões', () => {
-    expect(() => validarCamposQuiz(payloadValido({ questao_ids: [] }))).toThrow(/1 a 20/);
-    const vinteEUm = Array.from({ length: 21 }, (_, i) => i + 1);
-    expect(() => validarCamposQuiz(payloadValido({ questao_ids: vinteEUm }))).toThrow(/1 a 20/);
+  it('cria o quiz quando tudo é válido', async () => {
+    configurarDb({
+      questoes: [ok([{ id: 'q1' }, { id: 'q2' }])],
+      quizzes_custom: [ok({ id: 'quiz-1', criador_id: 'user-1' })],
+      quiz_custom_questoes: [ok(null)],
+    });
+
+    const criado = await criarQuiz('user-1', DADOS_BASE);
+    expect(criado.id).toBe('quiz-1');
+    expect(criado.total_questoes).toBe(2);
   });
 
-  it('aceita exatamente 20 questões (limite superior)', () => {
-    const vinte = Array.from({ length: 20 }, (_, i) => i + 1);
-    expect(validarCamposQuiz(payloadValido({ questao_ids: vinte })).questao_ids).toHaveLength(20);
+  it('rejeita vidas menor que 1', async () => {
+    await expect(criarQuiz('user-1', { ...DADOS_BASE, vidas: 0 })).rejects.toThrow(/vidas/);
   });
 
-  it('rejeita questões repetidas', () => {
-    expect(() => validarCamposQuiz(payloadValido({ questao_ids: [1, 2, 2] }))).toThrow(/repetidas/);
+  it('rejeita vidas não inteiro', async () => {
+    await expect(criarQuiz('user-1', { ...DADOS_BASE, vidas: 2.5 })).rejects.toThrow(/vidas/);
   });
 
-  it('anexa status 400 aos erros', () => {
-    try {
-      validarCamposQuiz(payloadValido({ titulo: '' }));
-      throw new Error('deveria ter lançado');
-    } catch (e) {
-      expect(e.status).toBe(400);
-    }
+  it('cria "boss fight" com vidas definidas e grava no insert', async () => {
+    const mock = configurarDb({
+      questoes: [ok([{ id: 'q1' }, { id: 'q2' }])],
+      quizzes_custom: [ok({ id: 'quiz-1', criador_id: 'user-1' })],
+      quiz_custom_questoes: [ok(null)],
+    });
+
+    await criarQuiz('user-1', { ...DADOS_BASE, vidas: 3 });
+
+    const insertChain = mock.chainsPara('quizzes_custom')[0];
+    expect(insertChain.insert).toHaveBeenCalledWith(expect.objectContaining({ vidas: 3 }));
+  });
+
+  it('vidas fica null (sem limite) quando não informado', async () => {
+    const mock = configurarDb({
+      questoes: [ok([{ id: 'q1' }, { id: 'q2' }])],
+      quizzes_custom: [ok({ id: 'quiz-1', criador_id: 'user-1' })],
+      quiz_custom_questoes: [ok(null)],
+    });
+
+    await criarQuiz('user-1', DADOS_BASE);
+
+    const insertChain = mock.chainsPara('quizzes_custom')[0];
+    expect(insertChain.insert).toHaveBeenCalledWith(expect.objectContaining({ vidas: null }));
+  });
+
+  it('desfaz a criação (compensação) se a inserção das questões falhar', async () => {
+    configurarDb({
+      questoes: [ok([{ id: 'q1' }, { id: 'q2' }])],
+      quizzes_custom: [ok({ id: 'quiz-1', criador_id: 'user-1' }), ok(null)], // insert + delete de compensação
+      quiz_custom_questoes: [{ data: null, error: new Error('falhou') }],
+    });
+
+    await expect(criarQuiz('user-1', DADOS_BASE)).rejects.toThrow('falhou');
+    expect(db.from).toHaveBeenCalledWith('quizzes_custom');
   });
 });

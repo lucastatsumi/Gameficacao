@@ -1,23 +1,777 @@
-import { describe, it, expect } from 'vitest';
-import { xpDaResposta } from './quizService.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { makeDb, ok, fail } from '../test/dbMock.js';
 
-describe('xpDaResposta', () => {
-  it('vale o XP cheio da questão quando não usou dica', () => {
-    expect(xpDaResposta({ usou_dica: false, questoes: { xp_valor: 10 } })).toBe(10);
+vi.mock('../config/supabase.js', () => ({ db: { from: vi.fn() } }));
+vi.mock('./badgeService.js', () => ({ verificarBadges: vi.fn().mockResolvedValue([]) }));
+
+const { db } = await import('../config/supabase.js');
+const { iniciarQuiz, iniciarQuizCustom, responderQuestao, responderSequencia, finalizarQuiz } =
+  await import('./quizService.js');
+const { HttpError } = await import('../utils/httpError.js');
+
+function configurarDb(filas) {
+  const mock = makeDb(filas);
+  db.from.mockImplementation(mock.from);
+  return mock;
+}
+
+beforeEach(() => vi.clearAllMocks());
+afterEach(() => vi.useRealTimers());
+
+describe('iniciarQuiz', () => {
+  it('bloqueia a fase se o requisito anterior não foi concluído', async () => {
+    configurarDb({
+      fases: [ok({ id: 2, fase_requisito_id: 1 })],
+      progresso_fase: [ok({ concluida: false })],
+    });
+
+    await expect(iniciarQuiz('user-1', 2)).rejects.toMatchObject({
+      status: 403,
+    });
   });
 
-  it('corta o XP pela metade (arredondado para baixo) quando usou dica', () => {
-    expect(xpDaResposta({ usou_dica: true, questoes: { xp_valor: 10 } })).toBe(5);
-    expect(xpDaResposta({ usou_dica: true, questoes: { xp_valor: 7 } })).toBe(3);
+  it('rejeita fase sem questões ativas', async () => {
+    configurarDb({
+      fases: [ok({ id: 1, fase_requisito_id: null })],
+      tentativas: [ok(null)], // abandonarTentativasAbertas (update, sem terminal)
+      questoes: [ok([])],
+    });
+
+    await expect(iniciarQuiz('user-1', 1)).rejects.toMatchObject({ status: 404 });
   });
 
-  it('garante no mínimo 1 XP mesmo com dica em questão de baixo valor', () => {
-    expect(xpDaResposta({ usou_dica: true, questoes: { xp_valor: 1 } })).toBe(1);
-    expect(xpDaResposta({ usou_dica: true, questoes: { xp_valor: 0 } })).toBe(1);
+  it('sorteia até QUESTOES_POR_QUIZ questões e não acrescenta campos de gabarito', async () => {
+    // A query real usa `.select('id, ..., alternativas ( id, letra, texto )')` —
+    // o Postgrest já restringe as colunas antes de chegar aqui. O stub simula
+    // exatamente essa projeção (sem `correta`/`explicacao`).
+    const questoesBrutas = Array.from({ length: 15 }, (_, i) => ({
+      id: `q${i}`,
+      enunciado: `Questão ${i}`,
+      tempo_limite_seg: 30,
+      alternativas: [
+        { id: 'a1', letra: 'A', texto: 'x' },
+        { id: 'a2', letra: 'B', texto: 'y' },
+      ],
+    }));
+
+    configurarDb({
+      fases: [ok({ id: 1, fase_requisito_id: null, nome: 'Listas' })],
+      tentativas: [ok(null), ok([]), ok({ id: 'tent-1' })],
+      questoes: [ok(questoesBrutas)],
+    });
+
+    const resultado = await iniciarQuiz('user-1', 1);
+
+    expect(resultado.questoes).toHaveLength(10); // QUESTOES_POR_QUIZ
+    for (const q of resultado.questoes) {
+      for (const alt of q.alternativas) {
+        expect(Object.keys(alt).sort()).toEqual(['id', 'letra', 'texto']);
+      }
+    }
   });
 
-  it('trata questão ausente como 0 XP', () => {
-    expect(xpDaResposta({ usou_dica: false, questoes: null })).toBe(0);
-    expect(xpDaResposta({ usou_dica: true, questoes: undefined })).toBe(1); // mínimo garantido
+  it('funciona com menos questões que QUESTOES_POR_QUIZ e preserva o formato (ex.: fase bônus com 5 questões)', async () => {
+    const questoesBrutas = Array.from({ length: 5 }, (_, i) => ({
+      id: `b${i}`,
+      enunciado: `Batalha ${i}`,
+      tempo_limite_seg: 15,
+      formato: 'batalha_complexidade',
+      alternativas: [
+        { id: 'a1', letra: 'A', texto: 'O(n)' },
+        { id: 'a2', letra: 'B', texto: 'O(log n)' },
+      ],
+    }));
+
+    configurarDb({
+      fases: [ok({ id: 6, fase_requisito_id: null, nome: 'Batalha de Complexidade' })],
+      tentativas: [ok(null), ok([]), ok({ id: 'tent-2' })],
+      questoes: [ok(questoesBrutas)],
+    });
+
+    const resultado = await iniciarQuiz('user-1', 6);
+
+    expect(resultado.questoes).toHaveLength(5);
+    expect(resultado.questoes.every((q) => q.formato === 'batalha_complexidade')).toBe(true);
+  });
+
+  it('dificuldade adaptativa: com desempenho recente baixo, prioriza questões fáceis', async () => {
+    const questoesBrutas = [
+      ...Array.from({ length: 5 }, (_, i) => ({
+        id: `f${i}`,
+        dificuldade: 'facil',
+        alternativas: [{ id: 'a1', letra: 'A', texto: 'x' }],
+      })),
+      ...Array.from({ length: 5 }, (_, i) => ({
+        id: `m${i}`,
+        dificuldade: 'media',
+        alternativas: [{ id: 'a1', letra: 'A', texto: 'x' }],
+      })),
+      ...Array.from({ length: 5 }, (_, i) => ({
+        id: `d${i}`,
+        dificuldade: 'dificil',
+        alternativas: [{ id: 'a1', letra: 'A', texto: 'x' }],
+      })),
+    ];
+
+    configurarDb({
+      fases: [ok({ id: 1, fase_requisito_id: null, nome: 'Listas' })],
+      // 2 tentativas recentes com baixo aproveitamento (2/10 = 20%)
+      tentativas: [
+        ok(null),
+        ok([
+          { acertos: 1, total_questoes: 5 },
+          { acertos: 1, total_questoes: 5 },
+        ]),
+        ok({ id: 'tent-3' }),
+      ],
+      questoes: [ok(questoesBrutas)],
+    });
+
+    const resultado = await iniciarQuiz('user-1', 1);
+    const porDificuldade = resultado.questoes.reduce((acc, q) => {
+      const dif = questoesBrutas.find((qb) => qb.id === q.id).dificuldade;
+      acc[dif] = (acc[dif] ?? 0) + 1;
+      return acc;
+    }, {});
+
+    expect(resultado.questoes).toHaveLength(10);
+    expect(porDificuldade.facil).toBeGreaterThan(porDificuldade.dificil);
+  });
+});
+
+describe('iniciarQuizCustom', () => {
+  it('repassa "vidas" (boss fight) no objeto quiz devolvido ao cliente', async () => {
+    configurarDb({
+      quizzes_custom: [ok({ id: 'quiz-1', criador_id: 'prof-1', ativo: true, vidas: 3, permitir_dicas: true })],
+      tentativas: [ok(null), ok({ id: 'tent-1' })],
+      quiz_custom_questoes: [
+        ok([
+          {
+            ordem: 0,
+            questoes: {
+              id: 'q1',
+              enunciado: 'Enunciado',
+              tempo_limite_seg: 30,
+              dica: null,
+              ativa: true,
+              alternativas: [{ id: 'a1', letra: 'A', texto: 'x' }],
+            },
+          },
+        ]),
+      ],
+    });
+
+    const resultado = await iniciarQuizCustom({ id: 'user-1' }, 'quiz-1');
+    expect(resultado.quiz.vidas).toBe(3);
+  });
+});
+
+describe('responderQuestao', () => {
+  const questaoBase = {
+    id: 'q1',
+    fase_id: 1,
+    tempo_limite_seg: 30,
+    alternativas: [
+      { id: 'a-certa', letra: 'A', correta: true, explicacao: 'Porque sim.' },
+      { id: 'a-errada', letra: 'B', correta: false, explicacao: 'Porque não.' },
+    ],
+  };
+
+  it('rejeita responder uma tentativa já finalizada', async () => {
+    configurarDb({
+      tentativas: [ok({ id: 't1', user_id: 'user-1', finalizada_em: '2026-01-01T00:00:00Z' })],
+    });
+
+    await expect(
+      responderQuestao('user-1', { tentativa_id: 't1', questao_id: 'q1' })
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('marca como INCORRETA quando o tempo estourou, mesmo com a alternativa certa', async () => {
+    const inicio = new Date('2026-01-01T10:00:00.000Z');
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(inicio.getTime() + 40_000)); // 40s depois (limite 30s + 5s tolerância)
+
+    const mock = configurarDb({
+      tentativas: [
+        ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 1, iniciada_em: inicio.toISOString() }),
+      ],
+      questoes: [ok(questaoBase)],
+      poderes_usados: [ok(null)],
+      respostas: [ok(null), ok(null)], // sem resposta anterior; depois o insert
+      dicas_usadas: [ok(null)],
+    });
+
+    const fb = await responderQuestao('user-1', {
+      tentativa_id: 't1',
+      questao_id: 'q1',
+      alternativa_id: 'a-certa',
+    });
+
+    expect(fb.tempo_esgotado).toBe(true);
+    expect(fb.correta).toBe(false);
+
+    const insertChain = mock.chainsPara('respostas')[1];
+    expect(insertChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ alternativa_id: null, correta: false })
+    );
+  });
+
+  it('corrige certo dentro do tempo', async () => {
+    const inicio = new Date('2026-01-01T10:00:00.000Z');
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(inicio.getTime() + 5_000));
+
+    configurarDb({
+      tentativas: [
+        ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 1, iniciada_em: inicio.toISOString() }),
+      ],
+      questoes: [ok(questaoBase)],
+      poderes_usados: [ok(null)],
+      respostas: [ok(null), ok(null)],
+      dicas_usadas: [ok(null)],
+    });
+
+    const fb = await responderQuestao('user-1', {
+      tentativa_id: 't1',
+      questao_id: 'q1',
+      alternativa_id: 'a-certa',
+    });
+
+    expect(fb.tempo_esgotado).toBe(false);
+    expect(fb.correta).toBe(true);
+    expect(fb.alternativa_correta).toEqual({ id: 'a-certa', letra: 'A' });
+  });
+
+  it('rejeita alternativa que não pertence à questão', async () => {
+    const inicio = new Date();
+    configurarDb({
+      tentativas: [
+        ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 1, iniciada_em: inicio.toISOString() }),
+      ],
+      questoes: [ok(questaoBase)],
+      poderes_usados: [ok(null)],
+      respostas: [ok(null)],
+    });
+
+    await expect(
+      responderQuestao('user-1', { tentativa_id: 't1', questao_id: 'q1', alternativa_id: 'nao-existe' })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('trata resposta duplicada (constraint 23505) como conflito', async () => {
+    const inicio = new Date();
+    configurarDb({
+      tentativas: [
+        ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 1, iniciada_em: inicio.toISOString() }),
+      ],
+      questoes: [ok(questaoBase)],
+      poderes_usados: [ok(null)],
+      respostas: [ok(null), fail({ code: '23505' })],
+      dicas_usadas: [ok(null)],
+    });
+
+    await expect(
+      responderQuestao('user-1', { tentativa_id: 't1', questao_id: 'q1', alternativa_id: 'a-certa' })
+    ).rejects.toMatchObject({ status: 409 });
+  });
+});
+
+describe('responderSequencia — minigame reordenar algoritmo', () => {
+  const questaoSequencia = {
+    id: 'qseq',
+    fase_id: 7,
+    tempo_limite_seg: 30,
+    ordem_correta: ['p1', 'p2', 'p3'],
+  };
+
+  it('rejeita sem "ordem" como array', async () => {
+    await expect(
+      responderSequencia('user-1', { tentativa_id: 't1', questao_id: 'qseq' })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('correta quando a ordem enviada bate exatamente com ordem_correta', async () => {
+    const inicio = new Date('2026-01-01T10:00:00.000Z');
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(inicio.getTime() + 5_000));
+
+    configurarDb({
+      tentativas: [
+        ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 7, iniciada_em: inicio.toISOString() }),
+      ],
+      questoes: [ok(questaoSequencia)],
+      respostas: [ok(null), ok(null)],
+    });
+
+    const fb = await responderSequencia('user-1', {
+      tentativa_id: 't1',
+      questao_id: 'qseq',
+      ordem: ['p1', 'p2', 'p3'],
+    });
+
+    expect(fb.correta).toBe(true);
+    expect(fb.tempo_esgotado).toBe(false);
+  });
+
+  it('incorreta quando a ordem está fora de sequência (mesmo com os ids certos)', async () => {
+    const inicio = new Date('2026-01-01T10:00:00.000Z');
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(inicio.getTime() + 5_000));
+
+    configurarDb({
+      tentativas: [
+        ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 7, iniciada_em: inicio.toISOString() }),
+      ],
+      questoes: [ok(questaoSequencia)],
+      respostas: [ok(null), ok(null)],
+    });
+
+    const fb = await responderSequencia('user-1', {
+      tentativa_id: 't1',
+      questao_id: 'qseq',
+      ordem: ['p2', 'p1', 'p3'],
+    });
+
+    expect(fb.correta).toBe(false);
+    expect(fb.ordem_correta).toEqual(['p1', 'p2', 'p3']);
+  });
+
+  it('incorreta quando o tempo esgotou, mesmo com a ordem certa', async () => {
+    const inicio = new Date('2026-01-01T10:00:00.000Z');
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(inicio.getTime() + 40_000)); // > 30s + 5s tolerância
+
+    configurarDb({
+      tentativas: [
+        ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 7, iniciada_em: inicio.toISOString() }),
+      ],
+      questoes: [ok(questaoSequencia)],
+      respostas: [ok(null), ok(null)],
+    });
+
+    const fb = await responderSequencia('user-1', {
+      tentativa_id: 't1',
+      questao_id: 'qseq',
+      ordem: ['p1', 'p2', 'p3'],
+    });
+
+    expect(fb.correta).toBe(false);
+    expect(fb.tempo_esgotado).toBe(true);
+  });
+
+  it('grava a resposta na mesma tabela respostas (alternativa_id null)', async () => {
+    const inicio = new Date();
+    const mock = configurarDb({
+      tentativas: [
+        ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 7, iniciada_em: inicio.toISOString() }),
+      ],
+      questoes: [ok(questaoSequencia)],
+      respostas: [ok(null), ok(null)],
+    });
+
+    await responderSequencia('user-1', { tentativa_id: 't1', questao_id: 'qseq', ordem: ['p1', 'p2', 'p3'] });
+
+    const insertChain = mock.chainsPara('respostas')[1];
+    expect(insertChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ tentativa_id: 't1', questao_id: 'qseq', alternativa_id: null })
+    );
+  });
+
+  it('rejeita reenviar a mesma questão (23505) como conflito', async () => {
+    configurarDb({
+      tentativas: [
+        ok({ id: 't1', user_id: 'user-1', finalizada_em: null, fase_id: 7, iniciada_em: new Date().toISOString() }),
+      ],
+      questoes: [ok(questaoSequencia)],
+      respostas: [ok(null), fail({ code: '23505' })],
+    });
+
+    await expect(
+      responderSequencia('user-1', { tentativa_id: 't1', questao_id: 'qseq', ordem: ['p1', 'p2', 'p3'] })
+    ).rejects.toMatchObject({ status: 409 });
+  });
+});
+
+describe('finalizarQuiz — regra anti-farming de XP', () => {
+  it('numa primeira tentativa, todo o XP bruto vira XP ganho', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't1',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 2,
+        }),
+        ok(null), // update tentativas
+      ],
+      respostas: [
+        ok([
+          { correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } },
+          { correta: true, usou_dica: false, tempo_resposta_ms: 2000, questoes: { xp_valor: 15 } },
+        ]),
+        ok([]), // melhorXpBrutoAnterior: nenhuma tentativa anterior
+      ],
+      progresso_fase: [ok(null), ok({ concluida: true })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([])],
+    });
+
+    const usuario = { id: 'user-1', xp_total: 0, nivel: 1 };
+    const res = await finalizarQuiz(usuario, 't1');
+
+    expect(res.xp_bruto).toBe(25);
+    expect(res.xp_ganho).toBe(25);
+    expect(res.aprovada).toBe(true); // 2/2 >= 70%
+    expect(res.evento).toBeNull();
+  });
+
+  it('com evento ativo na fase, multiplica o XP bruto antes da regra anti-farming', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't3',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 2,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([{ correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } }]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: false })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([{ id: 1, nome: 'Semana das Listas', fase_id: 1, multiplicador_xp: 2 }])],
+      poderes_usados: [ok([])],
+    });
+
+    const usuario = { id: 'user-1', xp_total: 0, nivel: 1 };
+    const res = await finalizarQuiz(usuario, 't3');
+
+    expect(res.xp_bruto).toBe(20); // 10 * 2
+    expect(res.evento).toEqual({ nome: 'Semana das Listas', multiplicador_xp: 2 });
+  });
+
+  it('repetir a fase só rende XP que EXCEDE o recorde anterior', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't2',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 2,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([{ correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } }]),
+        ok([
+          {
+            tentativa_id: 't1-anterior',
+            usou_dica: false,
+            questoes: { xp_valor: 25 },
+          },
+        ]),
+      ],
+      progresso_fase: [ok({ concluida: true }), ok({ concluida: true })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([])],
+    });
+
+    const usuario = { id: 'user-1', xp_total: 25, nivel: 1 };
+    const res = await finalizarQuiz(usuario, 't2');
+
+    expect(res.xp_bruto).toBe(10);
+    expect(res.xp_ganho).toBe(0); // 10 não supera o recorde de 25
+  });
+
+  it('streak alto soma bônus de XP ao xp_bruto (só quando acertou algo)', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't6',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 2,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([{ correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } }]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: false })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([])],
+    });
+
+    // streak_ultimo_dia = ontem -> hoje incrementa para o dia 6
+    const ontem = new Date();
+    ontem.setUTCDate(ontem.getUTCDate() - 1);
+    const usuario = {
+      id: 'user-1',
+      xp_total: 0,
+      nivel: 1,
+      streak_dias: 5,
+      streak_ultimo_dia: ontem.toISOString().slice(0, 10),
+    };
+    const res = await finalizarQuiz(usuario, 't6');
+
+    expect(res.streak_dias).toBe(6);
+    expect(res.bonus_streak).toBe(5); // dia 6 - 1
+    expect(res.xp_bruto).toBe(15); // 10 (questão) + 5 (bônus)
+  });
+
+  it('sem acertar nenhuma questão, não há bônus de streak (não recompensa "bater ponto")', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't7',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 2,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([{ correta: false, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } }]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: false })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([])],
+    });
+
+    const ontem = new Date();
+    ontem.setUTCDate(ontem.getUTCDate() - 1);
+    const usuario = {
+      id: 'user-1',
+      xp_total: 0,
+      nivel: 1,
+      streak_dias: 10,
+      streak_ultimo_dia: ontem.toISOString().slice(0, 10),
+    };
+    const res = await finalizarQuiz(usuario, 't7');
+
+    expect(res.bonus_streak).toBe(0);
+    expect(res.xp_bruto).toBe(0);
+  });
+
+  it('bônus de streak tem teto de +20 (streak de 21+ dias)', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't8',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 2,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([{ correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } }]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: false })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([])],
+    });
+
+    const ontem = new Date();
+    ontem.setUTCDate(ontem.getUTCDate() - 1);
+    const usuario = {
+      id: 'user-1',
+      xp_total: 0,
+      nivel: 1,
+      streak_dias: 99,
+      streak_ultimo_dia: ontem.toISOString().slice(0, 10),
+    };
+    const res = await finalizarQuiz(usuario, 't8');
+
+    expect(res.streak_dias).toBe(100);
+    expect(res.bonus_streak).toBe(20); // teto
+  });
+
+  it('streak_marco é true só quando o dia novo faz a streak bater múltiplo de 5', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't9',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 2,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([{ correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } }]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: false })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([])],
+    });
+
+    const ontem = new Date();
+    ontem.setUTCDate(ontem.getUTCDate() - 1);
+    const usuario = {
+      id: 'user-1',
+      xp_total: 0,
+      nivel: 1,
+      streak_dias: 4, // ontem -> hoje incrementa para 5 (marco)
+      streak_ultimo_dia: ontem.toISOString().slice(0, 10),
+    };
+    const res = await finalizarQuiz(usuario, 't9');
+
+    expect(res.streak_dias).toBe(5);
+    expect(res.streak_marco).toBe(true);
+  });
+
+  it('streak_marco é false no mesmo dia (evita conceder o poder de novo)', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't10',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 2,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([{ correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } }]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: false })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([])],
+    });
+
+    const hoje = new Date().toISOString().slice(0, 10);
+    const usuario = {
+      id: 'user-1',
+      xp_total: 0,
+      nivel: 1,
+      streak_dias: 5, // já bateu o marco hoje mais cedo
+      streak_ultimo_dia: hoje,
+    };
+    const res = await finalizarQuiz(usuario, 't10');
+
+    expect(res.streak_dias).toBe(5);
+    expect(res.streak_marco).toBe(false);
+  });
+
+  it('questão pulada com o poder não conta contra a aprovação (denominador efetivo)', async () => {
+    // 3 questões no total: 1 pulada (poder), 2 respondidas e ambas certas.
+    // Sem excluir a pulada, 2/3 = 67% reprovaria (precisa de 70%); excluindo,
+    // 2/2 = 100% aprova.
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't4',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 3,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([
+          { correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } },
+          { correta: true, usou_dica: false, tempo_resposta_ms: 2000, questoes: { xp_valor: 10 } },
+        ]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: true })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([{ questao_id: 'q-pulada' }])],
+    });
+
+    const usuario = { id: 'user-1', xp_total: 0, nivel: 1 };
+    const res = await finalizarQuiz(usuario, 't4');
+
+    expect(res.acertos).toBe(2);
+    expect(res.total_questoes).toBe(3);
+    expect(res.questoes_puladas).toBe(1);
+    expect(res.aprovada).toBe(true);
+  });
+
+  it('sem pular nenhuma questão, o mesmo cenário (2 de 3) reprova', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't5',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 3,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([
+          { correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } },
+          { correta: true, usou_dica: false, tempo_resposta_ms: 2000, questoes: { xp_valor: 10 } },
+        ]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: false })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([])],
+    });
+
+    const usuario = { id: 'user-1', xp_total: 0, nivel: 1 };
+    const res = await finalizarQuiz(usuario, 't5');
+
+    expect(res.aprovada).toBe(false); // 2/3 = 67% < 70%
+  });
+
+  it('rejeita finalizar uma tentativa já finalizada', async () => {
+    configurarDb({
+      tentativas: [ok({ id: 't1', user_id: 'user-1', finalizada_em: '2026-01-01T00:00:00Z' })],
+    });
+
+    const usuario = { id: 'user-1', xp_total: 0, nivel: 1 };
+    await expect(finalizarQuiz(usuario, 't1')).rejects.toMatchObject({ status: 409 });
   });
 });

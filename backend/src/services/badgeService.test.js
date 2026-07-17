@@ -1,59 +1,230 @@
-import { describe, it, expect } from 'vitest';
-import { condicaoAtendida } from './badgeService.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { makeDb, ok } from '../test/dbMock.js';
 
-function badge(tipo_condicao, parametro = {}) {
-  return { tipo_condicao, parametro };
+vi.mock('../config/supabase.js', () => ({ db: { from: vi.fn() } }));
+
+const { db } = await import('../config/supabase.js');
+const { verificarBadges } = await import('./badgeService.js');
+
+function configurarDb(filas) {
+  const mock = makeDb(filas);
+  db.from.mockImplementation(mock.from);
 }
 
-describe('condicaoAtendida', () => {
-  describe('xp_acumulado', () => {
-    it('atende quando xpTotal alcança o alvo', () => {
-      expect(condicaoAtendida(badge('xp_acumulado', { xp: 1000 }), { xpTotal: 1000 })).toBe(true);
-      expect(condicaoAtendida(badge('xp_acumulado', { xp: 1000 }), { xpTotal: 1500 })).toBe(true);
-    });
+const BADGE_XP = { id: 1, nome: 'Rico em XP', tipo_condicao: 'xp_acumulado', parametro: { xp: 100 } };
+const BADGE_FASE1 = {
+  id: 2,
+  nome: 'Fase 1 concluída',
+  tipo_condicao: 'fase_concluida',
+  parametro: { fase_ordem: 1 },
+};
+const BADGE_PERFEITO = { id: 3, nome: 'Perfeccionista', tipo_condicao: 'quiz_perfeito', parametro: {} };
+const BADGE_VELOZ = {
+  id: 4,
+  nome: 'Raio',
+  tipo_condicao: 'velocidade',
+  parametro: { tempo_medio_ms: 5000 },
+};
+const BADGE_SEQUENCIA = {
+  id: 5,
+  nome: 'Sequência de 3',
+  tipo_condicao: 'sequencia_acertos',
+  parametro: { acertos: 3 },
+};
+const BADGE_STREAK = {
+  id: 6,
+  nome: 'Em Chamas',
+  tipo_condicao: 'streak_dias',
+  parametro: { dias: 7 },
+};
+const BADGE_SEM_DICA = {
+  id: 7,
+  nome: 'Sem Ajudinha',
+  tipo_condicao: 'sem_dica',
+  parametro: { min_questoes: 3 },
+};
 
-    it('não atende abaixo do alvo', () => {
-      expect(condicaoAtendida(badge('xp_acumulado', { xp: 1000 }), { xpTotal: 999 })).toBe(false);
-    });
+describe('verificarBadges', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  describe('fase_concluida', () => {
-    it('exige aprovação E a fase certa', () => {
-      const b = badge('fase_concluida', { fase_ordem: 2 });
-      expect(condicaoAtendida(b, { aprovada: true, faseOrdem: 2 })).toBe(true);
-      expect(condicaoAtendida(b, { aprovada: false, faseOrdem: 2 })).toBe(false);
-      expect(condicaoAtendida(b, { aprovada: true, faseOrdem: 3 })).toBe(false);
+  it('não repete badge já conquistada', async () => {
+    configurarDb({
+      badges: [ok([BADGE_XP])],
+      usuario_badges: [ok([{ badge_id: 1 }])],
     });
+
+    const novas = await verificarBadges('user-1', { xpTotal: 999 });
+    expect(novas).toEqual([]);
+    expect(db.from).not.toHaveBeenCalledWith('respostas');
   });
 
-  describe('quiz_perfeito', () => {
-    it('reflete o contexto diretamente', () => {
-      const b = badge('quiz_perfeito');
-      expect(condicaoAtendida(b, { quizPerfeito: true })).toBe(true);
-      expect(condicaoAtendida(b, { quizPerfeito: false })).toBe(false);
+  it('concede badge de XP acumulado quando o limiar é atingido', async () => {
+    // usuario_badges é lido (badges conquistadas) e depois escrito (insert das novas)
+    configurarDb({
+      badges: [ok([BADGE_XP])],
+      usuario_badges: [ok([]), ok(null)],
     });
+
+    const novas = await verificarBadges('user-1', { xpTotal: 150 });
+    expect(novas).toHaveLength(1);
+    expect(novas[0].nome).toBe('Rico em XP');
   });
 
-  describe('velocidade', () => {
-    it('exige aprovação, tempo definido e dentro do limite', () => {
-      const b = badge('velocidade', { tempo_medio_ms: 15000 });
-      expect(condicaoAtendida(b, { aprovada: true, tempoMedioMs: 10000 })).toBe(true);
-      expect(condicaoAtendida(b, { aprovada: true, tempoMedioMs: 15000 })).toBe(true);
-      expect(condicaoAtendida(b, { aprovada: true, tempoMedioMs: 20000 })).toBe(false);
-      expect(condicaoAtendida(b, { aprovada: false, tempoMedioMs: 5000 })).toBe(false);
-      expect(condicaoAtendida(b, { aprovada: true, tempoMedioMs: null })).toBe(false);
+  it('não concede badge de XP abaixo do limiar', async () => {
+    configurarDb({
+      badges: [ok([BADGE_XP])],
+      usuario_badges: [ok([])],
     });
+
+    const novas = await verificarBadges('user-1', { xpTotal: 50 });
+    expect(novas).toEqual([]);
   });
 
-  describe('sequencia_acertos', () => {
-    it('exige que a sequência atual alcance o alvo', () => {
-      const b = badge('sequencia_acertos', { acertos: 10 });
-      expect(condicaoAtendida(b, { sequenciaAtual: 10 })).toBe(true);
-      expect(condicaoAtendida(b, { sequenciaAtual: 9 })).toBe(false);
+  it('badge de fase só conta a fase certa e exige aprovação', async () => {
+    configurarDb({
+      badges: [ok([BADGE_FASE1])],
+      usuario_badges: [ok([])],
     });
+    const semAprovar = await verificarBadges('user-1', { aprovada: false, faseOrdem: 1 });
+    expect(semAprovar).toEqual([]);
+
+    configurarDb({
+      badges: [ok([BADGE_FASE1])],
+      usuario_badges: [ok([]), ok(null)],
+    });
+    const faseErrada = await verificarBadges('user-1', { aprovada: true, faseOrdem: 2 });
+    expect(faseErrada).toEqual([]);
+
+    configurarDb({
+      badges: [ok([BADGE_FASE1])],
+      usuario_badges: [ok([]), ok(null)],
+    });
+    const certo = await verificarBadges('user-1', { aprovada: true, faseOrdem: 1 });
+    expect(certo).toHaveLength(1);
   });
 
-  it('condição desconhecida nunca é atendida', () => {
-    expect(condicaoAtendida(badge('tipo_inexistente'), { xpTotal: 999999 })).toBe(false);
+  it('badge de quiz perfeito depende só da flag quizPerfeito', async () => {
+    configurarDb({
+      badges: [ok([BADGE_PERFEITO])],
+      usuario_badges: [ok([]), ok(null)],
+    });
+    const novas = await verificarBadges('user-1', { quizPerfeito: true });
+    expect(novas).toHaveLength(1);
+  });
+
+  it('badge de velocidade exige aprovação E tempo médio dentro do limite', async () => {
+    configurarDb({
+      badges: [ok([BADGE_VELOZ])],
+      usuario_badges: [ok([])],
+    });
+    const lento = await verificarBadges('user-1', { aprovada: true, tempoMedioMs: 9000 });
+    expect(lento).toEqual([]);
+
+    configurarDb({
+      badges: [ok([BADGE_VELOZ])],
+      usuario_badges: [ok([]), ok(null)],
+    });
+    const rapido = await verificarBadges('user-1', { aprovada: true, tempoMedioMs: 4000 });
+    expect(rapido).toHaveLength(1);
+  });
+
+  it('badge de sequência consulta o histórico de respostas só quando necessário', async () => {
+    configurarDb({
+      badges: [ok([BADGE_SEQUENCIA])],
+      usuario_badges: [ok([]), ok(null)],
+      respostas: [
+        ok([
+          { correta: true, respondida_em: '2026-01-03' },
+          { correta: true, respondida_em: '2026-01-02' },
+          { correta: true, respondida_em: '2026-01-01' },
+          { correta: false, respondida_em: '2025-12-31' },
+        ]),
+      ],
+    });
+
+    const novas = await verificarBadges('user-1', {});
+    expect(novas).toHaveLength(1);
+    expect(db.from).toHaveBeenCalledWith('respostas');
+  });
+
+  it('interrompe a sequência no primeiro erro (mais recente primeiro)', async () => {
+    configurarDb({
+      badges: [ok([BADGE_SEQUENCIA])],
+      usuario_badges: [ok([])],
+      respostas: [
+        ok([
+          { correta: true, respondida_em: '2026-01-03' },
+          { correta: false, respondida_em: '2026-01-02' },
+          { correta: true, respondida_em: '2026-01-01' },
+        ]),
+      ],
+    });
+
+    const novas = await verificarBadges('user-1', {});
+    expect(novas).toEqual([]);
+  });
+
+  it('badge de streak diário compara streakAtual com o limiar', async () => {
+    configurarDb({
+      badges: [ok([BADGE_STREAK])],
+      usuario_badges: [ok([])],
+    });
+    const aindaNao = await verificarBadges('user-1', { streakAtual: 6 });
+    expect(aindaNao).toEqual([]);
+
+    configurarDb({
+      badges: [ok([BADGE_STREAK])],
+      usuario_badges: [ok([]), ok(null)],
+    });
+    const conquistou = await verificarBadges('user-1', { streakAtual: 7 });
+    expect(conquistou).toHaveLength(1);
+  });
+
+  it('badge "sem dica" exige aprovação, nenhuma dica usada e quantidade mínima de questões', async () => {
+    configurarDb({
+      badges: [ok([BADGE_SEM_DICA])],
+      usuario_badges: [ok([])],
+    });
+    const semAprovar = await verificarBadges('user-1', {
+      aprovada: false,
+      semDica: true,
+      totalQuestoes: 10,
+    });
+    expect(semAprovar).toEqual([]);
+
+    configurarDb({
+      badges: [ok([BADGE_SEM_DICA])],
+      usuario_badges: [ok([])],
+    });
+    const usouDica = await verificarBadges('user-1', {
+      aprovada: true,
+      semDica: false,
+      totalQuestoes: 10,
+    });
+    expect(usouDica).toEqual([]);
+
+    configurarDb({
+      badges: [ok([BADGE_SEM_DICA])],
+      usuario_badges: [ok([])],
+    });
+    const poucasQuestoes = await verificarBadges('user-1', {
+      aprovada: true,
+      semDica: true,
+      totalQuestoes: 2,
+    });
+    expect(poucasQuestoes).toEqual([]);
+
+    configurarDb({
+      badges: [ok([BADGE_SEM_DICA])],
+      usuario_badges: [ok([]), ok(null)],
+    });
+    const conquistou = await verificarBadges('user-1', {
+      aprovada: true,
+      semDica: true,
+      totalQuestoes: 10,
+    });
+    expect(conquistou).toHaveLength(1);
   });
 });

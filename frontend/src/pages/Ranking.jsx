@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../services/api.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import Alerta from '../components/ui/Alerta.jsx';
 import PixelIcon from '../components/ui/PixelIcon.jsx';
+import AvatarPixel from '../components/ui/AvatarPixel.jsx';
 import pixelPodio from '../assets/img/pixel-podio.svg';
 
 // cores das medalhas do pódio (ouro, prata, bronze)
@@ -191,6 +193,17 @@ export default function Ranking() {
         </div>
       )}
 
+      {/* quizzes customizados são globais desde a migration 07 — atalho para a lista completa */}
+      {aba === 'turma' && turmaId && (
+        <Link
+          to="/quizzes"
+          className="card-pixel mt-4 flex items-center gap-2 border-2 border-indigo-500/40 bg-slate-900/60 p-4 font-pixel text-[11px] text-indigo-300 hover:bg-indigo-500/10"
+        >
+          <PixelIcon nome="gamepad" className="h-4 w-4" />
+          Ver quizzes disponíveis para jogar →
+        </Link>
+      )}
+
       <div className="mt-6">
         {erro && <Alerta>{erro}</Alerta>}
         {!erro && !dados && (aba === 'global' || turmaId || faseId) && <Spinner />}
@@ -259,8 +272,16 @@ function LinhaRanking({ linha, souEu, ehFase }) {
         )}
       </td>
       <td className="px-4 py-3 font-medium">
-        {linha.nome}
-        {souEu && <span className="ml-2 text-xs text-indigo-300">(você)</span>}
+        <div className="flex items-center gap-2">
+          {!ehFase && <AvatarPixel nivel={linha.nivel} className="h-6 w-6 shrink-0" />}
+          <span>
+            {linha.nome}
+            {souEu && <span className="ml-2 text-xs text-indigo-300">(você)</span>}
+            {!ehFase && linha.classe && (
+              <span className="ml-2 text-xs font-normal text-emerald-400/80">{linha.classe}</span>
+            )}
+          </span>
+        </div>
       </td>
       {!ehFase && <td className="px-4 py-3 text-slate-400">Nv. {linha.nivel}</td>}
       <td className="px-4 py-3 text-right font-mono text-amber-300">

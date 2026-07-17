@@ -1,49 +1,78 @@
-import { describe, it, expect } from 'vitest';
-import { escaparCsv, slug } from './relatorioService.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { makeDb, ok } from '../test/dbMock.js';
 
-describe('escaparCsv', () => {
-  it('deixa valores simples intactos', () => {
-    expect(escaparCsv('Lucas')).toBe('Lucas');
-    expect(escaparCsv(42)).toBe('42');
+vi.mock('../config/supabase.js', () => ({ db: { from: vi.fn() } }));
+vi.mock('./turmaService.js', () => ({
+  exigirTurmaDoProfessor: vi.fn(),
+  alunosDaTurma: vi.fn(),
+}));
+
+const { db } = await import('../config/supabase.js');
+const { exigirTurmaDoProfessor, alunosDaTurma } = await import('./turmaService.js');
+const { desempenhoPorQuestao, desempenhoPorFase, csvDesempenhoTurma } =
+  await import('./relatorioService.js');
+
+describe('relatorioService.desempenhoPorQuestao', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('filtra por fase quando informado', async () => {
+    db.from.mockImplementation(makeDb({ desempenho_questoes: [ok([{ questao_id: 'q1' }])] }).from);
+    const dados = await desempenhoPorQuestao(3);
+    expect(dados).toEqual([{ questao_id: 'q1' }]);
   });
 
-  it('converte null e undefined em string vazia', () => {
-    expect(escaparCsv(null)).toBe('');
-    expect(escaparCsv(undefined)).toBe('');
-  });
-
-  it('preserva o zero (não vira vazio)', () => {
-    expect(escaparCsv(0)).toBe('0');
-  });
-
-  it('envolve em aspas quando há o separador ";"', () => {
-    expect(escaparCsv('Silva; Souza')).toBe('"Silva; Souza"');
-  });
-
-  it('envolve em aspas quando há quebra de linha', () => {
-    expect(escaparCsv('linha1\nlinha2')).toBe('"linha1\nlinha2"');
-    expect(escaparCsv('a\r\nb')).toBe('"a\r\nb"');
-  });
-
-  it('duplica aspas internas e envolve o campo', () => {
-    expect(escaparCsv('diz "olá"')).toBe('"diz ""olá"""');
+  it('sem fase, traz todas', async () => {
+    db.from.mockImplementation(makeDb({ desempenho_questoes: [ok([])] }).from);
+    const dados = await desempenhoPorQuestao(null);
+    expect(dados).toEqual([]);
   });
 });
 
-describe('slug', () => {
-  it('minúsculas com hífens no lugar de espaços', () => {
-    expect(slug('Turma A')).toBe('turma-a');
+describe('relatorioService.desempenhoPorFase', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('traz a view desempenho_fases ordenada por ordem', async () => {
+    const mock = makeDb({
+      desempenho_fases: [
+        ok([
+          { fase_id: 1, fase_nome: 'Listas', ordem: 1, total_tentativas: 10, taxa_aprovacao_pct: 80 },
+        ]),
+      ],
+    });
+    db.from.mockImplementation(mock.from);
+
+    const dados = await desempenhoPorFase();
+    expect(dados).toEqual([
+      { fase_id: 1, fase_nome: 'Listas', ordem: 1, total_tentativas: 10, taxa_aprovacao_pct: 80 },
+    ]);
+    expect(mock.chainsPara('desempenho_fases')[0].order).toHaveBeenCalledWith('ordem');
+  });
+});
+
+describe('relatorioService.csvDesempenhoTurma', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('gera CSV com BOM, separador ";" e nome de arquivo com slug', async () => {
+    exigirTurmaDoProfessor.mockResolvedValue({ id: 'turma-1', nome: 'Turma Ção & Cia' });
+    alunosDaTurma.mockResolvedValue([
+      { nome: 'Ana', nivel: 3, xp_total: 450, fases_concluidas: 2, total_tentativas: 5, total_badges: 1 },
+    ]);
+
+    const { nomeArquivo, conteudo } = await csvDesempenhoTurma('prof-1', 'turma-1');
+
+    expect(nomeArquivo).toBe('desempenho-turma-cao-cia.csv');
+    expect(conteudo[0]).toBe('﻿'); // BOM
+    expect(conteudo).toContain('Nome;Nível;XP Total;Fases Concluídas;Tentativas;Badges');
+    expect(conteudo).toContain('Ana;3;450;2;5;1');
   });
 
-  it('remove acentos', () => {
-    expect(slug('Estrutura de Dados — Ção')).toBe('estrutura-de-dados-cao');
-  });
+  it('escapa valores com ";", aspas ou quebra de linha', async () => {
+    exigirTurmaDoProfessor.mockResolvedValue({ id: 'turma-1', nome: 'Turma' });
+    alunosDaTurma.mockResolvedValue([
+      { nome: 'Ana; "A"', nivel: 1, xp_total: 0, fases_concluidas: 0, total_tentativas: 0, total_badges: 0 },
+    ]);
 
-  it('colapsa símbolos e separadores repetidos em um único hífen', () => {
-    expect(slug('3ºA / Manhã!!!')).toBe('3-a-manha');
-  });
-
-  it('remove hífens das pontas', () => {
-    expect(slug('  ...Turma...  ')).toBe('turma');
+    const { conteudo } = await csvDesempenhoTurma('prof-1', 'turma-1');
+    expect(conteudo).toContain('"Ana; ""A"""');
   });
 });

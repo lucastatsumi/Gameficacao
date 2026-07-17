@@ -2,11 +2,26 @@ import { db } from '../config/supabase.js';
 import { HttpError } from '../utils/httpError.js';
 import { embaralhar } from '../utils/random.js';
 import { nivelPorXp } from '../utils/nivel.js';
+import { dataDeHoje, proximoStreak } from '../utils/streak.js';
 import { verificarBadges } from './badgeService.js';
+import { eventoAtivoParaFase } from './eventoService.js';
+import { selecionarAdaptativo } from '../utils/dificuldadeAdaptativa.js';
+
+const TENTATIVAS_PARA_DIFICULDADE = 5; // janela recente usada para medir desempenho na fase
 
 const QUESTOES_POR_QUIZ = 10;
 const PCT_APROVACAO = 0.7; // acertar 70% conclui a fase / aprova o quiz
 const TOLERANCIA_REDE_MS = 5000; // folga sobre o timer para latência de rede
+
+// Taxa de acerto (%) nas últimas tentativas finalizadas do aluno na fase —
+// alimenta a dificuldade adaptativa. null quando não há histórico ainda.
+function taxaAcertoRecente(tentativas) {
+  if (!tentativas?.length) return null;
+  const totalQuestoes = tentativas.reduce((soma, t) => soma + t.total_questoes, 0);
+  if (totalQuestoes === 0) return null;
+  const totalAcertos = tentativas.reduce((soma, t) => soma + t.acertos, 0);
+  return Math.round((totalAcertos / totalQuestoes) * 100);
+}
 
 // ---------------------------------------------------------------
 // POST /quiz/iniciar — valida desbloqueio, sorteia questões e abre
@@ -40,19 +55,33 @@ export async function iniciarQuiz(userId, faseId) {
   const { data: questoes, error: erroQuestoes } = await db
     .from('questoes')
     .select(
-      'id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, alternativas ( id, letra, texto )',
+      // NUNCA inclui `ordem_correta` (gabarito do formato reordenar_algoritmo)
+      'id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, formato, passos, alternativas ( id, letra, texto )'
     )
     .eq('fase_id', faseId)
     .eq('ativa', true);
   if (erroQuestoes) throw erroQuestoes;
   if (!questoes?.length) throw new HttpError(404, 'Esta fase ainda não possui questões');
 
-  const sorteadas = embaralhar(questoes)
-    .slice(0, QUESTOES_POR_QUIZ)
+  const { data: tentativasRecentes } = await db
+    .from('tentativas')
+    .select('acertos, total_questoes')
+    .eq('user_id', userId)
+    .eq('fase_id', faseId)
+    .not('finalizada_em', 'is', null)
+    .order('finalizada_em', { ascending: false })
+    .limit(TENTATIVAS_PARA_DIFICULDADE);
+
+  const taxaAcertoPct = taxaAcertoRecente(tentativasRecentes);
+
+  const sorteadas = selecionarAdaptativo(questoes, taxaAcertoPct, QUESTOES_POR_QUIZ)
     .map((q) => ({
       ...q,
       tem_dica: false, // dicas são exclusivas dos quizzes customizados
       alternativas: [...q.alternativas].sort((a, b) => a.letra.localeCompare(b.letra)),
+      // embaralha os passos a cada tentativa — senão a ordem cadastrada já
+      // seria uma dica
+      passos: q.passos ? embaralhar(q.passos) : null,
     }));
 
   const { data: tentativa, error: erroTentativa } = await db
@@ -88,7 +117,8 @@ export async function iniciarQuizCustom(usuario, quizId) {
   const { data: itens, error: erroItens } = await db
     .from('quiz_custom_questoes')
     .select(
-      'ordem, questoes ( id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, dica, ativa, alternativas ( id, letra, texto ) )',
+      // NUNCA inclui `ordem_correta` (gabarito do formato reordenar_algoritmo)
+      'ordem, questoes ( id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, formato, passos, dica, ativa, alternativas ( id, letra, texto ) )'
     )
     .eq('quiz_id', quizId)
     .order('ordem');
@@ -104,6 +134,7 @@ export async function iniciarQuizCustom(usuario, quizId) {
       // NUNCA enviar o texto da dica aqui: o aluno pede via /quiz/dica
       tem_dica: quiz.permitir_dicas && Boolean(dica?.trim()),
       alternativas: [...q.alternativas].sort((a, b) => a.letra.localeCompare(b.letra)),
+      passos: q.passos ? embaralhar(q.passos) : null,
     }));
   if (!questoes.length) throw new HttpError(404, 'Este quiz não possui questões ativas');
 
@@ -122,6 +153,7 @@ export async function iniciarQuizCustom(usuario, quizId) {
       descricao: quiz.descricao,
       sons: quiz.sons,
       permitir_dicas: quiz.permitir_dicas,
+      vidas: quiz.vidas,
     },
     questoes,
   };
@@ -196,6 +228,17 @@ export async function responderQuestao(userId, dados) {
     throw new HttpError(400, 'Questão não pertence a esta tentativa');
   }
 
+  // Poder "tempo_extra" usado nesta questão (registrado pelo servidor em
+  // /quiz/poder) soma ao limite antes de decidir se estourou o tempo.
+  const { data: poderTempo } = await db
+    .from('poderes_usados')
+    .select('segundos_extra')
+    .eq('tentativa_id', tentativa_id)
+    .eq('questao_id', questao_id)
+    .eq('poder', 'tempo_extra')
+    .maybeSingle();
+  if (poderTempo?.segundos_extra) tempoLimiteSeg += poderTempo.segundos_extra;
+
   // Timer no servidor: o tempo conta desde a resposta anterior
   // (ou desde o início da tentativa, na primeira questão)
   const { data: ultimaResposta } = await db
@@ -257,6 +300,70 @@ export async function responderQuestao(userId, dados) {
 }
 
 // ---------------------------------------------------------------
+// POST /quiz/responder-sequencia — corrige questões do minigame
+// "reordenar algoritmo" (formato = 'reordenar_algoritmo'). Grava na
+// MESMA tabela `respostas` que responderQuestao, então finalizarQuiz
+// (XP, aprovação, badges, streak) funciona sem nenhuma alteração.
+// ---------------------------------------------------------------
+export async function responderSequencia(userId, dados) {
+  const { tentativa_id, questao_id, ordem } = dados ?? {};
+  if (!tentativa_id || !questao_id || !Array.isArray(ordem)) {
+    throw new HttpError(400, 'tentativa_id, questao_id e ordem (array) são obrigatórios');
+  }
+
+  const tentativa = await buscarTentativa(userId, tentativa_id);
+  if (tentativa.finalizada_em) throw new HttpError(409, 'Esta tentativa já foi finalizada');
+
+  const { data: questao, error: erroQuestao } = await db
+    .from('questoes')
+    .select('id, fase_id, tempo_limite_seg, ordem_correta')
+    .eq('id', questao_id)
+    .maybeSingle();
+  if (erroQuestao) throw erroQuestao;
+  if (!questao) throw new HttpError(400, 'Questão não encontrada');
+
+  let tempoLimiteSeg = questao.tempo_limite_seg;
+  if (tentativa.quiz_custom_id) {
+    await exigirQuestaoNoQuiz(tentativa.quiz_custom_id, questao_id);
+    const quiz = await buscarQuizCustom(tentativa.quiz_custom_id);
+    tempoLimiteSeg = quiz.tempo_limite_seg ?? questao.tempo_limite_seg;
+  } else if (questao.fase_id !== tentativa.fase_id) {
+    throw new HttpError(400, 'Questão não pertence a esta tentativa');
+  }
+
+  const { data: ultimaResposta } = await db
+    .from('respostas')
+    .select('respondida_em')
+    .eq('tentativa_id', tentativa_id)
+    .order('respondida_em', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const referencia = new Date(ultimaResposta?.respondida_em ?? tentativa.iniciada_em).getTime();
+  const decorridoMs = Date.now() - referencia;
+  const tempoEsgotado = decorridoMs > tempoLimiteSeg * 1000 + TOLERANCIA_REDE_MS;
+
+  const ordemCorreta = questao.ordem_correta ?? [];
+  const acertouOrdem =
+    ordem.length === ordemCorreta.length && ordem.every((id, i) => id === ordemCorreta[i]);
+  const correta = !tempoEsgotado && acertouOrdem;
+
+  const { error: erroInsert } = await db.from('respostas').insert({
+    tentativa_id,
+    questao_id,
+    alternativa_id: null, // este formato não usa alternativas
+    correta,
+    tempo_resposta_ms: decorridoMs,
+  });
+  if (erroInsert?.code === '23505') {
+    throw new HttpError(409, 'Esta questão já foi respondida nesta tentativa');
+  }
+  if (erroInsert) throw erroInsert;
+
+  return { correta, tempo_esgotado: tempoEsgotado, ordem_correta: ordemCorreta };
+}
+
+// ---------------------------------------------------------------
 // POST /quiz/finalizar — consolida a tentativa: XP (com regra
 // anti-farming e penalidade de dica), progresso, nível e badges.
 // ---------------------------------------------------------------
@@ -268,6 +375,16 @@ export async function finalizarQuiz(usuario, tentativaId) {
 
   const ehCustom = Boolean(tentativa.quiz_custom_id);
 
+  // Streak diário: qualquer quiz finalizado (campanha ou custom) conta como
+  // atividade do dia. Calculado ANTES do XP porque o bônus de streak entra
+  // no xp_bruto desta tentativa (ver abaixo).
+  const hoje = dataDeHoje();
+  const streakDias = proximoStreak({
+    streakAtual: usuario.streak_dias,
+    ultimoDia: usuario.streak_ultimo_dia,
+    hoje,
+  });
+
   const { data: respostas, error: erroRespostas } = await db
     .from('respostas')
     .select('correta, usou_dica, tempo_resposta_ms, questoes ( xp_valor )')
@@ -275,8 +392,36 @@ export async function finalizarQuiz(usuario, tentativaId) {
   if (erroRespostas) throw erroRespostas;
 
   const acertos = respostas.filter((r) => r.correta).length;
-  const xpBruto = respostas.filter((r) => r.correta).reduce((soma, r) => soma + xpDaResposta(r), 0);
-  const aprovada = acertos >= Math.ceil(tentativa.total_questoes * PCT_APROVACAO);
+  const xpSemEvento = respostas
+    .filter((r) => r.correta)
+    .reduce((soma, r) => soma + xpDaResposta(r), 0);
+
+  // Evento temporário (ex.: "semana das árvores"): multiplica o XP bruto
+  // desta tentativa. Só se aplica ao modo campanha — quiz custom não tem
+  // fase associada para casar com o evento.
+  const evento = ehCustom ? null : await eventoAtivoParaFase(tentativa.fase_id);
+  const multiplicadorEvento = evento?.multiplicador_xp ?? 1;
+
+  // Recompensa crescente de streak: só faz sentido se o aluno de fato
+  // acertou algo (xpSemEvento > 0) — não recompensa reprovar de propósito
+  // só para "bater ponto". +1 XP por dia de streak além do primeiro,
+  // até um teto de +20 (streak de 21+ dias).
+  const bonusStreak = xpSemEvento > 0 ? Math.min(Math.max(0, streakDias - 1), 20) : 0;
+
+  const xpBruto = Math.round(xpSemEvento * multiplicadorEvento) + bonusStreak;
+
+  // Poder "pular_questao": a questão pulada nunca vira uma linha em
+  // `respostas` (o cliente não responde), então precisa ser excluída do
+  // denominador de aprovação — senão pular equivaleria a errar.
+  const { data: puladasData, error: erroPuladas } = await db
+    .from('poderes_usados')
+    .select('questao_id')
+    .eq('tentativa_id', tentativaId)
+    .eq('poder', 'pular_questao');
+  if (erroPuladas) throw erroPuladas;
+  const totalEfetivo = Math.max(0, tentativa.total_questoes - puladasData.length);
+
+  const aprovada = acertos >= Math.ceil(totalEfetivo * PCT_APROVACAO);
 
   // Anti-farming: repetir só rende o XP que EXCEDER o melhor desempenho
   // anterior na mesma origem (fase ou quiz custom).
@@ -309,18 +454,24 @@ export async function finalizarQuiz(usuario, tentativaId) {
 
   const xpTotal = usuario.xp_total + xpGanho;
   const nivel = nivelPorXp(xpTotal);
+
   const { error: erroPerfil } = await db
     .from('profiles')
-    .update({ xp_total: xpTotal, nivel })
+    .update({ xp_total: xpTotal, nivel, streak_dias: streakDias, streak_ultimo_dia: hoje })
     .eq('id', usuario.id);
   if (erroPerfil) throw erroPerfil;
 
   // Tempo médio só vale se o quiz foi respondido por completo
   const temposValidos = respostas.map((r) => r.tempo_resposta_ms).filter((t) => t != null);
   const tempoMedioMs =
-    respostas.length === tentativa.total_questoes && temposValidos.length === respostas.length
+    respostas.length === totalEfetivo && temposValidos.length === respostas.length
       ? temposValidos.reduce((soma, t) => soma + t, 0) / temposValidos.length
       : null;
+
+  // "Sem usar dica": só faz sentido avaliar se o quiz foi respondido por
+  // completo (senão questões puladas/pendentes mascarariam o resultado).
+  const semDica =
+    respostas.length === totalEfetivo && respostas.every((r) => !r.usou_dica);
 
   const badgesNovas = await verificarBadges(usuario.id, {
     xpTotal,
@@ -328,6 +479,9 @@ export async function finalizarQuiz(usuario, tentativaId) {
     faseOrdem: fase?.ordem ?? null,
     quizPerfeito: tentativa.total_questoes > 0 && acertos === tentativa.total_questoes,
     tempoMedioMs,
+    streakAtual: streakDias,
+    semDica,
+    totalQuestoes: tentativa.total_questoes,
   });
 
   let titulo = fase?.nome;
@@ -340,14 +494,22 @@ export async function finalizarQuiz(usuario, tentativaId) {
     fase: titulo,
     acertos,
     total_questoes: tentativa.total_questoes,
+    questoes_puladas: puladasData.length,
     aprovada,
     xp_bruto: xpBruto,
+    bonus_streak: bonusStreak,
     xp_ganho: xpGanho,
     xp_total: xpTotal,
     nivel,
     subiu_nivel: nivel > usuario.nivel,
     fase_concluida: progresso.concluida,
     badges_novas: badgesNovas,
+    streak_dias: streakDias,
+    // Marco de streak (a cada 5 dias): só true quando ESTE quiz foi o que
+    // efetivamente contou o novo dia — evita conceder o poder de novo se o
+    // aluno finalizar vários quizzes no mesmo dia em que bateu o marco.
+    streak_marco: hoje !== usuario.streak_ultimo_dia && streakDias > 0 && streakDias % 5 === 0,
+    evento: evento && { nome: evento.nome, multiplicador_xp: evento.multiplicador_xp },
   };
 }
 
@@ -369,7 +531,7 @@ async function abandonarTentativasAbertas(userId) {
     .is('finalizada_em', null);
 }
 
-async function buscarTentativa(userId, tentativaId) {
+export async function buscarTentativa(userId, tentativaId) {
   const { data, error } = await db
     .from('tentativas')
     .select('*')
@@ -392,7 +554,7 @@ async function buscarQuizCustom(quizId) {
   return data;
 }
 
-async function exigirQuestaoNoQuiz(quizId, questaoId) {
+export async function exigirQuestaoNoQuiz(quizId, questaoId) {
   const { data, error } = await db
     .from('quiz_custom_questoes')
     .select('questao_id')
