@@ -16,6 +16,7 @@
     "react-router-dom": "^6.26.0"
   },
   "devDependencies": {
+    "@guidepup/virtual-screen-reader": "^0.32.1",
     "@tailwindcss/vite": "^4.0.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

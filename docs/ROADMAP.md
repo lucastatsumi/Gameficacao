@@ -412,18 +412,32 @@ assistivo real), documentada abaixo em cada item.
   incluindo o banner de retomada e o botão de desafio) — expandir pro
   resto do app (Quiz, Quizzes, Ranking, Perfil, Admin) é trabalho mecânico
   (extrair string, adicionar chave), não um bloqueio de recurso externo.
-- **Acessibilidade avançada com leitor de tela real** — ✅ agora existe
-  auditoria AUTOMATIZADA (`vitest-axe`/`axe-core`, ver "Infraestrutura /
-  qualidade" abaixo), o que é um avanço real sobre a leitura manual de
-  código que havia antes. Mas isso continua sendo diferente de validar
-  com um leitor de tela de verdade: `axe-core` analisa a árvore DOM
-  estaticamente, não simula navegação só de teclado nem lê o conteúdo em
-  voz alta, e não pega problemas de UX que só aparecem em uso real (ordem
-  de leitura confusa, anúncios repetitivos, foco que "some" visualmente
-  mas continua no DOM). Isso exige NVDA/JAWS/VoiceOver, que não está
-  disponível neste ambiente — declarar "100% acessível" sem esse teste
-  continuaria sendo enganoso. Este É o resíduo genuinamente fora de
-  escopo, não o item inteiro.
+- **Acessibilidade avançada com leitor de tela real** — três camadas de
+  validação automatizada existem agora (ver "Infraestrutura / qualidade"
+  abaixo): auditoria estática (`axe-core`), navegação só de teclado
+  (`@testing-library/user-event`) e — nesta rodada — **simulação de leitor
+  de tela** (`@guidepup/virtual-screen-reader`): percorre a árvore de
+  acessibilidade computada a partir das especificações W3C
+  (ACCNAME/CORE-AAM/ARIA) e reproduz a sequência de frases que um leitor
+  de tela real anunciaria (`BotaoAlternativa.screenreader.test.jsx`, 3
+  testes, verificados manualmente linha por linha contra o
+  `spokenPhraseLog` real antes de virarem asserção — não só "passou por
+  acaso"). Isso é categoricamente mais próximo de "testar com um leitor
+  de tela" do que as duas camadas anteriores — não é mais "não simula
+  leitura em voz alta", ele simula a lógica de anúncio de verdade.
+  **O que isso ainda NÃO é** (aqui está o resíduo genuíno, e a própria
+  documentação do `virtual-screen-reader` é explícita sobre isso: *"there
+  is no substitute for testing with real screen readers and with real
+  users"*): é uma simulação da especificação, não o software real — não
+  testa peculiaridades de implementação de NVDA/JAWS/VoiceOver específicas
+  (cada um tem bugs e comportamentos próprios que a spec não captura), não
+  roda num browser real com extensões/configurações de acessibilidade do
+  usuário, e não envolve uma pessoa que de fato usa leitor de tela no
+  dia a dia validando que a experiência faz sentido. Esse "último degrau"
+  — AT real, browser real, usuário real — é o que continua estruturalmente
+  fora do alcance de uma sessão autônoma de código neste ambiente.
+  Cobertura ainda de 1 componente (`BotaoAlternativa`); expandir pros
+  demais é mecânico, mesmo padrão dos outros dois tipos de teste.
 
 ## Infraestrutura / qualidade
 
@@ -463,6 +477,20 @@ assistivo real), documentada abaixo em cada item.
   além do axe-core estático, e o padrão mais próximo de uso real que dá
   pra automatizar sem o hardware/software assistivo que este ambiente não
   tem.
+- ✅ **Simulação de leitor de tela (virtual screen reader)** —
+  `@guidepup/virtual-screen-reader` instalado;
+  `BotaoAlternativa.screenreader.test.jsx` percorre a árvore de
+  acessibilidade computada a partir das especificações W3C
+  (ACCNAME/CORE-AAM/ARIA) com `virtual.next()` e verifica a sequência
+  exata de frases que um leitor de tela real anunciaria (role, nome
+  acessível, estado `disabled`, texto de feedback) via
+  `virtual.spokenPhraseLog()`. Diferente do `axe-core` (regras estáticas)
+  e do teste de teclado (só foco/ativação), isto simula a PRÓPRIA LÓGICA
+  DE ANÚNCIO — mais perto de "testar com um leitor de tela" do que
+  qualquer coisa anterior no projeto. Ver a nota detalhada em "Fora do
+  escopo" (acessibilidade avançada) sobre o que isso ainda não cobre —
+  peculiaridades de NVDA/JAWS/VoiceOver reais e validação com usuário
+  real continuam fora do alcance autônomo.
 - **Monitoramento de qualidade das questões** — rodar o agente
   `question-researcher` periodicamente em modo de auditoria sobre
   `database/05_seed_questoes.sql` e futuras seeds, para pegar
