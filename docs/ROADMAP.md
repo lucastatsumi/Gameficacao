@@ -366,17 +366,33 @@ mecanismos redundantes e mal cobertos.
 
 Estes itens não são "esquecidos" — são categoricamente diferentes do resto
 deste roadmap: não dá pra implementá-los bem só com julgamento de
-engenharia, porque dependem de uma escolha de produto, arte nova, ou
-ferramenta que este ambiente não tem. Dois itens que estavam aqui
-(multiplayer/desafio e avatar visual) tinham um subconjunto genuinamente
-implementável sem esses recursos — foram movidos pra "Curto/médio prazo"
-como ✅ **feito**, com o que ainda falta (a parte que exige mesmo decisão
-de produto ou arte nova) explicitado ali.
+engenharia, porque dependem de uma escolha de produto, arte nova, revisão
+humana especializada, ou ferramenta que este ambiente não tem. Três itens
+que estavam aqui (multiplayer/desafio, avatar visual e internacionalização)
+tinham um subconjunto genuinamente implementável sem esses recursos —
+foram movidos pra "Curto/médio prazo" como ✅ **feito**, com o que ainda
+falta (a parte que exige mesmo decisão de produto, arte nova, ou revisor
+nativo) explicitado ali. O que sobrou aqui é o que realmente não tem
+subconjunto implementável sem o recurso externo.
 
-- **Internacionalização** — depende de decidir PARA QUAIS idiomas, e
-  provavelmente de um revisor humano nativo para as traduções — traduzir
-  sozinho sem revisão arrisca ficar com qualidade pior que o português
-  original.
+- ✅ **Infra de internacionalização (parcial, sem revisão nativa)** —
+  `frontend/src/i18n/translations.js` (dicionário pt/en) +
+  `contexts/I18nContext.jsx` (`useI18n()` com `t(chave)`, idioma persistido
+  em `localStorage`, fallback pra pt se a chave não existir no idioma
+  atual — nunca quebra a UI mostrando `undefined`). Botão EN/PT no header
+  (`Layout.jsx`). Cobertura ATUAL é deliberadamente parcial — navegação +
+  tela de login inteira, como padrão de referência para outras páginas
+  seguirem — não o app inteiro. Testado (4 casos: idioma padrão, troca +
+  persistência, idioma inválido ignorado, chave desconhecida não quebra).
+  **O que ainda falta e continua fora do escopo autônomo**: (1) tradução
+  do restante do app (a maior parte do trabalho é mecânico — extrair
+  string, adicionar chave — mas seria uma mudança grande demais pra fazer
+  de uma vez sem risco de regressão visual); (2) a tradução para inglês
+  foi feita pelo próprio agente, SEM revisor nativo — pode ter fraseado
+  estranho a um falante nativo; não deveria ir pra produção com público
+  internacional sem essa revisão. Isso é exatamente o risco que motivou o
+  item ficar fora de escopo nas rodadas anteriores — a infra em si não
+  tinha esse problema, só a qualidade da tradução tem.
 - **Acessibilidade avançada com leitor de tela** — dá pra fazer uma
   auditoria de código (ARIA labels, ordem de foco, contraste calculado),
   mas validar de verdade exige testar com um leitor de tela real
