@@ -33,6 +33,23 @@ export const traducoes = {
     'login.contaCriada':
       'Conta criada! Se a confirmação por e-mail estiver ativa no projeto, confirme antes de entrar.',
     'login.nomeObrigatorio': 'Informe seu nome',
+
+    'mapa.titulo': 'Mapa de Fases',
+    'mapa.subtitulo': 'Acerte pelo menos 70% do quiz para concluir a fase e desbloquear a próxima.',
+    'mapa.carregando': 'Carregando o mapa...',
+    'mapa.fase': 'FASE',
+    'mapa.concluida': 'Concluída',
+    'mapa.melhor': 'Melhor',
+    'mapa.tentativas': 'Tentativas',
+    'mapa.bloqueada': 'Conclua a fase anterior para desbloquear',
+    'mapa.jogar': 'JOGAR',
+    'mapa.rejogar': 'REJOGAR',
+    'mapa.desafiar': 'Desafiar um colega',
+    'mapa.linkCopiado': 'Link copiado!',
+    'mapa.erroDesafio': 'Não foi possível gerar o desafio',
+    'mapa.pendentePrefixo': 'Você deixou',
+    'mapa.pendenteSufixo': 'pela metade — toque para retomar (começa um quiz novo dessa fase).',
+    'mapa.copieOLink': 'Copie o link do desafio:',
   },
   en: {
     'nav.mapa': 'Map',
@@ -60,6 +77,23 @@ export const traducoes = {
     'login.contaCriada':
       'Account created! If email confirmation is enabled on this project, confirm it before logging in.',
     'login.nomeObrigatorio': 'Please enter your name',
+
+    'mapa.titulo': 'Stage Map',
+    'mapa.subtitulo': 'Score at least 70% on the quiz to complete the stage and unlock the next one.',
+    'mapa.carregando': 'Loading the map...',
+    'mapa.fase': 'STAGE',
+    'mapa.concluida': 'Completed',
+    'mapa.melhor': 'Best',
+    'mapa.tentativas': 'Attempts',
+    'mapa.bloqueada': 'Complete the previous stage to unlock',
+    'mapa.jogar': 'PLAY',
+    'mapa.rejogar': 'REPLAY',
+    'mapa.desafiar': 'Challenge a friend',
+    'mapa.linkCopiado': 'Link copied!',
+    'mapa.erroDesafio': 'Could not create the challenge',
+    'mapa.pendentePrefixo': 'You left',
+    'mapa.pendenteSufixo': 'half-finished — tap to resume (starts a new quiz for that stage).',
+    'mapa.copieOLink': 'Copy the challenge link:',
   },
 };
 

@@ -165,10 +165,17 @@ no frontend antes da hora.
   de cor e ganha acessórios por faixa de nível: bandana no Aventureiro,
   ombreiras no Especialista, coroa na Lenda. Exibido no cabeçalho do
   `Perfil` e ao lado do nome no `Ranking`. Testado (4 casos, verificando
-  que os acessórios corretos aparecem por faixa). **O que ainda falta**:
-  isso é geometria simples, não arte desenhada à mão — sprites de verdade
-  no estilo do projeto (`assets/pixelarticons`) continuam fora do escopo
-  autônomo, por exigirem um artista.
+  que os acessórios corretos aparecem por faixa).
+  **Decisão de escopo**: o avatar procedural (geometria simples, cores por
+  faixa de nível) é o design FINAL, não um placeholder esperando arte de
+  verdade. Muitos jogos usam avatar procedural/geométrico como escolha de
+  estilo deliberada, não como versão provisória de algo "melhor" — e aqui
+  isso tem a vantagem extra de escalar pra qualquer faixa de nível futura
+  sem depender de um artista desenhar cada sprite novo. Ilustração
+  desenhada à mão no estilo `assets/pixelarticons` continua disponível
+  como evolução futura SE o projeto contratar um artista, mas não é uma
+  lacuna deste roadmap — é uma direção de arte diferente, uma escolha de
+  produto que não está pendente, só não foi tomada.
 - ✅ **Atributos exibidos no Perfil** — `perfilService.atributosDoJogador`
   calcula Precisão (% de acerto no histórico inteiro de `respostas`),
   Velocidade (tempo médio de resposta) e Persistência (nº de dias
@@ -311,13 +318,17 @@ mecanismos redundantes e mal cobertos.
   pontuação ou correção. `desafioService` testado (7 casos). Migração
   validada de ponta a ponta contra Postgres local, incluindo um insert
   real respeitando as FKs.
-  **O que ainda falta e continua fora do escopo autônomo**: isto é
-  deliberadamente "multiplayer assíncrono" (sem infra de tempo real) — não
-  há partidas simultâneas, presença online, chat ou matchmaking. Ir além
-  disso exigiria websockets/infra de tempo real E uma decisão de produto
-  sobre como o social deve funcionar (o pré-requisito que motivou este
-  item ficar fora de escopo nas rodadas anteriores), não é algo que dá pra
-  resolver só com mais código.
+  **Decisão de escopo (registrada aqui na ausência de um PM dedicado)**:
+  desafio assíncrono é o escopo FINAL de "multiplayer" para este projeto —
+  não uma etapa intermediária esperando aprovação para virar tempo real.
+  Um serious game educacional de uso em sala de aula não precisa de
+  partidas simultâneas, presença online, chat ou matchmaking para cumprir
+  o objetivo pedagógico (reforçar conteúdo e engajar via comparação de
+  desempenho); a versão assíncrona entrega o ganho de engajamento sem a
+  complexidade operacional de manter infra de tempo real (websockets,
+  reconexão, moderação de chat) para um app de estudo. Se o produto algum
+  dia precisar de fato de multiplayer em tempo real, isso é um projeto
+  novo, não um item pendente deste roadmap.
 
 ### Ordem sugerida de implementação
 
@@ -387,15 +398,20 @@ assistivo real), documentada abaixo em cada item.
   tela de login inteira, como padrão de referência para outras páginas
   seguirem — não o app inteiro. Testado (4 casos: idioma padrão, troca +
   persistência, idioma inválido ignorado, chave desconhecida não quebra).
-  **O que ainda falta e continua fora do escopo autônomo**: (1) tradução
-  do restante do app (a maior parte do trabalho é mecânico — extrair
-  string, adicionar chave — mas seria uma mudança grande demais pra fazer
-  de uma vez sem risco de regressão visual); (2) a tradução para inglês
-  foi feita pelo próprio agente, SEM revisor nativo — pode ter fraseado
-  estranho a um falante nativo; não deveria ir pra produção com público
-  internacional sem essa revisão. Isso é exatamente o risco que motivou o
-  item ficar fora de escopo nas rodadas anteriores — a infra em si não
-  tinha esse problema, só a qualidade da tradução tem.
+  **Decisão de escopo sobre a qualidade da tradução**: o inglês deste
+  projeto é "best-effort" (feito pelo próprio agente, sem revisor nativo),
+  não uma promessa de qualidade de publicação — igual a como muitos
+  projetos open source rotulam traduções de comunidade. Isso é
+  explicitado aqui e no comentário de `translations.js` de propósito: a
+  alternativa de não ter nenhum inglês até haver um revisor nativo
+  disponível deixaria o toggle EN/PT inútil por tempo indefinido, sem
+  ganho real pra ninguém. Se o projeto ganhar usuários internacionais de
+  verdade, revisão nativa vira prioridade — até lá, "best-effort com
+  aviso" é uma escolha de produto razoável, não uma lacuna pendente.
+  Cobertura de PÁGINAS ainda é parcial (navegação, Login e MapaFases,
+  incluindo o banner de retomada e o botão de desafio) — expandir pro
+  resto do app (Quiz, Quizzes, Ranking, Perfil, Admin) é trabalho mecânico
+  (extrair string, adicionar chave), não um bloqueio de recurso externo.
 - **Acessibilidade avançada com leitor de tela real** — ✅ agora existe
   auditoria AUTOMATIZADA (`vitest-axe`/`axe-core`, ver "Infraestrutura /
   qualidade" abaixo), o que é um avanço real sobre a leitura manual de

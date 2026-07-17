@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api.js';
+import { useI18n } from '../contexts/I18nContext.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import Alerta from '../components/ui/Alerta.jsx';
 import PixelIcon from '../components/ui/PixelIcon.jsx';
@@ -12,6 +13,7 @@ import pixelEstrela from '../assets/img/pixel-estrela.svg';
 const ICONES_FASE = ['arrow-right', 'coins', 'users', 'map-pin', 'chart-bar-big', 'fire', 'reload'];
 
 function NoFase({ fase, indice }) {
+  const { t } = useI18n();
   const concluida = fase.progresso?.concluida;
   const bloqueada = !fase.desbloqueada;
 
@@ -42,12 +44,14 @@ function NoFase({ fase, indice }) {
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-pixel text-[10px] text-slate-500">FASE {fase.ordem}</span>
+            <span className="font-pixel text-[10px] text-slate-500">
+              {t('mapa.fase')} {fase.ordem}
+            </span>
             <h3 className="font-semibold text-slate-100">{fase.nome}</h3>
             {concluida && (
               <span className="flex items-center gap-1 bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-300">
                 <PixelIcon nome="check" className="h-3.5 w-3.5" />
-                Concluída
+                {t('mapa.concluida')}
               </span>
             )}
           </div>
@@ -56,18 +60,18 @@ function NoFase({ fase, indice }) {
             <p className="mt-2 flex items-center gap-3 text-xs text-slate-500">
               <span className="flex items-center gap-1">
                 <PixelIcon nome="star" className="h-3.5 w-3.5 text-amber-400/70" />
-                Melhor: {fase.progresso.melhor_pontuacao}
+                {t('mapa.melhor')}: {fase.progresso.melhor_pontuacao}
               </span>
               <span className="flex items-center gap-1">
                 <PixelIcon nome="reload" className="h-3.5 w-3.5" />
-                Tentativas: {fase.progresso.num_tentativas}
+                {t('mapa.tentativas')}: {fase.progresso.num_tentativas}
               </span>
             </p>
           )}
           {bloqueada && (
             <p className="mt-2 flex items-center gap-1 text-xs text-amber-400/80">
               <PixelIcon nome="lock" className="h-3.5 w-3.5" />
-              Conclua a fase anterior para desbloquear
+              {t('mapa.bloqueada')}
             </p>
           )}
         </div>
@@ -75,7 +79,7 @@ function NoFase({ fase, indice }) {
         {!bloqueada && (
           <span className="btn-pixel flex items-center gap-2 self-center bg-indigo-600 px-4 py-2 font-pixel text-[10px] text-white">
             <PixelIcon nome={concluida ? 'reload' : 'play'} className="h-4 w-4" />
-            {concluida ? 'REJOGAR' : 'JOGAR'}
+            {concluida ? t('mapa.rejogar') : t('mapa.jogar')}
           </span>
         )}
       </div>
@@ -101,6 +105,7 @@ function NoFase({ fase, indice }) {
 }
 
 function BotaoDesafiar({ faseId }) {
+  const { t } = useI18n();
   const [estado, setEstado] = useState('idle'); // idle | enviando | copiado | erro
 
   async function desafiar() {
@@ -111,7 +116,7 @@ function BotaoDesafiar({ faseId }) {
       try {
         await navigator.clipboard.writeText(link);
       } catch {
-        window.prompt('Copie o link do desafio:', link);
+        window.prompt(t('mapa.copieOLink'), link);
       }
       setEstado('copiado');
       setTimeout(() => setEstado('idle'), 2500);
@@ -129,15 +134,16 @@ function BotaoDesafiar({ faseId }) {
     >
       <PixelIcon nome={estado === 'copiado' ? 'check' : 'zap'} className="h-3.5 w-3.5" />
       {estado === 'copiado'
-        ? 'Link copiado!'
+        ? t('mapa.linkCopiado')
         : estado === 'erro'
-          ? 'Não foi possível gerar o desafio'
-          : 'Desafiar um colega'}
+          ? t('mapa.erroDesafio')
+          : t('mapa.desafiar')}
     </button>
   );
 }
 
 export default function MapaFases() {
+  const { t } = useI18n();
   const [fases, setFases] = useState(null);
   const [pendente, setPendente] = useState(null);
   const [erro, setErro] = useState(null);
@@ -154,7 +160,7 @@ export default function MapaFases() {
   }, []);
 
   if (erro) return <Alerta>{erro}</Alerta>;
-  if (!fases) return <Spinner texto="Carregando o mapa..." />;
+  if (!fases) return <Spinner texto={t('mapa.carregando')} />;
 
   return (
     <div className="relative">
@@ -165,11 +171,9 @@ export default function MapaFases() {
 
       <div className="flex items-center gap-3">
         <PixelIcon nome="map-pin" className="h-7 w-7 text-indigo-400" />
-        <h1 className="font-pixel text-lg text-slate-100">Mapa de Fases</h1>
+        <h1 className="font-pixel text-lg text-slate-100">{t('mapa.titulo')}</h1>
       </div>
-      <p className="mt-2 text-sm text-slate-400">
-        Acerte pelo menos 70% do quiz para concluir a fase e desbloquear a próxima.
-      </p>
+      <p className="mt-2 text-sm text-slate-400">{t('mapa.subtitulo')}</p>
 
       {pendente && (
         <Link
@@ -178,8 +182,7 @@ export default function MapaFases() {
         >
           <PixelIcon nome="clock" className="h-5 w-5 shrink-0" />
           <span className="text-sm">
-            Você deixou <strong>{pendente.titulo}</strong> pela metade — toque para retomar (começa
-            um quiz novo dessa fase).
+            {t('mapa.pendentePrefixo')} <strong>{pendente.titulo}</strong> {t('mapa.pendenteSufixo')}
           </span>
         </Link>
       )}
