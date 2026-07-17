@@ -269,12 +269,11 @@ mecanismos redundantes e mal cobertos.
 
 ## Longo prazo (expansão)
 
-- **Multiplayer/desafio entre colegas** — duelo síncrono ou assíncrono
-  (melhor tempo/acertos) entre dois alunos na mesma fase.
 - **Trilhas de aprendizagem alternativas** — múltiplos caminhos no mapa de
-  fases (não só linear), com fases opcionais de aprofundamento. A "Batalha
-  de Complexidade" (fase 6, sempre desbloqueada) já é um primeiro passo
-  nessa direção — uma fase fora da trilha sequencial obrigatória.
+  fases (não só linear), com fases opcionais de aprofundamento. As fases 6
+  e 7 (Batalha de Complexidade, Reordenar Algoritmo — sempre desbloqueadas,
+  fora da trilha sequencial obrigatória) já são um primeiro passo nessa
+  direção.
 - ~~Editor visual de questões para o professor~~ **já existia antes desta
   rodada** — `components/admin/AbaQuestoes.jsx` (`FormQuestao`) já é um
   formulário guiado completo. Item retirado daqui por engano na primeira
@@ -283,21 +282,49 @@ mecanismos redundantes e mal cobertos.
   4) — seletor de formato no momento da criação (não pode mudar depois de
   criada: `questaoService.atualizarQuestao` ignora o formato do payload e
   usa sempre o já salvo, já que as alternativas existentes têm um número
-  fixo de letras). `questaoService` ganhou testes (16 casos).
+  fixo de letras). `questaoService` ganhou testes (16 casos). O formato
+  `reordenar_algoritmo` (passos + ordem correta) ainda não tem editor
+  visual — só via SQL/MCP (ver seção de minigames).
 - ~~Exportação de relatórios (CSV/PDF)~~ **CSV já existia antes desta
   rodada** (`GET /admin/turmas/:id/relatorio.csv`, botão "CSV" na aba
-  Turmas). Falta só a exportação em **PDF**.
-- **Internacionalização** — se houver interesse em usar o jogo além do
-  público de língua portuguesa.
-- **Acessibilidade avançada** — suporte a leitor de tela completo no fluxo
-  de quiz, modo alto contraste, navegação 100% por teclado.
+  Turmas). ✅ **PDF implementado nesta rodada** — sem biblioteca nova nem
+  endpoint novo: botão "PDF" em `AbaTurmas.jsx` monta uma tabela HTML com
+  os dados já disponíveis via `/admin/turmas/:id/alunos`, abre numa nova
+  janela e chama `window.print()` — o professor escolhe "Salvar como PDF"
+  no diálogo nativo do navegador. Conteúdo do aluno (nome) é escapado
+  antes de entrar no HTML injetado via `document.write`.
+
+### Fora do escopo de implementação autônoma (exigem decisão humana/recursos externos)
+
+Estes itens não são "esquecidos" — são categoricamente diferentes do resto
+deste roadmap: não dá pra implementá-los bem só com julgamento de
+engenharia, porque dependem de uma escolha de produto, arte nova, ou
+ferramenta que este ambiente não tem.
+
+- **Multiplayer/desafio entre colegas** (mesmo assíncrono) — antes de
+  codificar, alguém precisa decidir o modelo de relacionamento entre
+  jogadores (desafio 1:1? ranking de turma já cobre isso parcialmente?
+  notificação de convite como?) — é decisão de produto, não só técnica.
+- **Avatar visual por nível** (sprite pixel-art que muda de verdade) —
+  precisa de arte nova consistente com o estilo pixel-art do projeto
+  (`assets/pixelarticons`); gerar isso com qualidade está fora do que
+  código sozinho resolve bem.
+- **Internacionalização** — depende de decidir PARA QUAIS idiomas, e
+  provavelmente de um revisor humano nativo para as traduções — traduzir
+  sozinho sem revisão arrisca ficar com qualidade pior que o português
+  original.
+- **Acessibilidade avançada com leitor de tela** — dá pra fazer uma
+  auditoria de código (ARIA labels, ordem de foco, contraste calculado),
+  mas validar de verdade exige testar com um leitor de tela real
+  (NVDA/JAWS/VoiceOver), que não está disponível neste ambiente. Declarar
+  "acessível" sem esse teste seria enganoso.
 
 ## Infraestrutura / qualidade
 
 - ✅ **Cobertura de testes de todos os services do backend** —
   `quizService`, `badgeService`, `perfilService`, `questaoService`,
   `poderService`, `eventoService`, `quizCustomService`, `relatorioService`
-  e `turmaService` têm testes (111 no total, `cd backend && npm test`).
+  e `turmaService` têm testes (131 no total, `cd backend && npm test`).
   Falta testes de **componente no frontend** (ex.: com
   `@testing-library/react`, ainda não instalado), próximo passo natural de
   infra de testes.

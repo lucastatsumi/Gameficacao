@@ -52,6 +52,53 @@ export default function AbaTurmas() {
     }
   }
 
+  // "Exportação em PDF" via impressão do navegador: abre uma janela com uma
+  // tabela simples e chama print() — o professor escolhe "Salvar como PDF"
+  // no diálogo de impressão. Sem biblioteca nova nem endpoint novo.
+  async function exportarPdf(turma) {
+    try {
+      const lista = await api.get(`/admin/turmas/${turma.id}/alunos`);
+      const escapar = (v) =>
+        String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+      const linhas = lista
+        .map(
+          (a) =>
+            `<tr><td>${escapar(a.nome)}</td><td>${a.nivel}</td><td>${a.xp_total}</td><td>${a.fases_concluidas}</td><td>${a.total_tentativas}</td><td>${a.total_badges}</td></tr>`
+        )
+        .join('');
+
+      const html = `<!doctype html><html><head><meta charset="utf-8"><title>Desempenho — ${escapar(turma.nome)}</title>
+        <style>
+          body { font-family: sans-serif; padding: 24px; color: #111; }
+          h1 { font-size: 18px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; font-size: 13px; }
+          th { background: #f3f3f3; }
+        </style></head>
+        <body>
+          <h1>Desempenho — ${escapar(turma.nome)}</h1>
+          <p>Código de acesso: ${escapar(turma.codigo_acesso)} · Gerado em ${new Date().toLocaleString('pt-BR')}</p>
+          <table>
+            <thead><tr><th>Nome</th><th>Nível</th><th>XP</th><th>Fases concluídas</th><th>Tentativas</th><th>Badges</th></tr></thead>
+            <tbody>${linhas || '<tr><td colspan="6">Nenhum aluno matriculado ainda.</td></tr>'}</tbody>
+          </table>
+        </body></html>`;
+
+      const janela = window.open('', '_blank');
+      if (!janela) {
+        setErro('Não foi possível abrir a janela de impressão — verifique o bloqueador de pop-ups.');
+        return;
+      }
+      janela.document.write(html);
+      janela.document.close();
+      janela.focus();
+      janela.print();
+    } catch (err) {
+      setErro(err.message);
+    }
+  }
+
   if (!turmas) return <Spinner />;
 
   return (
@@ -120,6 +167,13 @@ export default function AbaTurmas() {
                 >
                   <PixelIcon nome="download" className="h-3.5 w-3.5" />
                   CSV
+                </button>
+                <button
+                  onClick={() => exportarPdf(turma)}
+                  className="btn-pixel flex items-center gap-1 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700"
+                >
+                  <PixelIcon nome="download" className="h-3.5 w-3.5" />
+                  PDF
                 </button>
               </div>
             </div>
