@@ -77,13 +77,12 @@ estudantes primeiro.
   `components/quizzes/FormQuiz.jsx`). Bundle final idêntico ao anterior
   (confirma reposicionamento puro). De brinde, removida uma variável morta
   (`perfil` desestruturado de `useAuth()` em `Quizzes.jsx` mas nunca usado).
-- ✅ **CI** — `.github/workflows/ci.yml`: roda `npm test` do backend e
-  `npm run build` do frontend em push para `main` e em todo PR. Validado
-  localmente com `npm ci` (não só `npm install`) em ambos, para garantir
-  que os lockfiles batem com o que o CI vai instalar. O frontend ainda não
-  tem suíte de testes própria; começar por lógica não-visual (ex.: uma
-  eventual extração de helpers puros de `Quiz.jsx`) quando houver o
-  suficiente para justificar.
+- ✅ **CI** — `.github/workflows/ci.yml`: roda `npm test` do backend e,
+  desde que o frontend ganhou infra de testes de componente (ver
+  "Infraestrutura / qualidade"), também `npm test` do frontend antes do
+  `npm run build`, em push para `main` e em todo PR. Validado localmente
+  com `npm ci` (não só `npm install`) em ambos, para garantir que os
+  lockfiles batem com o que o CI vai instalar.
 
 ## Médio prazo (features de jogo)
 
@@ -233,11 +232,11 @@ mecanismos redundantes e mal cobertos.
   que `responderQuestao` — por isso `finalizarQuiz` (XP, aprovação,
   badges, streak) funciona sem nenhuma alteração. UI de clique-para-montar-
   sequência em `Quiz.jsx` (sem lib de drag-and-drop, 100% acessível por
-  teclado/clique). **Pendência**: o editor de questões do professor
-  (`AbaQuestoes.jsx`) ainda não sabe criar questões deste formato — só via
-  SQL/MCP por enquanto, pois exigiria uma UI bem diferente (lista dinâmica
-  de passos + construtor de ordem correta). Poderes (`eliminar_alternativa`,
-  `tempo_extra`) também não se aplicam a este formato ainda.
+  teclado/clique). ✅ **Editor de questões do professor**: `AbaQuestoes.jsx`
+  ganhou uma lista dinâmica de passos (adicionar/remover/reordenar) para
+  este formato — a ordem digitada vira o gabarito, sem precisar de SQL/MCP
+  (ver "Longo prazo" para detalhes). Poderes (`eliminar_alternativa`,
+  `tempo_extra`) ainda não se aplicam a este formato.
 - ✅ **Boss fight (vidas)** — implementado sem NENHUMA mudança na lógica de
   correção/XP/aprovação existente: `quizzes_custom.vidas` (nullable,
   `database/15_boss_fight.sql`) é só metadado de configuração; quem decide
@@ -288,10 +287,11 @@ mecanismos redundantes e mal cobertos.
 1. ~~Streak diário~~ ✅ feito.
 2. ~~Poderes "Eliminar alternativa" e "Tempo extra"~~ ✅ feito.
 3. ~~Minigame "Batalha de complexidade"~~ ✅ feito.
-4. ~~Título por nível e classe por fase~~ ✅ feito (falta o avatar visual).
-5. Eventos temporários e recompensa crescente de streak.
-6. ~~"Reordenar algoritmo"~~ ✅ feito. Falta só boss fight (maior esforço
-   de UI/conteúdo).
+4. ~~Título por nível e classe por fase~~ ✅ feito (falta o avatar visual —
+   fora de escopo, exige arte nova).
+5. ~~Eventos temporários e recompensa crescente de streak~~ ✅ feito.
+6. ~~"Reordenar algoritmo" + boss fight~~ ✅ feito, incluindo o editor visual
+   de questões para o formato.
 
 ## Longo prazo (expansão)
 
