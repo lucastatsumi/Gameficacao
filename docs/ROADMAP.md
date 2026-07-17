@@ -107,9 +107,16 @@ estudantes primeiro.
   recente for baixa (<40%), aumenta o desafio (60% difícil) se for alta
   (≥80%), e mantém o mix equilibrado de antes (30/50/20) sem histórico. Toda a
   lógica é server-side; o frontend não sabe de nada disso.
-- **Notificações/lembretes de retomada** — para alunos que abandonaram uma
-  fase ou não acessam há X dias (o campo `abandonarTentativasAbertas` já
-  existe em `quizService.js` como base).
+- ✅ **Lembrete de retomada** — `GET /perfil/pendente`
+  (`perfilService.tentativaAbertaPendente`) traz a tentativa aberta (não
+  finalizada) mais recente do aluno, se houver — só pode existir 1 por vez,
+  já que `abandonarTentativasAbertas` fecha qualquer tentativa aberta antes
+  de iniciar uma nova. `MapaFases.jsx` mostra um banner "Você deixou X pela
+  metade" linkando de volta pra fase (ou pro quiz customizado). Não existe
+  "continuar de onde parou" de verdade — retomar reinicia a fase do zero,
+  mesma limitação de hoje — o objetivo é só lembrar o aluno de voltar.
+  Lembrete só dentro do app (push/e-mail ficam fora de escopo: exigiriam
+  infra de notificação externa que este ambiente não tem como validar).
 - **Painel do professor — mais relatórios** — `relatorioService.js` já traz
   desempenho por questão e exportação CSV da turma; falta uma visão agregada
   por fase (não só por questão individual) e gráfico de evolução ao longo do

@@ -119,6 +119,34 @@ export async function historicoDeTentativas(userId, limite = 50) {
   }));
 }
 
+// Lembrete de retomada: a tentativa aberta (não finalizada) mais recente do
+// aluno, se houver. Como `iniciarQuiz`/`iniciarQuizCustom` fecham qualquer
+// tentativa aberta antes de abrir uma nova (`abandonarTentativasAbertas`),
+// só existe NO MÁXIMO 1 tentativa aberta por vez — a que o aluno deixou pela
+// metade ao sair do jogo sem finalizar. Retomar de fato reinicia a fase
+// (não há como "continuar de onde parou" hoje); esse endpoint só existe pra
+// avisar o aluno que ele tem algo pendente, incentivando a voltar.
+export async function tentativaAbertaPendente(userId) {
+  const { data, error } = await db
+    .from('tentativas')
+    .select('id, fase_id, quiz_custom_id, iniciada_em, fases ( nome ), quizzes_custom ( titulo )')
+    .eq('user_id', userId)
+    .is('finalizada_em', null)
+    .order('iniciada_em', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    tentativa_id: data.id,
+    titulo: data.fases?.nome ?? data.quizzes_custom?.titulo ?? 'Quiz',
+    fase_id: data.fase_id,
+    quiz_custom_id: data.quiz_custom_id,
+    iniciada_em: data.iniciada_em,
+  };
+}
+
 // Modo de revisão de erros: últimas respostas ERRADAS do aluno (qualquer
 // tentativa, finalizada ou não), com a alternativa que ele escolheu (ou
 // null se o tempo esgotou), a correta e a explicação — para reforço

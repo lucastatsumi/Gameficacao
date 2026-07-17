@@ -31,3 +31,11 @@ export async function revisao(req, res, next) {
     next(err);
   }
 }
+
+export async function pendente(req, res, next) {
+  try {
+    res.json(await perfilService.tentativaAbertaPendente(req.usuario.id));
+  } catch (err) {
+    next(err);
+  }
+}

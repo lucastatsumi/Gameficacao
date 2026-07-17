@@ -4,7 +4,8 @@ import { makeDb, ok } from '../test/dbMock.js';
 vi.mock('../config/supabase.js', () => ({ db: { from: vi.fn() } }));
 
 const { db } = await import('../config/supabase.js');
-const { obterPerfil, historicoDeTentativas, errosRecentes } = await import('./perfilService.js');
+const { obterPerfil, historicoDeTentativas, errosRecentes, tentativaAbertaPendente } =
+  await import('./perfilService.js');
 
 function configurarDb(filas) {
   const mock = makeDb(filas);
@@ -131,6 +132,55 @@ describe('historicoDeTentativas', () => {
         finalizada_em: '2026-01-02',
       },
     ]);
+  });
+});
+
+describe('tentativaAbertaPendente', () => {
+  it('null quando não há tentativa aberta', async () => {
+    configurarDb({ tentativas: [ok(null)] });
+    expect(await tentativaAbertaPendente('user-1')).toBeNull();
+  });
+
+  it('traz o título da fase quando é tentativa de campanha', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't1',
+          fase_id: 3,
+          quiz_custom_id: null,
+          iniciada_em: '2026-07-15T10:00:00Z',
+          fases: { nome: 'Pilhas' },
+          quizzes_custom: null,
+        }),
+      ],
+    });
+
+    const pendente = await tentativaAbertaPendente('user-1');
+    expect(pendente).toEqual({
+      tentativa_id: 't1',
+      titulo: 'Pilhas',
+      fase_id: 3,
+      quiz_custom_id: null,
+      iniciada_em: '2026-07-15T10:00:00Z',
+    });
+  });
+
+  it('traz o título do quiz customizado quando é tentativa custom', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't2',
+          fase_id: null,
+          quiz_custom_id: 'quiz-1',
+          iniciada_em: '2026-07-16T09:00:00Z',
+          fases: null,
+          quizzes_custom: { titulo: 'Desafio relâmpago' },
+        }),
+      ],
+    });
+
+    const pendente = await tentativaAbertaPendente('user-1');
+    expect(pendente.titulo).toBe('Desafio relâmpago');
   });
 });
 

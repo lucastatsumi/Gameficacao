@@ -93,6 +93,7 @@ function NoFase({ fase, indice }) {
 
 export default function MapaFases() {
   const [fases, setFases] = useState(null);
+  const [pendente, setPendente] = useState(null);
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
@@ -100,6 +101,10 @@ export default function MapaFases() {
       .get('/fases')
       .then(setFases)
       .catch((err) => setErro(err.message));
+    api
+      .get('/perfil/pendente')
+      .then(setPendente)
+      .catch(() => {}); // lembrete é cosmético — falha silenciosa não deve travar o mapa
   }, []);
 
   if (erro) return <Alerta>{erro}</Alerta>;
@@ -119,6 +124,19 @@ export default function MapaFases() {
       <p className="mt-2 text-sm text-slate-400">
         Acerte pelo menos 70% do quiz para concluir a fase e desbloquear a próxima.
       </p>
+
+      {pendente && (
+        <Link
+          to={pendente.quiz_custom_id ? `/quiz/custom/${pendente.quiz_custom_id}` : `/quiz/${pendente.fase_id}`}
+          className="card-pixel mt-4 flex items-center gap-3 border-2 border-amber-500/40 bg-amber-500/10 p-3 text-amber-200 transition-colors hover:border-amber-400"
+        >
+          <PixelIcon nome="clock" className="h-5 w-5 shrink-0" />
+          <span className="text-sm">
+            Você deixou <strong>{pendente.titulo}</strong> pela metade — toque para retomar (começa
+            um quiz novo dessa fase).
+          </span>
+        </Link>
+      )}
 
       <div className="relative mt-6 space-y-5">
         {/* trilha vertical ligando as fases */}
