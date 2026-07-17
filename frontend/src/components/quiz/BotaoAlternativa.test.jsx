@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { axe } from 'vitest-axe';
 import BotaoAlternativa from './BotaoAlternativa.jsx';
@@ -53,5 +54,43 @@ describe('BotaoAlternativa', () => {
       <BotaoAlternativa alt={ALT_A} feedback={null} selecionada={null} aoClicar={() => {}} />
     );
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  // Navegação só de teclado — não substitui um leitor de tela real (ver
+  // docs/ROADMAP.md), mas cobre uma fatia concreta e automatizável do
+  // problema: será que o elemento é alcançável e ativável sem mouse?
+  it('é alcançável via Tab e ativável com Enter (navegação só de teclado)', async () => {
+    const usuario = userEvent.setup();
+    const aoClicar = vi.fn();
+    render(<BotaoAlternativa alt={ALT_A} feedback={null} selecionada={null} aoClicar={aoClicar} />);
+
+    await usuario.tab();
+    expect(screen.getByRole('button')).toHaveFocus();
+
+    await usuario.keyboard('{Enter}');
+    expect(aoClicar).toHaveBeenCalledTimes(1);
+  });
+
+  it('é ativável com a barra de espaço (padrão nativo de <button>)', async () => {
+    const usuario = userEvent.setup();
+    const aoClicar = vi.fn();
+    render(<BotaoAlternativa alt={ALT_A} feedback={null} selecionada={null} aoClicar={aoClicar} />);
+
+    await usuario.tab();
+    await usuario.keyboard(' ');
+    expect(aoClicar).toHaveBeenCalledTimes(1);
+  });
+
+  it('desabilitado, o Tab pula o botão (não fica preso num controle inerte)', async () => {
+    const usuario = userEvent.setup();
+    render(
+      <div>
+        <BotaoAlternativa alt={ALT_A} feedback={null} selecionada={null} desabilitado aoClicar={() => {}} />
+        <BotaoAlternativa alt={ALT_B} feedback={null} selecionada={null} aoClicar={() => {}} />
+      </div>
+    );
+
+    await usuario.tab();
+    expect(screen.getByText('Fila (FIFO)').closest('button')).toHaveFocus();
   });
 });

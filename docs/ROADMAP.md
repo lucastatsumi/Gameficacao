@@ -453,6 +453,16 @@ assistivo real), documentada abaixo em cada item.
   escopo" — acessibilidade avançada). Cobertura ainda parcial (3
   componentes); expandir pros demais é mecânico, mesmo padrão dos testes
   de componente comuns.
+- ✅ **Testes de navegação só de teclado** — `@testing-library/user-event`
+  instalado; `BotaoAlternativa` ganhou 3 testes cobrindo uma fatia
+  concreta e automatizável de acessibilidade que `axe-core` (estático) não
+  cobre: o elemento é alcançável via `Tab`? Ativa com `Enter`/Espaço?
+  Botões desabilitados são pulados na ordem de tabulação (em vez de
+  prender o foco num controle inerte)? Isso ainda não é "testado com um
+  leitor de tela real" — é teclado, não voz — mas é um degrau real a mais
+  além do axe-core estático, e o padrão mais próximo de uso real que dá
+  pra automatizar sem o hardware/software assistivo que este ambiente não
+  tem.
 - **Monitoramento de qualidade das questões** — rodar o agente
   `question-researcher` periodicamente em modo de auditoria sobre
   `database/05_seed_questoes.sql` e futuras seeds, para pegar
