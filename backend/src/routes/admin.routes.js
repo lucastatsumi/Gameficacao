@@ -21,6 +21,7 @@ adminRoutes.delete('/questoes/:id', adminController.desativarQuestao);
 
 // Relatórios
 adminRoutes.get('/relatorio/questoes', adminController.relatorioQuestoes);
+adminRoutes.get('/relatorio/fases', adminController.relatorioFases);
 
 // Eventos temporários
 adminRoutes.get('/eventos', adminController.listarEventos);

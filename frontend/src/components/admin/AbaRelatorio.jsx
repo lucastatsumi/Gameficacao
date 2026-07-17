@@ -7,10 +7,15 @@ export default function AbaRelatorio() {
   const [fases, setFases] = useState([]);
   const [filtroFase, setFiltroFase] = useState('');
   const [linhas, setLinhas] = useState(null);
+  const [porFase, setPorFase] = useState(null);
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
     api.get('/fases').then(setFases).catch(() => {});
+    api
+      .get('/admin/relatorio/fases')
+      .then(setPorFase)
+      .catch((err) => setErro(err.message));
   }, []);
 
   useEffect(() => {
@@ -22,7 +27,43 @@ export default function AbaRelatorio() {
   }, [filtroFase]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <section>
+        <h3 className="text-sm font-semibold text-slate-200">Desempenho por fase</h3>
+        <p className="mt-1 text-xs text-slate-500">
+          Taxa de aprovação de todas as tentativas finalizadas em cada fase — mostra em que ponto
+          da trilha a turma mais trava.
+        </p>
+        {!porFase ? (
+          <Spinner />
+        ) : (
+          <div className="mt-3 space-y-2">
+            {porFase.map((f) => (
+              <div key={f.fase_id} className="flex items-center gap-3">
+                <span className="w-32 shrink-0 truncate text-sm text-slate-300" title={f.fase_nome}>
+                  {f.fase_nome}
+                </span>
+                <div className="h-4 flex-1 overflow-hidden rounded bg-slate-800">
+                  <div
+                    className={`h-full ${corBarra(f.taxa_aprovacao_pct)}`}
+                    style={{ width: `${f.taxa_aprovacao_pct ?? 0}%` }}
+                  />
+                </div>
+                <span className="w-14 shrink-0 text-right font-mono text-xs text-slate-400">
+                  {f.taxa_aprovacao_pct != null ? `${f.taxa_aprovacao_pct}%` : '—'}
+                </span>
+                <span className="w-20 shrink-0 text-right text-xs text-slate-500">
+                  {f.total_tentativas} tent.
+                </span>
+              </div>
+            ))}
+            {porFase.length === 0 && (
+              <p className="text-xs text-slate-500">Nenhuma fase cadastrada ainda.</p>
+            )}
+          </div>
+        )}
+      </section>
+
       <div className="flex items-center gap-2">
         <select
           value={filtroFase}
@@ -83,4 +124,9 @@ function TaxaAcerto({ pct }) {
   if (pct == null) return <span className="text-slate-600">sem dados</span>;
   const cor = pct >= 70 ? 'text-emerald-300' : pct >= 40 ? 'text-amber-300' : 'text-red-300';
   return <span className={`font-mono font-semibold ${cor}`}>{pct}%</span>;
+}
+
+function corBarra(pct) {
+  if (pct == null) return 'bg-slate-700';
+  return pct >= 70 ? 'bg-emerald-500' : pct >= 40 ? 'bg-amber-500' : 'bg-red-500';
 }

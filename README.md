@@ -62,7 +62,8 @@ fases desbloqueável e ranking.
 │   ├── 15_boss_fight.sql         #   Vidas em quizzes customizados
 │   ├── 16_poder_pular.sql        #   Poder "pular sem perder XP"
 │   ├── 17_badge_sem_dica.sql     #   Valor de enum do badge "sem usar dica"
-│   └── 18_badge_sem_dica_seed.sql #  Seed do badge "sem usar dica"
+│   ├── 18_badge_sem_dica_seed.sql #  Seed do badge "sem usar dica"
+│   └── 19_desempenho_fases.sql   #   View de relatório agregado por fase
 ├── backend/
 │   └── src/
 │       ├── config/               # Cliente Supabase, variáveis de ambiente

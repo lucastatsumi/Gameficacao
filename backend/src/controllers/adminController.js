@@ -78,6 +78,14 @@ export async function relatorioQuestoes(req, res, next) {
   }
 }
 
+export async function relatorioFases(req, res, next) {
+  try {
+    res.json(await relatorioService.desempenhoPorFase());
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function exportarCsvTurma(req, res, next) {
   try {
     const { nomeArquivo, conteudo } = await relatorioService.csvDesempenhoTurma(

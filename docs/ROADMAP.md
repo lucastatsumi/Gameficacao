@@ -117,10 +117,15 @@ estudantes primeiro.
   mesma limitação de hoje — o objetivo é só lembrar o aluno de voltar.
   Lembrete só dentro do app (push/e-mail ficam fora de escopo: exigiriam
   infra de notificação externa que este ambiente não tem como validar).
-- **Painel do professor — mais relatórios** — `relatorioService.js` já traz
-  desempenho por questão e exportação CSV da turma; falta uma visão agregada
-  por fase (não só por questão individual) e gráfico de evolução ao longo do
-  tempo.
+- ✅ **Painel do professor — relatório agregado por fase** — nova view
+  `desempenho_fases` (`database/19_desempenho_fases.sql`, security invoker
+  como as demais views de relatório) agrega todas as tentativas finalizadas
+  por fase: taxa de aprovação e média de acerto. `GET /admin/relatorio/fases`
+  + `AbaRelatorio.jsx` mostra uma barra de progresso colorida (verde ≥70%,
+  âmbar ≥40%, vermelho abaixo) por fase, acima da tabela por questão já
+  existente — mostra de cara em que ponto da trilha a turma mais trava.
+  Gráfico de evolução ao longo do tempo continua fora de escopo (exigiria
+  guardar snapshots periódicos, não só o agregado atual).
 - ✅ **Templates de quiz (seleção rápida por fase)** — implementado em
   `FormQuiz.jsx`: ao filtrar o banco de questões por fase, aparece um atalho
   "Template rápido" que sorteia N questões daquela fase (1-20, campo

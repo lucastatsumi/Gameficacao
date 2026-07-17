@@ -9,7 +9,8 @@ vi.mock('./turmaService.js', () => ({
 
 const { db } = await import('../config/supabase.js');
 const { exigirTurmaDoProfessor, alunosDaTurma } = await import('./turmaService.js');
-const { desempenhoPorQuestao, csvDesempenhoTurma } = await import('./relatorioService.js');
+const { desempenhoPorQuestao, desempenhoPorFase, csvDesempenhoTurma } =
+  await import('./relatorioService.js');
 
 describe('relatorioService.desempenhoPorQuestao', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -24,6 +25,27 @@ describe('relatorioService.desempenhoPorQuestao', () => {
     db.from.mockImplementation(makeDb({ desempenho_questoes: [ok([])] }).from);
     const dados = await desempenhoPorQuestao(null);
     expect(dados).toEqual([]);
+  });
+});
+
+describe('relatorioService.desempenhoPorFase', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('traz a view desempenho_fases ordenada por ordem', async () => {
+    const mock = makeDb({
+      desempenho_fases: [
+        ok([
+          { fase_id: 1, fase_nome: 'Listas', ordem: 1, total_tentativas: 10, taxa_aprovacao_pct: 80 },
+        ]),
+      ],
+    });
+    db.from.mockImplementation(mock.from);
+
+    const dados = await desempenhoPorFase();
+    expect(dados).toEqual([
+      { fase_id: 1, fase_nome: 'Listas', ordem: 1, total_tentativas: 10, taxa_aprovacao_pct: 80 },
+    ]);
+    expect(mock.chainsPara('desempenho_fases')[0].order).toHaveBeenCalledWith('ordem');
   });
 });
 
