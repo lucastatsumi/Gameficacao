@@ -159,9 +159,16 @@ no frontend antes da hora.
   classe — é ranking de XP só daquela fase, a informação não faz sentido
   ali. Migração validada de ponta a ponta contra Postgres local, incluindo
   uma linha de dado real conferindo o `classe_fase` calculado.
-- **Avatar por nível** (sprite pixel-art que muda visualmente): ainda não
-  implementado — hoje só existe o texto do título, sem arte nova. Precisa de
-  assets extras que não existem no projeto.
+- ✅ **Avatar por nível (versão gerada, sem arte nova)** —
+  `frontend/src/components/ui/AvatarPixel.jsx` desenha um avatar pixel-art
+  via SVG (retângulos coloridos, mesma técnica do `PixelIcon.jsx`) que muda
+  de cor e ganha acessórios por faixa de nível: bandana no Aventureiro,
+  ombreiras no Especialista, coroa na Lenda. Exibido no cabeçalho do
+  `Perfil` e ao lado do nome no `Ranking`. Testado (4 casos, verificando
+  que os acessórios corretos aparecem por faixa). **O que ainda falta**:
+  isso é geometria simples, não arte desenhada à mão — sprites de verdade
+  no estilo do projeto (`assets/pixelarticons`) continuam fora do escopo
+  autônomo, por exigirem um artista.
 - ✅ **Atributos exibidos no Perfil** — `perfilService.atributosDoJogador`
   calcula Precisão (% de acerto no histórico inteiro de `respostas`),
   Velocidade (tempo médio de resposta) e Persistência (nº de dias
@@ -291,6 +298,27 @@ mecanismos redundantes e mal cobertos.
   "todas", multiplicador, início/fim) e remove eventos, com status
   ativo/futuro/encerrado calculado no backend.
 
+### 5. Desafio assíncrono (recorte implementável de "multiplayer")
+
+- ✅ **Desafiar um colega** — `database/21_desafios.sql` (tabela `desafios`:
+  criador, fase, `acertos_alvo` = melhor pontuação do criador naquela fase).
+  Botão "Desafiar um colega" em `MapaFases.jsx` (só em fases concluídas)
+  chama `POST /desafios` e copia um link `/desafio/:id` pra área de
+  transferência (mesmo padrão de `copiarConvite` já usado pra turmas).
+  Quem abre o link (`Desafio.jsx`) vê quem desafiou, a fase e a pontuação a
+  bater, com um botão "Aceitar" que leva direto pra `/quiz/:faseId` — o
+  fluxo de jogo em si é o mesmo de sempre, sem nenhuma lógica nova de
+  pontuação ou correção. `desafioService` testado (7 casos). Migração
+  validada de ponta a ponta contra Postgres local, incluindo um insert
+  real respeitando as FKs.
+  **O que ainda falta e continua fora do escopo autônomo**: isto é
+  deliberadamente "multiplayer assíncrono" (sem infra de tempo real) — não
+  há partidas simultâneas, presença online, chat ou matchmaking. Ir além
+  disso exigiria websockets/infra de tempo real E uma decisão de produto
+  sobre como o social deve funcionar (o pré-requisito que motivou este
+  item ficar fora de escopo nas rodadas anteriores), não é algo que dá pra
+  resolver só com mais código.
+
 ### Ordem sugerida de implementação
 
 1. ~~Streak diário~~ ✅ feito.
@@ -339,16 +367,12 @@ mecanismos redundantes e mal cobertos.
 Estes itens não são "esquecidos" — são categoricamente diferentes do resto
 deste roadmap: não dá pra implementá-los bem só com julgamento de
 engenharia, porque dependem de uma escolha de produto, arte nova, ou
-ferramenta que este ambiente não tem.
+ferramenta que este ambiente não tem. Dois itens que estavam aqui
+(multiplayer/desafio e avatar visual) tinham um subconjunto genuinamente
+implementável sem esses recursos — foram movidos pra "Curto/médio prazo"
+como ✅ **feito**, com o que ainda falta (a parte que exige mesmo decisão
+de produto ou arte nova) explicitado ali.
 
-- **Multiplayer/desafio entre colegas** (mesmo assíncrono) — antes de
-  codificar, alguém precisa decidir o modelo de relacionamento entre
-  jogadores (desafio 1:1? ranking de turma já cobre isso parcialmente?
-  notificação de convite como?) — é decisão de produto, não só técnica.
-- **Avatar visual por nível** (sprite pixel-art que muda de verdade) —
-  precisa de arte nova consistente com o estilo pixel-art do projeto
-  (`assets/pixelarticons`); gerar isso com qualidade está fora do que
-  código sozinho resolve bem.
 - **Internacionalização** — depende de decidir PARA QUAIS idiomas, e
   provavelmente de um revisor humano nativo para as traduções — traduzir
   sozinho sem revisão arrisca ficar com qualidade pior que o português
@@ -364,7 +388,7 @@ ferramenta que este ambiente não tem.
 - ✅ **Cobertura de testes de todos os services do backend** —
   `quizService`, `badgeService`, `perfilService`, `questaoService`,
   `poderService`, `eventoService`, `quizCustomService`, `relatorioService`,
-  `turmaService` e (nesta rodada) `rankingService` têm testes (161 no
+  `turmaService`, `rankingService` e `desafioService` têm testes (168 no
   total, `cd backend && npm test`).
 - ✅ **Infra de testes de componente no frontend** — `vitest` +
   `@testing-library/react` + `@testing-library/jest-dom` + `jsdom`

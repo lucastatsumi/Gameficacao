@@ -82,12 +82,58 @@ function NoFase({ fase, indice }) {
     </div>
   );
 
-  return bloqueada ? (
-    <div>{conteudo}</div>
-  ) : (
-    <Link to={`/quiz/${fase.id}`} className="block">
-      {conteudo}
-    </Link>
+  return (
+    <div>
+      {bloqueada ? (
+        <div>{conteudo}</div>
+      ) : (
+        <Link to={`/quiz/${fase.id}`} className="block">
+          {conteudo}
+        </Link>
+      )}
+      {/* "Desafio assíncrono": recorte de multiplayer sem infra de tempo
+          real — gera um link com a melhor pontuação do aluno pra um colega
+          tentar bater. Fora do <Link> da fase pra não aninhar elementos
+          clicáveis. */}
+      {concluida && <BotaoDesafiar faseId={fase.id} />}
+    </div>
+  );
+}
+
+function BotaoDesafiar({ faseId }) {
+  const [estado, setEstado] = useState('idle'); // idle | enviando | copiado | erro
+
+  async function desafiar() {
+    setEstado('enviando');
+    try {
+      const { id } = await api.post('/desafios', { fase_id: faseId });
+      const link = `${window.location.origin}/desafio/${id}`;
+      try {
+        await navigator.clipboard.writeText(link);
+      } catch {
+        window.prompt('Copie o link do desafio:', link);
+      }
+      setEstado('copiado');
+      setTimeout(() => setEstado('idle'), 2500);
+    } catch {
+      setEstado('erro');
+      setTimeout(() => setEstado('idle'), 2500);
+    }
+  }
+
+  return (
+    <button
+      onClick={desafiar}
+      disabled={estado === 'enviando'}
+      className="btn-pixel mt-2 flex items-center gap-1.5 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:opacity-50"
+    >
+      <PixelIcon nome={estado === 'copiado' ? 'check' : 'zap'} className="h-3.5 w-3.5" />
+      {estado === 'copiado'
+        ? 'Link copiado!'
+        : estado === 'erro'
+          ? 'Não foi possível gerar o desafio'
+          : 'Desafiar um colega'}
+    </button>
   );
 }
 

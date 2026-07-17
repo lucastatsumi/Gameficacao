@@ -7,6 +7,7 @@ import { rankingRoutes } from './ranking.routes.js';
 import { turmasRoutes } from './turmas.routes.js';
 import { perfilRoutes } from './perfil.routes.js';
 import { adminRoutes } from './admin.routes.js';
+import { desafiosRoutes } from './desafios.routes.js';
 
 export const rotas = Router();
 
@@ -21,3 +22,4 @@ rotas.use('/ranking', rankingRoutes);
 rotas.use('/turmas', turmasRoutes);
 rotas.use('/perfil', perfilRoutes);
 rotas.use('/admin', adminRoutes);
+rotas.use('/desafios', desafiosRoutes);

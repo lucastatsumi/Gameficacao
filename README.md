@@ -64,7 +64,8 @@ fases desbloqueável e ranking.
 │   ├── 17_badge_sem_dica.sql     #   Valor de enum do badge "sem usar dica"
 │   ├── 18_badge_sem_dica_seed.sql #  Seed do badge "sem usar dica"
 │   ├── 19_desempenho_fases.sql   #   View de relatório agregado por fase
-│   └── 20_ranking_classe.sql     #   Classe (Mestre de X) no ranking
+│   ├── 20_ranking_classe.sql     #   Classe (Mestre de X) no ranking
+│   └── 21_desafios.sql           #   Desafio assíncrono entre colegas
 ├── backend/
 │   └── src/
 │       ├── config/               # Cliente Supabase, variáveis de ambiente

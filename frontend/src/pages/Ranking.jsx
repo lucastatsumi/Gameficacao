@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import Alerta from '../components/ui/Alerta.jsx';
 import PixelIcon from '../components/ui/PixelIcon.jsx';
+import AvatarPixel from '../components/ui/AvatarPixel.jsx';
 import pixelPodio from '../assets/img/pixel-podio.svg';
 
 // cores das medalhas do pódio (ouro, prata, bronze)
@@ -262,11 +263,16 @@ function LinhaRanking({ linha, souEu, ehFase }) {
         )}
       </td>
       <td className="px-4 py-3 font-medium">
-        {linha.nome}
-        {souEu && <span className="ml-2 text-xs text-indigo-300">(você)</span>}
-        {!ehFase && linha.classe && (
-          <span className="ml-2 text-xs font-normal text-emerald-400/80">{linha.classe}</span>
-        )}
+        <div className="flex items-center gap-2">
+          {!ehFase && <AvatarPixel nivel={linha.nivel} className="h-6 w-6 shrink-0" />}
+          <span>
+            {linha.nome}
+            {souEu && <span className="ml-2 text-xs text-indigo-300">(você)</span>}
+            {!ehFase && linha.classe && (
+              <span className="ml-2 text-xs font-normal text-emerald-400/80">{linha.classe}</span>
+            )}
+          </span>
+        </div>
       </td>
       {!ehFase && <td className="px-4 py-3 text-slate-400">Nv. {linha.nivel}</td>}
       <td className="px-4 py-3 text-right font-mono text-amber-300">

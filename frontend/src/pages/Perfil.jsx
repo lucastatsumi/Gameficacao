@@ -5,6 +5,7 @@ import Spinner from '../components/ui/Spinner.jsx';
 import Alerta from '../components/ui/Alerta.jsx';
 import BarraXp from '../components/ui/BarraXp.jsx';
 import PixelIcon from '../components/ui/PixelIcon.jsx';
+import AvatarPixel from '../components/ui/AvatarPixel.jsx';
 
 export default function Perfil() {
   const { perfil } = useAuth();
@@ -34,7 +35,11 @@ export default function Perfil() {
       <div className="card-pixel border-2 border-slate-800 bg-slate-900/60 p-6">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center border-2 border-indigo-500/40 bg-indigo-950 text-indigo-300">
-            <PixelIcon nome={perfil.role === 'professor' ? 'book-open' : 'gamepad'} className="h-9 w-9" />
+            {perfil.role === 'professor' ? (
+              <PixelIcon nome="book-open" className="h-9 w-9" />
+            ) : (
+              <AvatarPixel nivel={perfil.nivel} className="h-12 w-12" />
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="font-pixel text-base text-slate-100">{perfil.nome}</h1>
