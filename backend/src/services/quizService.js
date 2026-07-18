@@ -504,6 +504,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
     total_questoes: tentativa.total_questoes,
     questoes_puladas: puladasData.length,
     aprovada,
+    sem_dica: semDica,
     xp_bruto: xpBruto,
     bonus_streak: bonusStreak,
     bonus_combo: bonusCombo,

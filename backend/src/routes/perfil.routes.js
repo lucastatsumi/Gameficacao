@@ -8,3 +8,4 @@ perfilRoutes.get('/badges', perfilController.badges);
 perfilRoutes.get('/historico', perfilController.historico);
 perfilRoutes.get('/revisao', perfilController.revisao);
 perfilRoutes.get('/pendente', perfilController.pendente);
+perfilRoutes.get('/missoes', perfilController.missoes);

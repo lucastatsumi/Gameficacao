@@ -1,6 +1,7 @@
 import * as quizService from '../services/quizService.js';
 import * as poderService from '../services/poderService.js';
 import * as fichaService from '../services/fichaService.js';
+import * as missaoService from '../services/missaoService.js';
 
 export async function iniciar(req, res, next) {
   try {
@@ -80,6 +81,18 @@ export async function finalizar(req, res, next) {
       req.usuario.id,
       resultado,
       req.body?.tentativa_id
+    );
+
+    // Missões do dia: aplica o resultado já corrigido ao progresso e paga
+    // as que concluírem agora (fichas somadas ao total exibido).
+    resultado.missoes_concluidas = await missaoService.registrarQuizNasMissoes(
+      req.usuario.id,
+      resultado,
+      req.body?.tentativa_id
+    );
+    resultado.fichas_ganhas += resultado.missoes_concluidas.reduce(
+      (soma, m) => soma + m.recompensa_fichas,
+      0
     );
 
     res.json(resultado);
