@@ -8,6 +8,7 @@ import { turmasRoutes } from './turmas.routes.js';
 import { perfilRoutes } from './perfil.routes.js';
 import { adminRoutes } from './admin.routes.js';
 import { desafiosRoutes } from './desafios.routes.js';
+import { lojaRoutes } from './loja.routes.js';
 
 export const rotas = Router();
 
@@ -23,3 +24,4 @@ rotas.use('/turmas', turmasRoutes);
 rotas.use('/perfil', perfilRoutes);
 rotas.use('/admin', adminRoutes);
 rotas.use('/desafios', desafiosRoutes);
+rotas.use('/loja', lojaRoutes);

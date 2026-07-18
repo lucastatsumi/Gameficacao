@@ -38,11 +38,18 @@ export default function Perfil() {
             {perfil.role === 'professor' ? (
               <PixelIcon nome="book-open" className="h-9 w-9" />
             ) : (
-              <AvatarPixel nivel={perfil.nivel} className="h-12 w-12" />
+              <AvatarPixel nivel={perfil.nivel} paleta={perfil.cosmeticos?.paleta} className="h-12 w-12" />
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="font-pixel text-base text-slate-100">{perfil.nome}</h1>
+            <h1 className="font-pixel text-base text-slate-100">
+              {perfil.nome}
+              {perfil.cosmeticos?.titulo && (
+                <span className="ml-2 align-middle border-2 border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 font-sans text-xs normal-case tracking-normal text-cyan-300">
+                  {perfil.cosmeticos.titulo}
+                </span>
+              )}
+            </h1>
             <p className="mt-1 text-sm text-slate-400">{perfil.email}</p>
             <p className="mt-1 flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-indigo-300">
               {perfil.role === 'professor' ? 'Professor' : 'Aluno'}

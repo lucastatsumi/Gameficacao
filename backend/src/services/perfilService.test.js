@@ -25,6 +25,7 @@ describe('obterPerfil', () => {
       progresso_fase: [ok([])],
       respostas: [ok([])],
       transacoes_fichas: [ok([])],
+      profiles: [ok({ equipados: {} })],
     });
 
     const perfil = await obterPerfil(usuarioBase);
@@ -45,6 +46,7 @@ describe('obterPerfil', () => {
       ],
       respostas: [ok([])],
       transacoes_fichas: [ok([])],
+      profiles: [ok({ equipados: {} })],
     });
 
     const perfil = await obterPerfil({ ...usuarioBase, nivel: 7 });
@@ -59,6 +61,7 @@ describe('obterPerfil', () => {
       progresso_fase: [ok([])],
       respostas: [ok([])],
       transacoes_fichas: [ok([{ quantidade: 15 }, { quantidade: -5 }])],
+      profiles: [ok({ equipados: {} })],
     });
 
     const perfil = await obterPerfil(usuarioBase);
@@ -80,6 +83,7 @@ describe('obterPerfil', () => {
         ]),
       ],
       transacoes_fichas: [ok([])],
+      profiles: [ok({ equipados: {} })],
     });
 
     const perfil = await obterPerfil(usuarioBase);
@@ -97,6 +101,7 @@ describe('obterPerfil', () => {
       progresso_fase: [ok([])],
       respostas: [ok([])],
       transacoes_fichas: [ok([])],
+      profiles: [ok({ equipados: {} })],
     });
 
     const perfil = await obterPerfil(usuarioBase);
