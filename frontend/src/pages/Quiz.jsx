@@ -53,6 +53,10 @@ export default function Quiz() {
   // desafio acaba ali, sem precisar responder o resto das questões
   const [errosCount, setErrosCount] = useState(0);
 
+  // Combo de acertos seguidos — só animação/feedback: o bônus de XP é
+  // calculado pelo servidor em /quiz/finalizar
+  const [comboAtual, setComboAtual] = useState(0);
+
   const [tempoRestante, setTempoRestante] = useState(0);
   const inicioQuestaoRef = useRef(Date.now());
   const ultimoTickRef = useRef(null); // evita tocar o tick 2x no mesmo segundo
@@ -93,10 +97,13 @@ export default function Quiz() {
           tempo_resposta_ms: Date.now() - inicioQuestaoRef.current,
         });
         setFeedback(fb);
-        if (fb.correta) som(tocarAcerto);
-        else {
+        if (fb.correta) {
+          som(tocarAcerto);
+          setComboAtual((n) => n + 1);
+        } else {
           som(tocarErro);
           setErrosCount((n) => n + 1);
+          setComboAtual(0);
         }
       } catch (err) {
         setErro(err.message);
@@ -120,10 +127,13 @@ export default function Quiz() {
           ordem,
         });
         setFeedbackSeq(fb);
-        if (fb.correta) som(tocarAcerto);
-        else {
+        if (fb.correta) {
+          som(tocarAcerto);
+          setComboAtual((n) => n + 1);
+        } else {
           som(tocarErro);
           setErrosCount((n) => n + 1);
+          setComboAtual(0);
         }
       } catch (err) {
         setErro(err.message);
@@ -281,6 +291,15 @@ export default function Quiz() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {comboAtual >= 2 && (
+            <span
+              className="anim-pop flex items-center gap-1 border-2 border-cyan-500/40 bg-cyan-500/10 px-2 py-1 text-xs font-bold text-cyan-300"
+              title="Acertos seguidos — bônus de XP no final"
+            >
+              <PixelIcon nome="zap" className="h-4 w-4" />
+              COMBO ×{comboAtual}
+            </span>
+          )}
           {vidasMax != null && (
             <div className="flex items-center gap-1" title={`${Math.max(0, vidasMax - errosCount)} de ${vidasMax} vidas`}>
               {Array.from({ length: vidasMax }, (_, i) => (

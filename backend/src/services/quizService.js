@@ -6,6 +6,7 @@ import { dataDeHoje, proximoStreak } from '../utils/streak.js';
 import { verificarBadges } from './badgeService.js';
 import { eventoAtivoParaFase } from './eventoService.js';
 import { selecionarAdaptativo } from '../utils/dificuldadeAdaptativa.js';
+import { aplicarCombo } from '../utils/combo.js';
 
 const TENTATIVAS_PARA_DIFICULDADE = 5; // janela recente usada para medir desempenho na fase
 
@@ -387,16 +388,19 @@ export async function finalizarQuiz(usuario, tentativaId) {
     hoje,
   });
 
+  // Ordenado por respondida_em porque o combo depende da SEQUÊNCIA real
+  // em que o aluno respondeu.
   const { data: respostas, error: erroRespostas } = await db
     .from('respostas')
-    .select('correta, usou_dica, tempo_resposta_ms, questoes ( xp_valor )')
-    .eq('tentativa_id', tentativaId);
+    .select('correta, usou_dica, tempo_resposta_ms, respondida_em, questoes ( xp_valor )')
+    .eq('tentativa_id', tentativaId)
+    .order('respondida_em', { ascending: true });
   if (erroRespostas) throw erroRespostas;
 
   const acertos = respostas.filter((r) => r.correta).length;
-  const xpSemEvento = respostas
-    .filter((r) => r.correta)
-    .reduce((soma, r) => soma + xpDaResposta(r), 0);
+  // Combo de acertos consecutivos (×1.1/×1.25/×1.5): o bônus é calculado
+  // aqui, no servidor — o cliente só anima o contador.
+  const { xpBase: xpSemEvento, bonusCombo, comboMax } = aplicarCombo(respostas, xpDaResposta);
 
   // Evento temporário (ex.: "semana das árvores"): multiplica o XP bruto
   // desta tentativa. Só se aplica ao modo campanha — quiz custom não tem
@@ -410,7 +414,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
   // até um teto de +20 (streak de 21+ dias).
   const bonusStreak = xpSemEvento > 0 ? Math.min(Math.max(0, streakDias - 1), 20) : 0;
 
-  const xpBruto = Math.round(xpSemEvento * multiplicadorEvento) + bonusStreak;
+  const xpBruto = Math.round(xpSemEvento * multiplicadorEvento) + bonusStreak + bonusCombo;
 
   // Poder "pular_questao": a questão pulada nunca vira uma linha em
   // `respostas` (o cliente não responde), então precisa ser excluída do
@@ -502,6 +506,8 @@ export async function finalizarQuiz(usuario, tentativaId) {
     aprovada,
     xp_bruto: xpBruto,
     bonus_streak: bonusStreak,
+    bonus_combo: bonusCombo,
+    combo_max: comboMax,
     xp_ganho: xpGanho,
     xp_total: xpTotal,
     nivel,
