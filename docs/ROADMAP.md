@@ -59,11 +59,33 @@ estudantes primeiro.
   `database/12_mais_questoes.sql`, validado rodando a cadeia completa
   01–12 num Postgres local (4 alternativas por questão, exatamente 1
   correta).
-- **Cobrir tópicos ainda sem fase própria**: grafos (BFS/DFS em grafo geral,
-  não só árvore/grid), tabelas hash (colisões, load factor), heaps/filas de
-  prioridade como estrutura própria (hoje só aparecem mencionados dentro da
-  fase de Árvores), recursão — exigiria uma fase nova (fase 7), não só mais
-  questões nas fases atuais.
+- ✅ **Cobrir tópicos ainda sem fase própria** — nova fase sequencial de
+  ordem 8, "Estruturas Avançadas" (`database/22_fase_estruturas_avancadas.sql`),
+  cobrindo grafos (BFS/DFS em grafo geral, representação por lista vs. matriz
+  de adjacência), tabelas hash (função hash, colisão por encadeamento e por
+  endereçamento aberto, load factor/resize amortizado), heaps/filas de
+  prioridade como estrutura própria (propriedade de heap, sift-down,
+  build-heap O(n)) e recursão (caso base, custo de espaço da call stack,
+  pilha explícita, Fibonacci ingênuo). `fase_requisito_id` aponta para a
+  fase "Algoritmos de Ordenação" (ordem 5) — as fases 6 e 7 (Batalha de
+  Complexidade, Reordenar Algoritmo) são minigames bônus sempre
+  desbloqueados e ficam fora da cadeia sequencial principal, por isso a nova
+  fase leva o número de ordem 8, não 7 como uma versão anterior deste
+  documento cogitava. 16 questões geradas pelo agente `question-researcher`
+  (4 por tópico, mistura fácil/média/média/difícil), com fatos técnicos
+  verificados contra CLRS (heaps, hashing, grafos/BFS/DFS) e
+  Goodrich/Tamassia/Goldwasser (comparação de implementações de fila de
+  prioridade). Novo badge "Arquiteto de Dados" (`fase_concluida`,
+  `fase_ordem: 8`). Migração validada de ponta a ponta rodando a cadeia
+  completa 01–22 num Postgres 16 local: 16 questões inseridas, todas com
+  exatamente 4 alternativas e exatamente 1 correta (conferido também pela
+  constraint `uma_correta_por_questao` do próprio banco), nenhuma explicação
+  vazia. Nenhuma mudança de backend foi necessária — fases, badges e
+  progresso já eram 100% data-driven a partir da tabela `fases`. No
+  frontend, só um ajuste mecânico: `ICONES_FASE` em `MapaFases.jsx` ganhou
+  uma 8ª entrada (ícone `star`, já existente em `PixelIcon.jsx`) e a copy
+  "5 fases" do login (pt/en) virou "6 fases" (contando só as fases
+  sequenciais da campanha, não as duas bônus).
 - ✅ **Extrair componentes de `pages/Quiz.jsx`** — tinha crescido para 692
   linhas (as features de poderes e batalha de complexidade desta rodada
   ajudaram a inchar). Movidos `BotaoAlternativa`, `BotaoBatalha`,
