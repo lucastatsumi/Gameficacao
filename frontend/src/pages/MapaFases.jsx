@@ -9,8 +9,8 @@ import pixelNuvem from '../assets/img/pixel-nuvem.svg';
 import pixelEstrela from '../assets/img/pixel-estrela.svg';
 
 // Ícone pixel de cada fase: Listas, Pilhas, Filas, Árvores, Ordenação,
-// Batalha de Complexidade e Reordenar Algoritmo (fases bônus)
-const ICONES_FASE = ['arrow-right', 'coins', 'users', 'map-pin', 'chart-bar-big', 'fire', 'reload'];
+// Batalha de Complexidade e Reordenar Algoritmo (fases bônus), Estruturas Avançadas
+const ICONES_FASE = ['arrow-right', 'coins', 'users', 'map-pin', 'chart-bar-big', 'fire', 'reload', 'star'];
 
 function NoFase({ fase, indice }) {
   const { t } = useI18n();
