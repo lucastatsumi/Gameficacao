@@ -1,5 +1,6 @@
 import * as quizService from '../services/quizService.js';
 import * as poderService from '../services/poderService.js';
+import * as fichaService from '../services/fichaService.js';
 
 export async function iniciar(req, res, next) {
   try {
@@ -72,6 +73,14 @@ export async function finalizar(req, res, next) {
       await poderService.concederPoder(req.usuario.id, sorteado, 1);
       resultado.poder_concedido = sorteado;
     }
+
+    // Fichas (economia gastável): aprovado com XP novo rende fichas, com
+    // teto diário — regras em fichaService.recompensarQuiz.
+    resultado.fichas_ganhas = await fichaService.recompensarQuiz(
+      req.usuario.id,
+      resultado,
+      req.body?.tentativa_id
+    );
 
     res.json(resultado);
   } catch (err) {

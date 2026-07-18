@@ -66,6 +66,15 @@ export default function Perfil() {
               {perfil.xp_total}
             </p>
             <p className="mt-1 text-xs text-slate-400">XP total</p>
+            {perfil.fichas > 0 && (
+              <p
+                className="mt-2 flex items-center justify-end gap-1.5 text-sm text-cyan-300"
+                title="Fichas — moeda para gastar na loja"
+              >
+                <PixelIcon nome="star" className="h-4 w-4" />
+                {perfil.fichas} fichas
+              </p>
+            )}
           </div>
           {perfil.streak_dias > 0 && (
             <div

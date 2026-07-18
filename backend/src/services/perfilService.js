@@ -3,16 +3,18 @@ import { xpParaNivel } from '../utils/nivel.js';
 import { tituloPorNivel } from '../utils/titulo.js';
 import { classeDaFase } from '../utils/classe.js';
 import { estoqueDoUsuario } from './poderService.js';
+import { saldoDeFichas } from './fichaService.js';
 
 export async function obterPerfil(usuario) {
   const xpNivelAtual = xpParaNivel(usuario.nivel);
   const xpProximoNivel = xpParaNivel(usuario.nivel + 1);
 
-  const [{ count: totalBadges }, poderes, classe, atributos] = await Promise.all([
+  const [{ count: totalBadges }, poderes, classe, atributos, fichas] = await Promise.all([
     db.from('usuario_badges').select('*', { count: 'exact', head: true }).eq('user_id', usuario.id),
     estoqueDoUsuario(usuario.id),
     classeDoJogador(usuario.id),
     atributosDoJogador(usuario.id),
+    saldoDeFichas(usuario.id),
   ]);
 
   return {
@@ -31,6 +33,7 @@ export async function obterPerfil(usuario) {
     total_badges: totalBadges ?? 0,
     streak_dias: usuario.streak_dias ?? 0,
     poderes,
+    fichas,
     // Progressão de personagem (RPG leve, cosmético — não afeta gameplay)
     titulo_nivel: tituloPorNivel(usuario.nivel),
     classe,

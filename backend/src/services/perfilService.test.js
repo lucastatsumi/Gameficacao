@@ -24,6 +24,7 @@ describe('obterPerfil', () => {
       usuario_poderes: [ok([])],
       progresso_fase: [ok([])],
       respostas: [ok([])],
+      transacoes_fichas: [ok([])],
     });
 
     const perfil = await obterPerfil(usuarioBase);
@@ -43,6 +44,7 @@ describe('obterPerfil', () => {
         ]),
       ],
       respostas: [ok([])],
+      transacoes_fichas: [ok([])],
     });
 
     const perfil = await obterPerfil({ ...usuarioBase, nivel: 7 });
@@ -50,17 +52,19 @@ describe('obterPerfil', () => {
     expect(perfil.titulo_nivel).toBe('Especialista');
   });
 
-  it('inclui streak e poderes com defaults seguros', async () => {
+  it('inclui streak, poderes e saldo de fichas (derivado do ledger)', async () => {
     configurarDb({
       usuario_badges: [ok(null)],
       usuario_poderes: [ok([{ poder: 'tempo_extra', quantidade: 1 }])],
       progresso_fase: [ok([])],
       respostas: [ok([])],
+      transacoes_fichas: [ok([{ quantidade: 15 }, { quantidade: -5 }])],
     });
 
     const perfil = await obterPerfil(usuarioBase);
     expect(perfil.streak_dias).toBe(0);
     expect(perfil.poderes).toEqual({ eliminar_alternativa: 0, tempo_extra: 1, pular_questao: 0 });
+    expect(perfil.fichas).toBe(10);
   });
 
   it('calcula atributos (precisão, velocidade, dias ativos) a partir do histórico', async () => {
@@ -75,6 +79,7 @@ describe('obterPerfil', () => {
           { correta: true, tempo_resposta_ms: 2000, respondida_em: '2026-01-02T09:00:00Z' },
         ]),
       ],
+      transacoes_fichas: [ok([])],
     });
 
     const perfil = await obterPerfil(usuarioBase);
@@ -91,6 +96,7 @@ describe('obterPerfil', () => {
       usuario_poderes: [ok([])],
       progresso_fase: [ok([])],
       respostas: [ok([])],
+      transacoes_fichas: [ok([])],
     });
 
     const perfil = await obterPerfil(usuarioBase);
