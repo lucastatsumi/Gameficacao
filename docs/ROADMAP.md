@@ -124,24 +124,218 @@ O pedido central do pivô: sair do certo/errado binário.
   cobertura de competências — versão "avaliativa" do título por nível que
   já existe na gamificação.
 
-## Horizonte 4 — Engajamento corporativo (novas experiências)
+## Horizonte 4 — Sistema de gamificação (design detalhado)
 
-- **Meta coletiva de equipe (raid boss)** — o gestor lança um "chefe" com
-  HP compartilhado para a equipe; cada acerto de qualquer membro causa
-  dano proporcional à dificuldade da questão. Derrotou dentro do prazo →
-  recompensa para todos (poderes/badge exclusiva). Transforma o
-  treinamento individual em objetivo de time — a mecânica de eventos
-  temporários existente já dá o esqueleto (período + escopo).
-- **Desafio diário** — um mini-quiz por dia com **seed determinística por
-  data** (todos respondem às mesmas questões, estilo Wordle), ranking
-  separado do dia e bônus de streak por participar. Reusa o sorteio de
-  questões existente trocando o RNG por um PRNG semeado pela data.
+O coração do produto. Cada mecânica abaixo está especificada com o
+**objetivo comportamental** que ataca, as **regras**, o **modelo de
+dados/backend** e as **salvaguardas anti-abuso** — em contexto
+corporativo, gamificação sem anti-abuso vira gincana de farmar pontos.
+Duas regras valem para TODAS as mecânicas:
+
+1. Recompensa é sempre concedida pelo **servidor** ao processar um evento
+   legítimo (finalizar quiz, completar missão) — o cliente nunca "pede" a
+   recompensa.
+2. **Gamificação ≠ avaliação**: XP, fichas, ligas e cosméticos motivam;
+   o score/competências (Horizonte 3) avaliam. Nenhuma mecânica lúdica
+   contamina o relatório que o gestor usa para decidir sobre pessoas.
+
+### 4.1 Economia dual — XP + Fichas
+
+*Objetivo: dar propósito contínuo ao jogo depois que o nível para de
+subir rápido.*
+
+- **XP** continua como está: progressão permanente, nunca se gasta.
+- **Fichas** são a moeda gastável: ganha ao aprovar quiz (10), quiz
+  perfeito (+5), desafio diário (+5), missões e raids; gasta na loja.
+- Backend: `carteiras` (saldo) + `transacoes_fichas` como **ledger
+  append-only** (motivo, referência da origem, timestamp) — saldo é
+  derivável do ledger, auditável, e impossível de "editar na mão".
+- Anti-abuso: teto diário de fichas por fonte; a regra anti-farming de XP
+  existente (só recompensa superar o próprio recorde) se aplica igual às
+  fichas de quiz repetido.
+
+### 4.2 Loja e cosméticos do avatar
+
+*Objetivo: dar em que gastar as fichas e deixar o jogador expressar
+identidade — sem pay-to-win.*
+
+- A loja vende: **poderes** (eliminar alternativa, tempo extra, pular —
+  hoje só ganháveis, passam a ser também compráveis com teto de estoque),
+  e **cosméticos**: paletas de cor do `AvatarPixel`, acessórios extras
+  (óculos, capa, aura), molduras de card no ranking e **títulos
+  exibíveis** ("O Implacável", "Caçador de Bugs") escolhidos no perfil.
+- Cosmético é 100% procedural (SVG por código, extensão direta do
+  `AvatarPixel.jsx` existente) — nenhuma arte externa necessária.
+- Raridades comum/raro/épico definem preço e cor da moldura.
+- Backend: `itens_catalogo`, `itens_do_jogador`, `equipados` (jsonb no
+  perfil). Compra é transação no ledger de fichas.
+
+### 4.3 Missões diárias e semanais (quadro de missões)
+
+*Objetivo: dar um motivo concreto para abrir o app HOJE, além do streak.*
+
+- 3 missões diárias sorteadas por jogador ("acerte 5 questões de
+  <tema>", "aprove 1 quiz sem usar dica", "vença 1 desafio contra
+  colega") + 1 missão semanal maior ("acumule 15 acertos na semana").
+- Recompensa: fichas + XP pequeno; a semanal dá item cosmético raro.
+- Backend: `missoes_catalogo` (tipo, parâmetro, recompensa) +
+  `missoes_do_dia` (atribuição por jogador/data, progresso). O progresso
+  é verificado **server-side no mesmo hook de `finalizarQuiz` que já
+  verifica badges** — zero confiança no cliente, mesma arquitetura.
+- Anti-abuso: progresso só conta em tentativas finalizadas; missões de
+  "N acertos" ignoram questões repetidas no mesmo dia.
+
+### 4.4 Combo dentro do quiz
+
+*Objetivo: tensão e ritmo momento-a-momento (a menor e mais barata
+mecânica do horizonte — quick win).*
+
+- Acertos consecutivos na MESMA tentativa multiplicam o XP da questão:
+  ×1.0 → ×1.1 (2 seguidos) → ×1.25 (3) → ×1.5 (teto, 4+). Errar zera.
+- Calculado em `finalizarQuiz` a partir da sequência de `respostas` (já
+  são ordenadas e timestamped — nenhuma coluna nova); o frontend só
+  ANIMA o contador ("COMBO ×1.5!"), nunca calcula.
+
+### 4.5 Ligas semanais
+
+*Objetivo: competição justa para todos os níveis — o ranking global atual
+premia veteranos para sempre; novato nunca alcança.*
+
+- Divisões Bronze → Prata → Ouro → Diamante. O ranking da semana é por
+  **XP ganho NA semana** (não total): todo mundo começa a segunda-feira
+  zerado dentro da sua divisão.
+- Fim da semana: top 20% da divisão sobe, bottom 20% desce, todos ganham
+  fichas conforme a posição.
+- Backend: `ligas_semana` (jogador, divisão, xp_semana, semana ISO) com
+  fechamento **lazy** — o primeiro acesso após a virada da semana
+  processa a promoção/rebaixamento (sem depender de cron externo, que
+  este ambiente não tem como garantir).
+
+### 4.6 Temporadas e passe de missões
+
+*Objetivo: arco de longo prazo renovável — e o gancho corporativo
+perfeito para campanhas trimestrais de treinamento.*
+
+- Temporada = 8–12 semanas com tema ("Temporada de Segurança Q1"),
+  trilha de ~30 recompensas destravadas por **pontos de temporada** (=
+  XP ganho no período). Cosméticos exclusivos que nunca voltam à loja.
+- No fim, ranking da temporada congela em "hall da fama" consultável.
+- Backend: `temporadas` (período, tema) + acumulador por jogador; a
+  mesma mecânica de eventos temporários dá o esqueleto do período.
+
+### 4.7 Raid boss de equipe
+
+*Objetivo: transformar treinamento individual em objetivo coletivo — o
+colaborador que não faria o quiz por si faz pela equipe.*
+
+- O gestor lança um chefe com **HP compartilhado** calibrado pelo
+  tamanho da equipe (ex.: membros × 40). Janela de 1 semana.
+- Cada acerto de qualquer membro causa dano = dificuldade da questão
+  (fácil 1 / média 2 / difícil 4). Nas **últimas 24h o boss "enfurece"**:
+  dano ×2 — pico de urgência coletiva no fim da janela.
+- Derrotou → badge exclusiva + fichas para TODOS (inclusive quem
+  contribuiu pouco: a pressão social já faz o trabalho; punir
+  individualmente aqui minaria o objetivo).
+- Backend: `raids` (equipe, hp_total, hp_atual, período) +
+  `raid_contribuicoes` (dano por jogador — alimenta um placar interno de
+  contribuição visível só para a equipe). Dano aplicado em
+  `finalizarQuiz`, nunca por chamada direta.
+
+### 4.8 Desafio diário (seed por data)
+
+*Objetivo: ritual compartilhado estilo Wordle — todos falam do MESMO
+desafio no café.*
+
+- 5 questões por dia, **idênticas para todos** (PRNG determinístico
+  semeado por `data + tema da semana` no sorteio existente), 1 tentativa
+  por jogador por dia, sem dicas/poderes.
+- Ranking do dia (acertos, depois tempo) separado do ranking geral;
+  participar mantém o streak diário existente.
+
+### 4.9 Cartas colecionáveis de conhecimento
+
+*Objetivo: colecionismo que É revisão de conteúdo — a recompensa reforça
+o aprendizado em vez de distrair dele.*
+
+- Dominar uma competência (ex.: ≥80% de acerto em ≥10 questões daquela
+  tag) **revela a carta** daquele conceito: frente com arte procedural
+  (mesma técnica SVG do avatar) e nome; verso com o resumo do conceito —
+  a carta vira material de consulta rápida no perfil.
+- Álbum por tema; completar o álbum = badge + entrada no certificado.
+- Backend: `cartas_catalogo` (1 por competência) + `cartas_do_jogador`;
+  a checagem de maestria roda no mesmo hook das badges.
+
+### 4.10 Mascote da equipe
+
+*Objetivo: nudge social gentil — sinalizar queda de engajamento coletivo
+sem expor ninguém individualmente.*
+
+- Cada equipe tem um mascote pixel procedural com humor semanal: radiante
+  (≥80% dos membros ativos na semana) → feliz → neutro → dormindo (<20%).
+  Evolui de forma (filhote → adulto → lendário) com semanas consecutivas
+  de equipe ativa.
+- Aparece no topo do ranking da equipe. NUNCA mostra quem está ativo ou
+  não — só o agregado (decisão deliberada de privacidade).
+- Backend: cálculo derivado de `respostas` por semana, sem tabela nova.
+
+### 4.11 Prestígio (Nova Jornada+)
+
+*Objetivo: rejogabilidade para quem terminou tudo — o "e agora?" do
+veterano.*
+
+- Quem completa a trilha de um tema pode **prestigiar**: o progresso da
+  trilha reinicia com modificadores de dificuldade (sem dicas, timer
+  −25%, só questões média/difícil) e o perfil ganha uma **estrela de
+  prestígio permanente** por ciclo.
+- O score/competências do Horizonte 3 **não resetam** (gamificação ≠
+  avaliação): o gestor continua vendo a proficiência real acumulada.
+- Backend: `prestigio` (jogador, tema, ciclo) + filtro extra no sorteio
+  de questões — reusa a infra da dificuldade adaptativa.
+
+### 4.12 Kudos entre colegas
+
+*Objetivo: reconhecimento social positivo — a única mecânica movida por
+generosidade, não competição.*
+
+- Cada jogador tem **3 kudos por semana** para dar a colegas (no ranking
+  ou após um desafio). Receber kudos rende fichas pequenas; dar kudos
+  conta para missão ("reconheça um colega").
+- Anti-conluio: kudos recíproco no mesmo dia não rende fichas; teto
+  semanal de fichas por kudos recebidos.
+- Backend: `kudos` (de, para, semana) com unique por par/semana.
+
+### Mapa mecânica × objetivo × esforço
+
+| Mecânica | Objetivo comportamental | Esforço | Depende de |
+|---|---|---|---|
+| Combo no quiz (4.4) | Tensão momento-a-momento | Baixo | nada |
+| Economia + loja (4.1, 4.2) | Propósito pós-nível | Médio | nada |
+| Missões (4.3) | Motivo para abrir hoje | Médio | fichas (4.1) |
+| Desafio diário (4.8) | Ritual compartilhado | Médio | nada |
+| Ligas semanais (4.5) | Competição justa | Médio | nada |
+| Kudos (4.12) | Reconhecimento social | Baixo | fichas (4.1) |
+| Raid boss (4.7) | Objetivo coletivo | Alto | equipes (H1) |
+| Cartas (4.9) | Colecionismo educativo | Alto | competências (H1/H3) |
+| Mascote de equipe (4.10) | Nudge social agregado | Baixo | equipes (H1) |
+| Temporadas + passe (4.6) | Arco de longo prazo | Alto | fichas, cosméticos |
+| Prestígio (4.11) | Rejogabilidade | Médio | trilhas por tema (H1) |
+
+**Sequência recomendada dentro do horizonte**: 4.4 (combo) → 4.1+4.2
+(economia+loja) → 4.3 (missões) → 4.8 (desafio diário) → 4.5 (ligas) →
+4.12 (kudos) → 4.7 (raid) → 4.10 (mascote) → 4.9 (cartas) → 4.6
+(temporadas) → 4.11 (prestígio). Os quatro primeiros formam o núcleo do
+loop diário; o resto empilha em cima.
+
+### Campanhas e torneios (empacotamento para o gestor)
+
 - **Campanha temática mensal** — evento temporário de 30 dias com badge
   exclusiva e ranking próprio ("Outubro da Segurança") — composição de
-  eventos + badges já existentes, novidade é o empacotamento.
+  eventos + badges já existentes, novidade é o empacotamento na UI do
+  gestor (criar campanha = evento + badge + missões do período de uma
+  vez).
 - **Torneio entre equipes** — janela em que os desafios assíncronos
-  existentes (`desafioService`) são agregados por equipe: soma de vitórias
-  vira placar de equipe.
+  existentes (`desafioService`) são agregados por equipe: soma de
+  vitórias vira placar de equipe; pódio rende fichas e cosmético.
 
 ## Horizonte 5 — Plataforma
 
@@ -173,14 +367,21 @@ ambiente não tem como criar/validar sozinho:
 
 ## Ordem sugerida
 
-1. Horizonte 1 (fundação multi-tema) — destrava todo o resto.
-2. Pontuação ponderada + competências (Horizonte 3, parte determinística)
+1. **Núcleo do loop diário de gamificação** (Horizonte 4: combo →
+   economia+loja → missões → desafio diário) — não depende do pivô
+   multi-tema, funciona já sobre o jogo atual, e é o que mais muda a
+   experiência percebida por menor esforço.
+2. Horizonte 1 (fundação multi-tema) — destrava tudo que é corporativo.
+3. Pontuação ponderada + competências (Horizonte 3, parte determinística)
    — entrega o "método de avaliar" pedido sem depender de IA.
-3. Geração de questões com IA (Horizonte 2) — maior valor percebido.
-4. Questão aberta com rubrica por IA (Horizonte 3, parte não
-   determinística) — depende da infra de IA do passo 3.
-5. Raid de equipe + desafio diário (Horizonte 4) — engajamento.
-6. Multi-tenancy (Horizonte 5) — antes de qualquer piloto com 2+ empresas.
+4. Geração de questões com IA (Horizonte 2) — maior valor percebido.
+5. Questão aberta com rubrica por IA (Horizonte 3, parte não
+   determinística) — depende da infra de IA do passo 4.
+6. Gamificação social e coletiva (Horizonte 4: ligas → kudos → raid →
+   mascote) — depende de equipes (H1) para brilhar de verdade.
+7. Arcos longos (Horizonte 4: cartas → temporadas → prestígio) — empilham
+   sobre economia, competências e trilhas já estabelecidas.
+8. Multi-tenancy (Horizonte 5) — antes de qualquer piloto com 2+ empresas.
 
 ---
 
