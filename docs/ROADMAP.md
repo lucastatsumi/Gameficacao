@@ -59,11 +59,34 @@ estudantes primeiro.
   `database/12_mais_questoes.sql`, validado rodando a cadeia completa
   01–12 num Postgres local (4 alternativas por questão, exatamente 1
   correta).
-- **Cobrir tópicos ainda sem fase própria**: grafos (BFS/DFS em grafo geral,
-  não só árvore/grid), tabelas hash (colisões, load factor), heaps/filas de
-  prioridade como estrutura própria (hoje só aparecem mencionados dentro da
-  fase de Árvores), recursão — exigiria uma fase nova (fase 7), não só mais
-  questões nas fases atuais.
+- ✅ **Cobrir tópicos ainda sem fase própria** — nova fase de campanha
+  "Estruturas Avançadas" (`database/22_fase_estruturas_avancadas.sql`,
+  `ordem = 8`, `fase_requisito_id` = fase de Algoritmos de Ordenação —
+  continua a trilha sequencial obrigatória, ao contrário das fases bônus
+  6/7, que ficam fora dela). 16 questões novas (4 por tópico) cobrindo
+  grafos gerais (BFS/DFS não só em árvore/grid, representação lista vs.
+  matriz de adjacência, detecção de ciclo em grafo direcionado), tabelas
+  hash (colisões inevitáveis, encadeamento vs. endereçamento aberto, load
+  factor/rehash, ataque de hash flooding), heaps/filas de prioridade como
+  estrutura própria (min vs. max-heap, complexidade de inserir/build-heap,
+  uso em Dijkstra) e recursão (caso base, limite da call stack, recursão vs.
+  iteração, recursão de cauda). Gerado pelo agente `question-researcher` e
+  fact-checado contra CLRS para as complexidades — inclusive uma pegadinha
+  real conferida via pesquisa: a V8 (motor do Node.js) nunca implementou
+  "proper tail calls" da spec ES2015 em produção, então a questão de
+  recursão de cauda evita a armadilha de assumir otimização automática.
+  Novo badge "Arquiteto de Estruturas" (`fase_concluida`, `fase_ordem: 8`).
+  Nenhuma mudança de backend foi necessária: o sistema de fases já é
+  inteiramente genérico (`fase_requisito_id`/`ordem`), sem nada hardcoded
+  por quantidade de fases. Validado rodando a cadeia completa 01–22 num
+  Postgres local descartável (com stubs de `auth.users`, papéis
+  `anon`/`authenticated` e `rls_auto_enable()` para reproduzir o ambiente
+  gerenciado do Supabase): fase 8 corretamente encadeada à fase 5, badge
+  inserido, e as 16 questões com exatamente 4 alternativas cada e
+  exatamente 1 correta. **Ainda não aplicado ao projeto Supabase real**
+  (o MCP do Supabase exige autenticação interativa indisponível numa
+  sessão autônoma) — aplicar via MCP como migration
+  "22_fase_estruturas_avancadas" numa sessão com acesso.
 - ✅ **Extrair componentes de `pages/Quiz.jsx`** — tinha crescido para 692
   linhas (as features de poderes e batalha de complexidade desta rodada
   ajudaram a inchar). Movidos `BotaoAlternativa`, `BotaoBatalha`,
