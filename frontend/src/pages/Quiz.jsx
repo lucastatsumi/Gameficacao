@@ -13,8 +13,10 @@ import pixelTriste from '../assets/img/pixel-triste.svg';
 import { somLigado, alternarSom, tocarClique, tocarAcerto, tocarErro, tocarTick } from '../lib/sons.js';
 
 export default function Quiz() {
-  // /quiz/:faseId (campanha) ou /quiz/custom/:quizId (quiz da turma)
+  // /quiz/:faseId (campanha), /quiz/custom/:quizId (quiz da turma) ou
+  // /quiz/diario (desafio diário — mesmas questões pra todo mundo hoje)
   const { faseId, quizId } = useParams();
+  const ehDesafioDiario = faseId === 'diario';
   const { recarregarPerfil, perfil } = useAuth();
 
   const [quiz, setQuiz] = useState(null); // { tentativa_id, fase|quiz, questoes }
@@ -73,7 +75,9 @@ export default function Quiz() {
   useEffect(() => {
     const chamada = quizId
       ? api.post('/quiz/iniciar-custom', { quiz_id: quizId })
-      : api.post('/quiz/iniciar', { fase_id: Number(faseId) });
+      : ehDesafioDiario
+        ? api.post('/desafio-diario/iniciar')
+        : api.post('/quiz/iniciar', { fase_id: Number(faseId) });
     chamada
       .then((dados) => {
         setQuiz(dados);
@@ -413,8 +417,10 @@ export default function Quiz() {
         </div>
       )}
 
-      {/* poderes — eliminar/tempo extra não se aplicam ao minigame de reordenar (sem alternativas) */}
+      {/* poderes — eliminar/tempo extra não se aplicam ao minigame de reordenar
+          (sem alternativas) nem ao desafio diário (arena justa, sem poderes) */}
       {!respondida &&
+        !ehDesafioDiario &&
         (estoquePoderes.pular_questao > 0 ||
           (questao.formato !== 'reordenar_algoritmo' &&
             (estoquePoderes.eliminar_alternativa > 0 || estoquePoderes.tempo_extra > 0))) && (

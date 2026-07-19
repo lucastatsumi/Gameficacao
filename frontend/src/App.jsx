@@ -41,6 +41,7 @@ export default function App() {
         <Route path="/" element={<MapaFases />} />
         <Route path="/quizzes" element={<Quizzes />} />
         <Route path="/quiz/custom/:quizId" element={<Quiz />} />
+        {/* "diario" casa com /quiz/:faseId — Quiz.jsx trata faseId === 'diario' */}
         <Route path="/quiz/:faseId" element={<Quiz />} />
         <Route path="/ranking" element={<Ranking />} />
         <Route path="/perfil" element={<Perfil />} />
