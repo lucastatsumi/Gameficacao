@@ -71,7 +71,11 @@ fases desbloqueável e ranking.
 │   ├── 18_badge_sem_dica_seed.sql #  Seed do badge "sem usar dica"
 │   ├── 19_desempenho_fases.sql   #   View de relatório agregado por fase
 │   ├── 20_ranking_classe.sql     #   Classe (Mestre de X) no ranking
-│   └── 21_desafios.sql           #   Desafio assíncrono entre colegas
+│   ├── 21_desafios.sql           #   Desafio assíncrono entre colegas
+│   ├── 22_fichas.sql             #   Fichas (moeda gastável, ledger)
+│   ├── 23_loja.sql               #   Loja de poderes e cosméticos
+│   ├── 24_missoes.sql            #   Missões diárias
+│   └── 25_desafio_diario.sql     #   Desafio diário (seed por data)
 ├── backend/
 │   └── src/
 │       ├── config/               # Cliente Supabase, variáveis de ambiente

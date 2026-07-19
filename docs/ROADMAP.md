@@ -139,10 +139,16 @@ Duas regras valem para TODAS as mecânicas:
    o score/competências (Horizonte 3) avaliam. Nenhuma mecânica lúdica
    contamina o relatório que o gestor usa para decidir sobre pessoas.
 
-### 4.1 Economia dual — XP + Fichas
+### 4.1 Economia dual — XP + Fichas ✅ implementado
 
 *Objetivo: dar propósito contínuo ao jogo depois que o nível para de
 subir rápido.*
+
+> **Como saiu**: `database/22_fichas.sql` + `fichaService.js` (7 testes).
+> Ledger append-only com check `quantidade <> 0`; saldo derivado da soma;
+> recompensa de quiz condicionada a `xp_ganho > 0` (herda o anti-farming)
+> com teto diário de 50; saldo exposto em `GET /perfil` e nas telas de
+> Perfil/resultado.
 
 - **XP** continua como está: progressão permanente, nunca se gasta.
 - **Fichas** são a moeda gastável: ganha ao aprovar quiz (10), quiz
@@ -154,10 +160,16 @@ subir rápido.*
   existente (só recompensa superar o próprio recorde) se aplica igual às
   fichas de quiz repetido.
 
-### 4.2 Loja e cosméticos do avatar
+### 4.2 Loja e cosméticos do avatar ✅ implementado
 
 *Objetivo: dar em que gastar as fichas e deixar o jogador expressar
 identidade — sem pay-to-win.*
+
+> **Como saiu**: `database/23_loja.sql` (9 itens seed) + `lojaService.js`
+> (11 testes) + página `/loja`. Poder comprável credita `usuario_poderes`
+> (consumível); paleta/título são compra única (PK composta) com o "em
+> uso" em `profiles.equipados`; `AvatarPixel` aceita a paleta comprada
+> (preview na própria loja) e o Perfil exibe o título equipado.
 
 - A loja vende: **poderes** (eliminar alternativa, tempo extra, pular —
   hoje só ganháveis, passam a ser também compráveis com teto de estoque),
@@ -170,9 +182,18 @@ identidade — sem pay-to-win.*
 - Backend: `itens_catalogo`, `itens_do_jogador`, `equipados` (jsonb no
   perfil). Compra é transação no ledger de fichas.
 
-### 4.3 Missões diárias e semanais (quadro de missões)
+### 4.3 Missões diárias e semanais (quadro de missões) ✅ diárias implementadas
 
 *Objetivo: dar um motivo concreto para abrir o app HOJE, além do streak.*
+
+> **Como saiu**: `database/24_missoes.sql` (catálogo de 6 + atribuições
+> por jogador/dia) + `missaoService.js` (7 testes) + `utils/seed.js`
+> (PRNG mulberry32 determinístico — atribuições concorrentes convergem).
+> Progresso atualizado só no hook do controller pós-`finalizarQuiz`;
+> fichas pagas uma única vez por conclusão; quadro no MapaFases e
+> celebração no resultado. Missão SEMANAL ficou de fora desta rodada
+> (exige janela de 7 dias no acumulador — extensão natural do mesmo
+> modelo, `dia` vira `semana ISO`).
 
 - 3 missões diárias sorteadas por jogador ("acerte 5 questões de
   <tema>", "aprove 1 quiz sem usar dica", "vença 1 desafio contra
@@ -185,10 +206,17 @@ identidade — sem pay-to-win.*
 - Anti-abuso: progresso só conta em tentativas finalizadas; missões de
   "N acertos" ignoram questões repetidas no mesmo dia.
 
-### 4.4 Combo dentro do quiz
+### 4.4 Combo dentro do quiz ✅ implementado
 
 *Objetivo: tensão e ritmo momento-a-momento (a menor e mais barata
 mecânica do horizonte — quick win).*
+
+> **Como saiu**: `utils/combo.js` (puro, 5 testes) aplicado em
+> `finalizarQuiz` sobre a sequência real de `respostas` (agora ordenada
+> por `respondida_em`); o bônus é a diferença entre XP com e sem
+> multiplicadores, então compõe com evento/streak sem mudar as regras
+> existentes. Contador animado no header do quiz e combo máximo na tela
+> de resultado — o cliente nunca calcula nada.
 
 - Acertos consecutivos na MESMA tentativa multiplicam o XP da questão:
   ×1.0 → ×1.1 (2 seguidos) → ×1.25 (3) → ×1.5 (teto, 4+). Errar zera.
@@ -241,10 +269,20 @@ colaborador que não faria o quiz por si faz pela equipe.*
   contribuição visível só para a equipe). Dano aplicado em
   `finalizarQuiz`, nunca por chamada direta.
 
-### 4.8 Desafio diário (seed por data)
+### 4.8 Desafio diário (seed por data) ✅ implementado
 
 *Objetivo: ritual compartilhado estilo Wordle — todos falam do MESMO
 desafio no café.*
+
+> **Como saiu**: `database/25_desafio_diario.sql` (terceira origem de
+> tentativa `desafio_dia` + índice único parcial de 1/dia — abrir e
+> abandonar consome o dia, anti-espiada) + `desafioDiarioService.js`
+> (6 testes). O conjunto do dia é DERIVADO (nunca armazenado): ids
+> ordenados + embaralhamento semeado por `desafio:<data>`;
+> `responderQuestao` revalida o pertencimento pela mesma seed; poderes
+> bloqueados (arena justa); sem anti-farming (1 tentativa/dia, conteúdo
+> novo por dia). Card no MapaFases com pódio do dia; rota `/quiz/diario`
+> reusa o fluxo inteiro do Quiz.
 
 - 5 questões por dia, **idênticas para todos** (PRNG determinístico
   semeado por `data + tema da semana` no sorteio existente), 1 tentativa
@@ -306,25 +344,27 @@ generosidade, não competição.*
 
 ### Mapa mecânica × objetivo × esforço
 
-| Mecânica | Objetivo comportamental | Esforço | Depende de |
-|---|---|---|---|
-| Combo no quiz (4.4) | Tensão momento-a-momento | Baixo | nada |
-| Economia + loja (4.1, 4.2) | Propósito pós-nível | Médio | nada |
-| Missões (4.3) | Motivo para abrir hoje | Médio | fichas (4.1) |
-| Desafio diário (4.8) | Ritual compartilhado | Médio | nada |
-| Ligas semanais (4.5) | Competição justa | Médio | nada |
-| Kudos (4.12) | Reconhecimento social | Baixo | fichas (4.1) |
-| Raid boss (4.7) | Objetivo coletivo | Alto | equipes (H1) |
-| Cartas (4.9) | Colecionismo educativo | Alto | competências (H1/H3) |
-| Mascote de equipe (4.10) | Nudge social agregado | Baixo | equipes (H1) |
-| Temporadas + passe (4.6) | Arco de longo prazo | Alto | fichas, cosméticos |
-| Prestígio (4.11) | Rejogabilidade | Médio | trilhas por tema (H1) |
+| Mecânica | Objetivo comportamental | Esforço | Depende de | Status |
+|---|---|---|---|---|
+| Combo no quiz (4.4) | Tensão momento-a-momento | Baixo | nada | ✅ |
+| Economia + loja (4.1, 4.2) | Propósito pós-nível | Médio | nada | ✅ |
+| Missões (4.3) | Motivo para abrir hoje | Médio | fichas (4.1) | ✅ diárias |
+| Desafio diário (4.8) | Ritual compartilhado | Médio | nada | ✅ |
+| Ligas semanais (4.5) | Competição justa | Médio | nada | — |
+| Kudos (4.12) | Reconhecimento social | Baixo | fichas (4.1) | — |
+| Raid boss (4.7) | Objetivo coletivo | Alto | equipes (H1) | — |
+| Cartas (4.9) | Colecionismo educativo | Alto | competências (H1/H3) | — |
+| Mascote de equipe (4.10) | Nudge social agregado | Baixo | equipes (H1) | — |
+| Temporadas + passe (4.6) | Arco de longo prazo | Alto | fichas, cosméticos | — |
+| Prestígio (4.11) | Rejogabilidade | Médio | trilhas por tema (H1) | — |
 
-**Sequência recomendada dentro do horizonte**: 4.4 (combo) → 4.1+4.2
-(economia+loja) → 4.3 (missões) → 4.8 (desafio diário) → 4.5 (ligas) →
+**Sequência recomendada dentro do horizonte**: ~~4.4 (combo) → 4.1+4.2
+(economia+loja) → 4.3 (missões) → 4.8 (desafio diário)~~ ✅ **o núcleo do
+loop diário inteiro está implementado e validado** (212 testes de backend,
+migrações 22–25 validadas em Postgres local). Próximos: 4.5 (ligas) →
 4.12 (kudos) → 4.7 (raid) → 4.10 (mascote) → 4.9 (cartas) → 4.6
-(temporadas) → 4.11 (prestígio). Os quatro primeiros formam o núcleo do
-loop diário; o resto empilha em cima.
+(temporadas) → 4.11 (prestígio) — os quatro sociais/coletivos rendem mais
+depois que o Horizonte 1 criar equipes de verdade.
 
 ### Campanhas e torneios (empacotamento para o gestor)
 
@@ -367,10 +407,11 @@ ambiente não tem como criar/validar sozinho:
 
 ## Ordem sugerida
 
-1. **Núcleo do loop diário de gamificação** (Horizonte 4: combo →
-   economia+loja → missões → desafio diário) — não depende do pivô
-   multi-tema, funciona já sobre o jogo atual, e é o que mais muda a
-   experiência percebida por menor esforço.
+1. ~~**Núcleo do loop diário de gamificação** (Horizonte 4: combo →
+   economia+loja → missões → desafio diário)~~ ✅ **feito** — implementado
+   sobre o jogo atual, sem esperar o pivô multi-tema (migrações 22–25,
+   fichaService/lojaService/missaoService/desafioDiarioService, página
+   /loja, quadro de missões e card do desafio no mapa).
 2. Horizonte 1 (fundação multi-tema) — destrava tudo que é corporativo.
 3. Pontuação ponderada + competências (Horizonte 3, parte determinística)
    — entrega o "método de avaliar" pedido sem depender de IA.
