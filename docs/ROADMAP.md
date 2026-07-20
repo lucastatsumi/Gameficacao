@@ -59,11 +59,32 @@ estudantes primeiro.
   `database/12_mais_questoes.sql`, validado rodando a cadeia completa
   01–12 num Postgres local (4 alternativas por questão, exatamente 1
   correta).
-- **Cobrir tópicos ainda sem fase própria**: grafos (BFS/DFS em grafo geral,
-  não só árvore/grid), tabelas hash (colisões, load factor), heaps/filas de
-  prioridade como estrutura própria (hoje só aparecem mencionados dentro da
-  fase de Árvores), recursão — exigiria uma fase nova (fase 7), não só mais
-  questões nas fases atuais.
+- ✅ **Grafos ganharam fase própria** — nova fase sequencial "Grafos" (BFS/DFS
+  em grafo geral, não árvore/grid): `database/22_fase_grafos.sql` insere a
+  fase (`ordem = 8`, `fase_requisito_id` apontando para "Algoritmos de
+  Ordenação" — desbloqueia só depois da trilha original de 5 fases; as fases
+  bônus 6/7 continuam com `fase_requisito_id = null` e não interferem, já
+  que o desbloqueio olha só esse campo, nunca `ordem`), o badge "Explorador
+  de Grafos" (`fase_concluida`, `fase_ordem: 8`) e 6 questões novas geradas
+  pelo agente `question-researcher` e verificadas contra CLRS cap. 22,
+  Sedgewick & Wayne cap. 4, cp-algorithms.com e Baeldung — cobrindo caminho
+  mínimo via BFS, ordenação topológica via DFS, lista x matriz de
+  adjacência, detecção de ciclo (aresta de retorno), componentes conexos e
+  complexidade O(V+E). Migração validada rodando a cadeia completa 01–22
+  num Postgres local (6 questões, 24 alternativas, exatamente 1 correta
+  cada). `frontend/src/pages/MapaFases.jsx` ganhou um ícone pixel-art novo
+  (`graph`, adicionado a `PixelIcon.jsx`) para a 8ª fase — sem isso, o
+  array `ICONES_FASE` reciclaria silenciosamente o ícone da fase 1 (bug
+  descoberto ao investigar esta feature: `indice % ICONES_FASE.length` com
+  exatamente 7 ícones e 8 fases dava `7 % 7 = 0`). Textos de marketing da
+  tela de login (`login.feature1`/`feature3`, pt/en) atualizados para
+  refletir 6 fases e 15 conquistas (o valor anterior de badges, "10", já
+  estava desatualizado antes desta rodada — hoje são 14, +1 com o badge
+  novo desta fase). **Ainda sem fase própria**: tabelas hash (colisões,
+  load factor), heaps/filas de prioridade como estrutura própria (hoje só
+  mencionados dentro da fase de Árvores) e recursão — cada um exigiria sua
+  própria fase nova (9, 10, 11), não incluídos nesta rodada para manter o
+  escopo revisável (uma fase por vez, com validação de ponta a ponta).
 - ✅ **Extrair componentes de `pages/Quiz.jsx`** — tinha crescido para 692
   linhas (as features de poderes e batalha de complexidade desta rodada
   ajudaram a inchar). Movidos `BotaoAlternativa`, `BotaoBatalha`,
