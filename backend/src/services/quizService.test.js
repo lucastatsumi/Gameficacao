@@ -424,10 +424,47 @@ describe('finalizarQuiz — regra anti-farming de XP', () => {
     const usuario = { id: 'user-1', xp_total: 0, nivel: 1 };
     const res = await finalizarQuiz(usuario, 't1');
 
-    expect(res.xp_bruto).toBe(25);
-    expect(res.xp_ganho).toBe(25);
+    // 10 + 15 base; o 2º acerto consecutivo rende combo ×1.1 -> +2 de bônus
+    expect(res.xp_bruto).toBe(27);
+    expect(res.bonus_combo).toBe(2);
+    expect(res.combo_max).toBe(2);
+    expect(res.xp_ganho).toBe(27);
     expect(res.aprovada).toBe(true); // 2/2 >= 70%
     expect(res.evento).toBeNull();
+  });
+
+  it('erro no meio zera o combo (sem bônus quando não há acertos consecutivos)', async () => {
+    configurarDb({
+      tentativas: [
+        ok({
+          id: 't-combo',
+          user_id: 'user-1',
+          finalizada_em: null,
+          fase_id: 1,
+          quiz_custom_id: null,
+          total_questoes: 3,
+        }),
+        ok(null),
+      ],
+      respostas: [
+        ok([
+          { correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } },
+          { correta: false, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } },
+          { correta: true, usou_dica: false, tempo_resposta_ms: 1000, questoes: { xp_valor: 10 } },
+        ]),
+        ok([]),
+      ],
+      progresso_fase: [ok(null), ok({ concluida: false })],
+      fases: [ok({ ordem: 1, nome: 'Listas' })],
+      profiles: [ok(null)],
+      eventos: [ok([])],
+      poderes_usados: [ok([])],
+    });
+
+    const res = await finalizarQuiz({ id: 'user-1', xp_total: 0, nivel: 1 }, 't-combo');
+    expect(res.bonus_combo).toBe(0);
+    expect(res.combo_max).toBe(1);
+    expect(res.xp_bruto).toBe(20);
   });
 
   it('com evento ativo na fase, multiplica o XP bruto antes da regra anti-farming', async () => {

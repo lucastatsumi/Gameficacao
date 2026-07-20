@@ -142,10 +142,93 @@ function BotaoDesafiar({ faseId }) {
   );
 }
 
+// Quadro de missões do dia — o progresso é todo verificado no servidor;
+// aqui só se exibe o estado atual.
+function QuadroMissoes({ missoes }) {
+  if (!missoes?.length) return null;
+  return (
+    <div className="card-pixel mt-4 border-2 border-cyan-500/30 bg-cyan-500/5 p-3">
+      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-cyan-300">
+        <PixelIcon nome="flag" className="h-4 w-4" />
+        Missões de hoje
+      </p>
+      <div className="mt-2 grid gap-2 sm:grid-cols-3">
+        {missoes.map((m) => (
+          <div
+            key={m.chave}
+            className={`border-2 p-2 text-xs ${
+              m.concluida
+                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                : 'border-slate-800 bg-slate-900/60 text-slate-300'
+            }`}
+          >
+            <p className="flex items-center gap-1.5">
+              {m.concluida && <PixelIcon nome="check" className="h-3.5 w-3.5 shrink-0" />}
+              {m.descricao}
+            </p>
+            <p className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
+              <span>
+                {Math.min(m.progresso, m.parametro)}/{m.parametro}
+              </span>
+              <span className="flex items-center gap-1 text-cyan-400">
+                <PixelIcon nome="star" className="h-3 w-3" />
+                {m.recompensa_fichas}
+              </span>
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Card do desafio diário: mesmas questões para todo mundo hoje, 1
+// tentativa por dia, com o pódio do dia.
+function CartaoDesafioDiario({ status }) {
+  if (!status) return null;
+  return (
+    <div className="card-pixel mt-4 border-2 border-fuchsia-500/30 bg-fuchsia-500/5 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-fuchsia-300">
+          <PixelIcon nome="zap" className="h-4 w-4" />
+          Desafio diário — o mesmo quiz para todo mundo hoje
+        </p>
+        {status.ja_jogou ? (
+          <span className="text-xs text-slate-400">
+            {status.minha_pontuacao
+              ? `Você fez ${status.minha_pontuacao.acertos}/${status.minha_pontuacao.total_questoes} hoje`
+              : 'Você já usou a chance de hoje'}
+            {' — volte amanhã!'}
+          </span>
+        ) : (
+          <Link
+            to="/quiz/diario"
+            className="btn-pixel bg-fuchsia-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-fuchsia-500"
+          >
+            Jogar (1 chance por dia)
+          </Link>
+        )}
+      </div>
+      {status.ranking.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+          {status.ranking.slice(0, 3).map((r) => (
+            <span key={r.posicao} className={r.voce ? 'text-fuchsia-300' : ''}>
+              {r.posicao}º {r.nome}
+              {r.voce ? ' (você)' : ''} — {r.acertos}/{r.total_questoes}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MapaFases() {
   const { t } = useI18n();
   const [fases, setFases] = useState(null);
   const [pendente, setPendente] = useState(null);
+  const [missoes, setMissoes] = useState(null);
+  const [desafioDia, setDesafioDia] = useState(null);
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
@@ -157,6 +240,14 @@ export default function MapaFases() {
       .get('/perfil/pendente')
       .then(setPendente)
       .catch(() => {}); // lembrete é cosmético — falha silenciosa não deve travar o mapa
+    api
+      .get('/perfil/missoes')
+      .then(setMissoes)
+      .catch(() => {}); // idem: o mapa funciona sem o quadro de missões
+    api
+      .get('/desafio-diario')
+      .then(setDesafioDia)
+      .catch(() => {}); // idem para o card do desafio diário
   }, []);
 
   if (erro) return <Alerta>{erro}</Alerta>;
@@ -201,6 +292,9 @@ export default function MapaFases() {
           </span>
         </Link>
       )}
+
+      <CartaoDesafioDiario status={desafioDia} />
+      <QuadroMissoes missoes={missoes} />
 
       <div className="relative mt-6 space-y-5">
         {/* trilha vertical ligando as fases */}

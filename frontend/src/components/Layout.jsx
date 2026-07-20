@@ -66,6 +66,11 @@ export default function Layout() {
             <LinkNav para="/perfil" icone="user">
               {t('nav.perfil')}
             </LinkNav>
+            {perfil?.role !== 'professor' && (
+              <LinkNav para="/loja" icone="coins">
+                {t('nav.loja')}
+              </LinkNav>
+            )}
             {perfil?.role === 'professor' && (
               <LinkNav para="/admin" icone="briefcase">
                 {t('nav.admin')}

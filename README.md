@@ -5,6 +5,12 @@ Engenharia de Software / Ciência da Computação. Quiz contextualizado com
 cenários reais de desenvolvimento, sistema de XP, níveis, badges, mapa de
 fases desbloqueável e ranking.
 
+> **Direção do produto**: a próxima fase pivota a plataforma para o mercado
+> corporativo (empresa escolhe os temas, quizzes montados com IA, avaliação
+> com pontuação ponderada e rubricas) — ver [`docs/ROADMAP.md`](docs/ROADMAP.md).
+> O roadmap da fase educacional, já concluído, está arquivado em
+> [`docs/ROADMAP-v1.md`](docs/ROADMAP-v1.md).
+
 ## Sumário
 
 - [Stack](#stack)
@@ -65,7 +71,11 @@ fases desbloqueável e ranking.
 │   ├── 18_badge_sem_dica_seed.sql #  Seed do badge "sem usar dica"
 │   ├── 19_desempenho_fases.sql   #   View de relatório agregado por fase
 │   ├── 20_ranking_classe.sql     #   Classe (Mestre de X) no ranking
-│   └── 21_desafios.sql           #   Desafio assíncrono entre colegas
+│   ├── 21_desafios.sql           #   Desafio assíncrono entre colegas
+│   ├── 22_fichas.sql             #   Fichas (moeda gastável, ledger)
+│   ├── 23_loja.sql               #   Loja de poderes e cosméticos
+│   ├── 24_missoes.sql            #   Missões diárias
+│   └── 25_desafio_diario.sql     #   Desafio diário (seed por data)
 ├── backend/
 │   └── src/
 │       ├── config/               # Cliente Supabase, variáveis de ambiente

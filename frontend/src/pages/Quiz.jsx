@@ -13,8 +13,10 @@ import pixelTriste from '../assets/img/pixel-triste.svg';
 import { somLigado, alternarSom, tocarClique, tocarAcerto, tocarErro, tocarTick } from '../lib/sons.js';
 
 export default function Quiz() {
-  // /quiz/:faseId (campanha) ou /quiz/custom/:quizId (quiz da turma)
+  // /quiz/:faseId (campanha), /quiz/custom/:quizId (quiz da turma) ou
+  // /quiz/diario (desafio diário — mesmas questões pra todo mundo hoje)
   const { faseId, quizId } = useParams();
+  const ehDesafioDiario = faseId === 'diario';
   const { recarregarPerfil, perfil } = useAuth();
 
   const [quiz, setQuiz] = useState(null); // { tentativa_id, fase|quiz, questoes }
@@ -53,6 +55,10 @@ export default function Quiz() {
   // desafio acaba ali, sem precisar responder o resto das questões
   const [errosCount, setErrosCount] = useState(0);
 
+  // Combo de acertos seguidos — só animação/feedback: o bônus de XP é
+  // calculado pelo servidor em /quiz/finalizar
+  const [comboAtual, setComboAtual] = useState(0);
+
   const [tempoRestante, setTempoRestante] = useState(0);
   const inicioQuestaoRef = useRef(Date.now());
   const ultimoTickRef = useRef(null); // evita tocar o tick 2x no mesmo segundo
@@ -69,7 +75,9 @@ export default function Quiz() {
   useEffect(() => {
     const chamada = quizId
       ? api.post('/quiz/iniciar-custom', { quiz_id: quizId })
-      : api.post('/quiz/iniciar', { fase_id: Number(faseId) });
+      : ehDesafioDiario
+        ? api.post('/desafio-diario/iniciar')
+        : api.post('/quiz/iniciar', { fase_id: Number(faseId) });
     chamada
       .then((dados) => {
         setQuiz(dados);
@@ -93,10 +101,13 @@ export default function Quiz() {
           tempo_resposta_ms: Date.now() - inicioQuestaoRef.current,
         });
         setFeedback(fb);
-        if (fb.correta) som(tocarAcerto);
-        else {
+        if (fb.correta) {
+          som(tocarAcerto);
+          setComboAtual((n) => n + 1);
+        } else {
           som(tocarErro);
           setErrosCount((n) => n + 1);
+          setComboAtual(0);
         }
       } catch (err) {
         setErro(err.message);
@@ -120,10 +131,13 @@ export default function Quiz() {
           ordem,
         });
         setFeedbackSeq(fb);
-        if (fb.correta) som(tocarAcerto);
-        else {
+        if (fb.correta) {
+          som(tocarAcerto);
+          setComboAtual((n) => n + 1);
+        } else {
           som(tocarErro);
           setErrosCount((n) => n + 1);
+          setComboAtual(0);
         }
       } catch (err) {
         setErro(err.message);
@@ -281,6 +295,15 @@ export default function Quiz() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {comboAtual >= 2 && (
+            <span
+              className="anim-pop flex items-center gap-1 border-2 border-cyan-500/40 bg-cyan-500/10 px-2 py-1 text-xs font-bold text-cyan-300"
+              title="Acertos seguidos — bônus de XP no final"
+            >
+              <PixelIcon nome="zap" className="h-4 w-4" />
+              COMBO ×{comboAtual}
+            </span>
+          )}
           {vidasMax != null && (
             <div className="flex items-center gap-1" title={`${Math.max(0, vidasMax - errosCount)} de ${vidasMax} vidas`}>
               {Array.from({ length: vidasMax }, (_, i) => (
@@ -394,8 +417,10 @@ export default function Quiz() {
         </div>
       )}
 
-      {/* poderes — eliminar/tempo extra não se aplicam ao minigame de reordenar (sem alternativas) */}
+      {/* poderes — eliminar/tempo extra não se aplicam ao minigame de reordenar
+          (sem alternativas) nem ao desafio diário (arena justa, sem poderes) */}
       {!respondida &&
+        !ehDesafioDiario &&
         (estoquePoderes.pular_questao > 0 ||
           (questao.formato !== 'reordenar_algoritmo' &&
             (estoquePoderes.eliminar_alternativa > 0 || estoquePoderes.tempo_extra > 0))) && (

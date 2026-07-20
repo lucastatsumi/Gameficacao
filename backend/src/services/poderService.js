@@ -56,6 +56,11 @@ export async function usarPoder(userId, dados) {
 
   const tentativa = await buscarTentativa(userId, tentativa_id);
   if (tentativa.finalizada_em) throw new HttpError(409, 'Esta tentativa já foi finalizada');
+  // Desafio diário é a arena "justa": mesmas questões para todos, sem
+  // poderes — senão o ranking do dia mediria estoque de poder, não acerto.
+  if (tentativa.desafio_dia) {
+    throw new HttpError(400, 'Poderes não podem ser usados no desafio diário');
+  }
 
   const { data: questao, error: erroQuestao } = await db
     .from('questoes')

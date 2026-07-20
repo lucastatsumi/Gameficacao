@@ -6,6 +6,8 @@ import { dataDeHoje, proximoStreak } from '../utils/streak.js';
 import { verificarBadges } from './badgeService.js';
 import { eventoAtivoParaFase } from './eventoService.js';
 import { selecionarAdaptativo } from '../utils/dificuldadeAdaptativa.js';
+import { aplicarCombo } from '../utils/combo.js';
+import { idsDoDesafio } from './desafioDiarioService.js';
 
 const TENTATIVAS_PARA_DIFICULDADE = 5; // janela recente usada para medir desempenho na fase
 
@@ -218,12 +220,20 @@ export async function responderQuestao(userId, dados) {
   if (erroQuestao) throw erroQuestao;
   if (!questao) throw new HttpError(400, 'Questão não encontrada');
 
-  // A questão precisa pertencer à origem da tentativa (fase ou quiz custom)
+  // A questão precisa pertencer à origem da tentativa (fase, quiz custom
+  // ou desafio diário)
   let tempoLimiteSeg = questao.tempo_limite_seg;
   if (tentativa.quiz_custom_id) {
     await exigirQuestaoNoQuiz(tentativa.quiz_custom_id, questao_id);
     const quiz = await buscarQuizCustom(tentativa.quiz_custom_id);
     tempoLimiteSeg = quiz.tempo_limite_seg ?? questao.tempo_limite_seg;
+  } else if (tentativa.desafio_dia) {
+    // O conjunto do dia é derivado da seed da data — recalcular é barato e
+    // impede responder questões fora do desafio (quebraria o ranking justo)
+    const idsDoDia = await idsDoDesafio(tentativa.desafio_dia);
+    if (!idsDoDia.includes(questao_id)) {
+      throw new HttpError(400, 'Questão não pertence ao desafio de hoje');
+    }
   } else if (questao.fase_id !== tentativa.fase_id) {
     throw new HttpError(400, 'Questão não pertence a esta tentativa');
   }
@@ -373,7 +383,10 @@ export async function finalizarQuiz(usuario, tentativaId) {
   const tentativa = await buscarTentativa(usuario.id, tentativaId);
   if (tentativa.finalizada_em) throw new HttpError(409, 'Esta tentativa já foi finalizada');
 
-  const ehCustom = Boolean(tentativa.quiz_custom_id);
+  const ehDesafioDiario = Boolean(tentativa.desafio_dia);
+  // "Custom" aqui significa "sem fase associada" (quiz custom OU desafio
+  // diário): pula evento e progresso de fase.
+  const ehCustom = Boolean(tentativa.quiz_custom_id) || ehDesafioDiario;
 
   // Streak diário: qualquer quiz finalizado (campanha ou custom) conta como
   // atividade do dia. Calculado ANTES do XP porque o bônus de streak entra
@@ -385,16 +398,19 @@ export async function finalizarQuiz(usuario, tentativaId) {
     hoje,
   });
 
+  // Ordenado por respondida_em porque o combo depende da SEQUÊNCIA real
+  // em que o aluno respondeu.
   const { data: respostas, error: erroRespostas } = await db
     .from('respostas')
-    .select('correta, usou_dica, tempo_resposta_ms, questoes ( xp_valor )')
-    .eq('tentativa_id', tentativaId);
+    .select('correta, usou_dica, tempo_resposta_ms, respondida_em, questoes ( xp_valor )')
+    .eq('tentativa_id', tentativaId)
+    .order('respondida_em', { ascending: true });
   if (erroRespostas) throw erroRespostas;
 
   const acertos = respostas.filter((r) => r.correta).length;
-  const xpSemEvento = respostas
-    .filter((r) => r.correta)
-    .reduce((soma, r) => soma + xpDaResposta(r), 0);
+  // Combo de acertos consecutivos (×1.1/×1.25/×1.5): o bônus é calculado
+  // aqui, no servidor — o cliente só anima o contador.
+  const { xpBase: xpSemEvento, bonusCombo, comboMax } = aplicarCombo(respostas, xpDaResposta);
 
   // Evento temporário (ex.: "semana das árvores"): multiplica o XP bruto
   // desta tentativa. Só se aplica ao modo campanha — quiz custom não tem
@@ -408,7 +424,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
   // até um teto de +20 (streak de 21+ dias).
   const bonusStreak = xpSemEvento > 0 ? Math.min(Math.max(0, streakDias - 1), 20) : 0;
 
-  const xpBruto = Math.round(xpSemEvento * multiplicadorEvento) + bonusStreak;
+  const xpBruto = Math.round(xpSemEvento * multiplicadorEvento) + bonusStreak + bonusCombo;
 
   // Poder "pular_questao": a questão pulada nunca vira uma linha em
   // `respostas` (o cliente não responde), então precisa ser excluída do
@@ -424,8 +440,11 @@ export async function finalizarQuiz(usuario, tentativaId) {
   const aprovada = acertos >= Math.ceil(totalEfetivo * PCT_APROVACAO);
 
   // Anti-farming: repetir só rende o XP que EXCEDER o melhor desempenho
-  // anterior na mesma origem (fase ou quiz custom).
-  const melhorAnterior = await melhorXpBrutoAnterior(usuario.id, tentativa, tentativaId);
+  // anterior na mesma origem (fase ou quiz custom). O desafio diário fica
+  // fora — só existe 1 tentativa por dia e as questões mudam a cada dia.
+  const melhorAnterior = ehDesafioDiario
+    ? 0
+    : await melhorXpBrutoAnterior(usuario.id, tentativa, tentativaId);
   const xpGanho = Math.max(0, xpBruto - melhorAnterior);
 
   const { error: erroTentativa } = await db
@@ -485,19 +504,25 @@ export async function finalizarQuiz(usuario, tentativaId) {
   });
 
   let titulo = fase?.nome;
-  if (ehCustom) {
+  if (ehDesafioDiario) {
+    titulo = 'Desafio Diário';
+  } else if (tentativa.quiz_custom_id) {
     const quiz = await buscarQuizCustom(tentativa.quiz_custom_id);
     titulo = quiz.titulo;
   }
 
   return {
     fase: titulo,
+    desafio_diario: ehDesafioDiario,
     acertos,
     total_questoes: tentativa.total_questoes,
     questoes_puladas: puladasData.length,
     aprovada,
+    sem_dica: semDica,
     xp_bruto: xpBruto,
     bonus_streak: bonusStreak,
+    bonus_combo: bonusCombo,
+    combo_max: comboMax,
     xp_ganho: xpGanho,
     xp_total: xpTotal,
     nivel,

@@ -28,8 +28,13 @@ const ROSTO = [
   '01111110',
 ];
 
-export default function AvatarPixel({ nivel = 1, className = 'h-14 w-14' }) {
-  const faixa = faixaPorNivel(nivel);
+// `paleta` (opcional, vinda da loja: { pele, acento }) sobrepõe as cores
+// da faixa de nível — os acessórios por nível continuam os mesmos.
+export default function AvatarPixel({ nivel = 1, paleta = null, className = 'h-14 w-14' }) {
+  const faixaBase = faixaPorNivel(nivel);
+  const faixa = paleta?.pele
+    ? { ...faixaBase, pele: paleta.pele, acento: paleta.acento ?? faixaBase.acento }
+    : faixaBase;
   const tam = 8;
   const px = 100 / tam;
 
@@ -55,7 +60,7 @@ export default function AvatarPixel({ nivel = 1, className = 'h-14 w-14' }) {
   // acessórios cumulativos por faixa: aventureiro+ ganha bandana,
   // especialista+ ganha ombreiras, lenda ganha coroa
   const acessorios = [];
-  const indiceFaixa = FAIXAS.indexOf(faixa);
+  const indiceFaixa = FAIXAS.indexOf(faixaBase);
   if (indiceFaixa >= 1) {
     // bandana: linha logo acima dos olhos
     for (let x = 1; x < 7; x++) {
