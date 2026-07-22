@@ -224,20 +224,34 @@ mecânica do horizonte — quick win).*
   são ordenadas e timestamped — nenhuma coluna nova); o frontend só
   ANIMA o contador ("COMBO ×1.5!"), nunca calcula.
 
-### 4.5 Ligas semanais
+### 4.5 Ligas semanais ✅ implementado
 
 *Objetivo: competição justa para todos os níveis — o ranking global atual
 premia veteranos para sempre; novato nunca alcança.*
 
+> **Como saiu**: `database/27_ligas_semanais.sql` (`ligas_jogador` com a
+> divisão atual + `ligas_semana` como balde por jogador/semana ISO,
+> `xp_semana`, `fechada`) + `ligaService.js` (10 testes) + aba "Liga" na
+> tela de Ranking. `utils/semana.js` calcula a semana ISO 8601
+> (`YYYY-Www`) sem depender de cron. XP entra pelo mesmo hook de
+> `finalizarQuiz` que já alimenta fichas e missões (herda o anti-farming:
+> só tentativa com `xp_ganho > 0` conta). Migrações 01–27 validadas em
+> Postgres local (constraints de divisão, PK composta e `xp_semana >= 0`
+> testadas manualmente).
+
 - Divisões Bronze → Prata → Ouro → Diamante. O ranking da semana é por
-  **XP ganho NA semana** (não total): todo mundo começa a segunda-feira
+  **XP ganho NA semana** (não total): todo mundo começa a semana
   zerado dentro da sua divisão.
-- Fim da semana: top 20% da divisão sobe, bottom 20% desce, todos ganham
-  fichas conforme a posição.
+- Fim da semana: top 20% da divisão sobe, bottom 20% desce (sem passar dos
+  limites Bronze/Diamante), todos ganham fichas conforme o terço (20 no
+  topo, 10 no meio, 5 no fundo).
 - Backend: `ligas_semana` (jogador, divisão, xp_semana, semana ISO) com
   fechamento **lazy** — o primeiro acesso após a virada da semana
-  processa a promoção/rebaixamento (sem depender de cron externo, que
-  este ambiente não tem como garantir).
+  (quiz ou só abrir a tela de liga) processa a promoção/rebaixamento
+  contra o cohort já imutável da semana anterior (sem depender de cron
+  externo, que este ambiente não tem como garantir); update condicionado
+  a `fechada = false` evita pagar fichas duas vezes em acessos
+  concorrentes.
 
 ### 4.6 Temporadas e passe de missões
 
@@ -350,7 +364,7 @@ generosidade, não competição.*
 | Economia + loja (4.1, 4.2) | Propósito pós-nível | Médio | nada | ✅ |
 | Missões (4.3) | Motivo para abrir hoje | Médio | fichas (4.1) | ✅ diárias |
 | Desafio diário (4.8) | Ritual compartilhado | Médio | nada | ✅ |
-| Ligas semanais (4.5) | Competição justa | Médio | nada | — |
+| Ligas semanais (4.5) | Competição justa | Médio | nada | ✅ |
 | Kudos (4.12) | Reconhecimento social | Baixo | fichas (4.1) | — |
 | Raid boss (4.7) | Objetivo coletivo | Alto | equipes (H1) | — |
 | Cartas (4.9) | Colecionismo educativo | Alto | competências (H1/H3) | — |
@@ -361,10 +375,12 @@ generosidade, não competição.*
 **Sequência recomendada dentro do horizonte**: ~~4.4 (combo) → 4.1+4.2
 (economia+loja) → 4.3 (missões) → 4.8 (desafio diário)~~ ✅ **o núcleo do
 loop diário inteiro está implementado e validado** (212 testes de backend,
-migrações 22–25 validadas em Postgres local). Próximos: 4.5 (ligas) →
-4.12 (kudos) → 4.7 (raid) → 4.10 (mascote) → 4.9 (cartas) → 4.6
-(temporadas) → 4.11 (prestígio) — os quatro sociais/coletivos rendem mais
-depois que o Horizonte 1 criar equipes de verdade.
+migrações 22–25 validadas em Postgres local). ~~4.5 (ligas semanais)~~ ✅
+**implementado e validado** (239 testes de backend, migrações 22–27
+validadas em Postgres local). Próximos: 4.12 (kudos) → 4.7 (raid) → 4.10
+(mascote) → 4.9 (cartas) → 4.6 (temporadas) → 4.11 (prestígio) — os
+quatro sociais/coletivos rendem mais depois que o Horizonte 1 criar
+equipes de verdade.
 
 ### Campanhas e torneios (empacotamento para o gestor)
 
@@ -418,8 +434,9 @@ ambiente não tem como criar/validar sozinho:
 4. Geração de questões com IA (Horizonte 2) — maior valor percebido.
 5. Questão aberta com rubrica por IA (Horizonte 3, parte não
    determinística) — depende da infra de IA do passo 4.
-6. Gamificação social e coletiva (Horizonte 4: ligas → kudos → raid →
-   mascote) — depende de equipes (H1) para brilhar de verdade.
+6. Gamificação social e coletiva (Horizonte 4: ~~ligas~~ ✅ → kudos → raid
+   → mascote) — kudos ainda não depende de equipes; raid e mascote
+   dependem de equipes (H1) para brilhar de verdade.
 7. Arcos longos (Horizonte 4: cartas → temporadas → prestígio) — empilham
    sobre economia, competências e trilhas já estabelecidas.
 8. Multi-tenancy (Horizonte 5) — antes de qualquer piloto com 2+ empresas.

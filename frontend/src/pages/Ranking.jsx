@@ -11,15 +11,26 @@ import pixelPodio from '../assets/img/pixel-podio.svg';
 // cores das medalhas do pódio (ouro, prata, bronze)
 const CORES_MEDALHA = ['text-amber-400', 'text-slate-300', 'text-amber-700'];
 
+// divisões da liga semanal (roadmap 4.5), da mais baixa pra mais alta
+const DIVISAO_LABEL = { bronze: 'Bronze', prata: 'Prata', ouro: 'Ouro', diamante: 'Diamante' };
+const DIVISAO_COR = {
+  bronze: 'text-amber-700',
+  prata: 'text-slate-300',
+  ouro: 'text-amber-400',
+  diamante: 'text-cyan-300',
+};
+
 export default function Ranking() {
   const { perfil } = useAuth();
-  const [aba, setAba] = useState('global'); // 'global' | 'turma' | 'fase'
+  const [aba, setAba] = useState('global'); // 'global' | 'turma' | 'fase' | 'liga'
   const [turmas, setTurmas] = useState([]);
   const [fases, setFases] = useState([]);
   const [turmaId, setTurmaId] = useState('');
   const [faseId, setFaseId] = useState('');
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState(null);
+  const [ligaDados, setLigaDados] = useState(null);
+  const [erroLiga, setErroLiga] = useState(null);
   const [codigoTurma, setCodigoTurma] = useState('');
   const [msgTurma, setMsgTurma] = useState(null);
   const [copiado, setCopiado] = useState(false);
@@ -38,12 +49,16 @@ export default function Ranking() {
   const carregar = useCallback(async () => {
     setDados(null);
     setErro(null);
+    setLigaDados(null);
+    setErroLiga(null);
     try {
       if (aba === 'global') setDados(await api.get('/ranking/global'));
       else if (aba === 'turma' && turmaId) setDados(await api.get(`/ranking/turma/${turmaId}`));
       else if (aba === 'fase' && faseId) setDados(await api.get(`/ranking/fase/${faseId}`));
+      else if (aba === 'liga') setLigaDados(await api.get('/liga'));
     } catch (err) {
-      setErro(err.message);
+      if (aba === 'liga') setErroLiga(err.message);
+      else setErro(err.message);
     }
   }, [aba, turmaId, faseId]);
 
@@ -91,6 +106,7 @@ export default function Ranking() {
           ['global', 'trophy', 'Global'],
           ['turma', 'users', 'Turma'],
           ['fase', 'map-pin', 'Fase'],
+          ['liga', 'flag', 'Liga'],
         ].map(([valor, icone, rotulo]) => (
           <button
             key={valor}
@@ -205,15 +221,103 @@ export default function Ranking() {
       )}
 
       <div className="mt-6">
-        {erro && <Alerta>{erro}</Alerta>}
-        {!erro && !dados && (aba === 'global' || turmaId || faseId) && <Spinner />}
+        {aba !== 'liga' && erro && <Alerta>{erro}</Alerta>}
+        {aba !== 'liga' && !erro && !dados && (aba === 'global' || turmaId || faseId) && <Spinner />}
         {!erro && !dados && aba === 'turma' && !turmaId && turmas.length > 0 && (
           <p className="text-sm text-slate-500">Selecione uma turma acima.</p>
         )}
         {!erro && !dados && aba === 'fase' && !faseId && (
           <p className="text-sm text-slate-500">Selecione uma fase acima.</p>
         )}
-        {dados && <TabelaRanking dados={dados} meuId={perfil?.id} ehFase={aba === 'fase'} />}
+        {aba !== 'liga' && dados && (
+          <TabelaRanking dados={dados} meuId={perfil?.id} ehFase={aba === 'fase'} />
+        )}
+
+        {aba === 'liga' && erroLiga && <Alerta>{erroLiga}</Alerta>}
+        {aba === 'liga' && !erroLiga && !ligaDados && <Spinner />}
+        {aba === 'liga' && ligaDados && <PainelLiga dados={ligaDados} meuId={perfil?.id} />}
+      </div>
+    </div>
+  );
+}
+
+function PainelLiga({ dados, meuId }) {
+  const { divisao, semana, xp_semana: xpSemana, posicao, total_na_divisao: total, ranking } = dados;
+
+  return (
+    <div>
+      <div className="card-pixel flex flex-wrap items-center justify-between gap-3 border-2 border-slate-800 p-4">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-slate-500">Sua divisão</p>
+          <p className={`font-pixel text-base ${DIVISAO_COR[divisao] ?? 'text-slate-300'}`}>
+            {DIVISAO_LABEL[divisao] ?? divisao}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs uppercase tracking-wide text-slate-500">XP nesta semana</p>
+          <p className="font-mono text-lg text-amber-300">{xpSemana}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Posição</p>
+          <p className="font-mono text-lg text-slate-200">
+            {posicao > 0 ? `${posicao}º de ${total}` : '—'}
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-3 text-xs text-slate-500">
+        Toda semana ({semana}) o placar zera: os 20% melhores da divisão sobem, os 20% piores
+        descem — todos ganham fichas conforme a posição.
+      </p>
+
+      <div className="mt-4">
+        {!ranking.length ? (
+          <p className="text-sm text-slate-500">Ninguém pontuou nesta divisão ainda esta semana.</p>
+        ) : (
+          <div className="card-pixel overflow-hidden border-2 border-slate-800">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-900 text-left text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-4 py-3">#</th>
+                  <th className="px-4 py-3">Jogador</th>
+                  <th className="px-4 py-3 text-right">XP na semana</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ranking.map((linha) => (
+                  <tr
+                    key={linha.user_id}
+                    className={`border-t border-slate-800 ${
+                      linha.user_id === meuId
+                        ? 'bg-indigo-500/10'
+                        : 'odd:bg-slate-950 even:bg-slate-900/40'
+                    }`}
+                  >
+                    <td className="px-4 py-3 font-mono">
+                      {linha.posicao <= 3 ? (
+                        <PixelIcon
+                          nome="trophy"
+                          className={`h-5 w-5 ${CORES_MEDALHA[linha.posicao - 1]}`}
+                        />
+                      ) : (
+                        `${linha.posicao}º`
+                      )}
+                    </td>
+                    <td className="px-4 py-3 font-medium">
+                      {linha.nome ?? 'Jogador'}
+                      {linha.user_id === meuId && (
+                        <span className="ml-2 text-xs text-indigo-300">(você)</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-amber-300">
+                      {linha.xp_semana}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
