@@ -223,12 +223,43 @@ function CartaoDesafioDiario({ status }) {
   );
 }
 
+// Card da liga semanal: divisão atual e os 3 primeiros do ranking da
+// semana (xp ganho NA semana, não o total) — o progresso é todo calculado
+// no servidor, aqui só se exibe o estado atual.
+const NOME_DIVISAO = { bronze: 'Bronze', prata: 'Prata', ouro: 'Ouro', diamante: 'Diamante' };
+
+function CartaoLiga({ liga }) {
+  if (!liga) return null;
+  return (
+    <div className="card-pixel mt-4 border-2 border-amber-500/30 bg-amber-500/5 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-300">
+          <PixelIcon nome="chart-bar-big" className="h-4 w-4" />
+          Liga {NOME_DIVISAO[liga.divisao] ?? liga.divisao} — top 20% sobe no fim da semana
+        </p>
+        <span className="text-xs text-slate-400">Seu XP na semana: {liga.xp_semana}</span>
+      </div>
+      {liga.ranking?.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+          {liga.ranking.slice(0, 3).map((r) => (
+            <span key={r.posicao} className={r.voce ? 'text-amber-300' : ''}>
+              {r.posicao}º {r.nome}
+              {r.voce ? ' (você)' : ''} — {r.xp_semana} XP
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MapaFases() {
   const { t } = useI18n();
   const [fases, setFases] = useState(null);
   const [pendente, setPendente] = useState(null);
   const [missoes, setMissoes] = useState(null);
   const [desafioDia, setDesafioDia] = useState(null);
+  const [liga, setLiga] = useState(null);
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
@@ -248,6 +279,10 @@ export default function MapaFases() {
       .get('/desafio-diario')
       .then(setDesafioDia)
       .catch(() => {}); // idem para o card do desafio diário
+    api
+      .get('/liga')
+      .then(setLiga)
+      .catch(() => {}); // idem para o card da liga semanal
   }, []);
 
   if (erro) return <Alerta>{erro}</Alerta>;
@@ -294,6 +329,7 @@ export default function MapaFases() {
       )}
 
       <CartaoDesafioDiario status={desafioDia} />
+      <CartaoLiga liga={liga} />
       <QuadroMissoes missoes={missoes} />
 
       <div className="relative mt-6 space-y-5">
