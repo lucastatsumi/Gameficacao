@@ -2,6 +2,7 @@ import * as quizService from '../services/quizService.js';
 import * as poderService from '../services/poderService.js';
 import * as fichaService from '../services/fichaService.js';
 import * as missaoService from '../services/missaoService.js';
+import * as ligaService from '../services/ligaService.js';
 
 export async function iniciar(req, res, next) {
   try {
@@ -94,6 +95,12 @@ export async function finalizar(req, res, next) {
       (soma, m) => soma + m.recompensa_fichas,
       0
     );
+
+    // Liga semanal: soma o XP desta tentativa ao acumulado da semana do
+    // jogador na divisão atual (fecha a semana anterior por trás dos panos
+    // se for o primeiro acesso da divisão desde a virada).
+    const liga = await ligaService.registrarXpNaLiga(req.usuario.id, resultado.xp_ganho);
+    resultado.liga = { divisao: liga.divisao, xp_semana: liga.xp_semana };
 
     res.json(resultado);
   } catch (err) {

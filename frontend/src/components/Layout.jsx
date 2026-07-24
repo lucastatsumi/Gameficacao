@@ -71,6 +71,11 @@ export default function Layout() {
                 {t('nav.loja')}
               </LinkNav>
             )}
+            {perfil?.role !== 'professor' && (
+              <LinkNav para="/ligas" icone="flag">
+                {t('nav.ligas')}
+              </LinkNav>
+            )}
             {perfil?.role === 'professor' && (
               <LinkNav para="/admin" icone="briefcase">
                 {t('nav.admin')}

@@ -224,16 +224,28 @@ mecânica do horizonte — quick win).*
   são ordenadas e timestamped — nenhuma coluna nova); o frontend só
   ANIMA o contador ("COMBO ×1.5!"), nunca calcula.
 
-### 4.5 Ligas semanais
+### 4.5 Ligas semanais ✅ implementado
 
 *Objetivo: competição justa para todos os níveis — o ranking global atual
 premia veteranos para sempre; novato nunca alcança.*
 
+> **Como saiu**: `database/27_ligas.sql` (tabela `ligas_semana`) +
+> `ligaService.js` (12 testes) + `utils/semana.js` (ISO 8601 determinístico,
+> mesmo estilo de `utils/streak.js`) + página `/ligas`. Uma linha por
+> jogador guarda divisão/xp_semana/semana corrente; `registrarXpNaLiga` é
+> chamado no mesmo hook pós-`finalizarQuiz` que já alimenta fichas e
+> missões. Fechamento **lazy**: o primeiro acesso — de qualquer jogador —
+> depois da virada da semana dispara `fecharSemanaDaDivisao` para a
+> divisão inteira (não só quem acessou), com guarda contra fechar a mesma
+> semana duas vezes se duas requisições chegarem juntas.
+
 - Divisões Bronze → Prata → Ouro → Diamante. O ranking da semana é por
   **XP ganho NA semana** (não total): todo mundo começa a segunda-feira
   zerado dentro da sua divisão.
-- Fim da semana: top 20% da divisão sobe, bottom 20% desce, todos ganham
-  fichas conforme a posição.
+- Fim da semana: top 20% da divisão sobe, bottom 20% desce (extremos não
+  saem de Diamante/Bronze), fichas pagas por posição (interpolação linear
+  entre o topo e a base da divisão) a quem pontuou algo — quem não jogou
+  não recebe.
 - Backend: `ligas_semana` (jogador, divisão, xp_semana, semana ISO) com
   fechamento **lazy** — o primeiro acesso após a virada da semana
   processa a promoção/rebaixamento (sem depender de cron externo, que
@@ -350,7 +362,7 @@ generosidade, não competição.*
 | Economia + loja (4.1, 4.2) | Propósito pós-nível | Médio | nada | ✅ |
 | Missões (4.3) | Motivo para abrir hoje | Médio | fichas (4.1) | ✅ diárias |
 | Desafio diário (4.8) | Ritual compartilhado | Médio | nada | ✅ |
-| Ligas semanais (4.5) | Competição justa | Médio | nada | — |
+| Ligas semanais (4.5) | Competição justa | Médio | nada | ✅ |
 | Kudos (4.12) | Reconhecimento social | Baixo | fichas (4.1) | — |
 | Raid boss (4.7) | Objetivo coletivo | Alto | equipes (H1) | — |
 | Cartas (4.9) | Colecionismo educativo | Alto | competências (H1/H3) | — |
@@ -361,10 +373,12 @@ generosidade, não competição.*
 **Sequência recomendada dentro do horizonte**: ~~4.4 (combo) → 4.1+4.2
 (economia+loja) → 4.3 (missões) → 4.8 (desafio diário)~~ ✅ **o núcleo do
 loop diário inteiro está implementado e validado** (212 testes de backend,
-migrações 22–25 validadas em Postgres local). Próximos: 4.5 (ligas) →
-4.12 (kudos) → 4.7 (raid) → 4.10 (mascote) → 4.9 (cartas) → 4.6
-(temporadas) → 4.11 (prestígio) — os quatro sociais/coletivos rendem mais
-depois que o Horizonte 1 criar equipes de verdade.
+migrações 22–25 validadas em Postgres local). ~~4.5 (ligas)~~ ✅
+**implementado e validado** (231 testes de backend, migração 27 validada
+em Postgres local). Próximos: 4.12 (kudos) → 4.7 (raid) → 4.10 (mascote) →
+4.9 (cartas) → 4.6 (temporadas) → 4.11 (prestígio) — os quatro
+sociais/coletivos rendem mais depois que o Horizonte 1 criar equipes de
+verdade.
 
 ### Campanhas e torneios (empacotamento para o gestor)
 
