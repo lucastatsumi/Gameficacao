@@ -76,7 +76,8 @@ fases desbloqueável e ranking.
 │   ├── 23_loja.sql               #   Loja de poderes e cosméticos
 │   ├── 24_missoes.sql            #   Missões diárias
 │   ├── 25_desafio_diario.sql     #   Desafio diário (seed por data)
-│   └── 26_fase_estruturas_avancadas.sql # Fase 8: grafos, hash, heaps, recursão
+│   ├── 26_fase_estruturas_avancadas.sql # Fase 8: grafos, hash, heaps, recursão
+│   └── 27_ligas.sql              #   Ligas semanais (divisões, fechamento lazy)
 ├── backend/
 │   └── src/
 │       ├── config/               # Cliente Supabase, variáveis de ambiente
