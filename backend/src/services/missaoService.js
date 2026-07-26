@@ -36,6 +36,32 @@ export async function missoesDoDia(userId) {
   return buscarAtribuidas(userId, dia);
 }
 
+// Hook chamado pelo kudosService após dar kudos: avança a missão diária
+// "dar_kudos" (roadmap 4.12) do MESMO jeito que registrarQuizNasMissoes
+// avança as demais — server-side, sem o cliente reportar progresso.
+// Devolve a missão concluída agora (ou null, se não havia nenhuma pendente).
+export async function registrarKudosNaMissao(userId) {
+  const missoes = await missoesDoDia(userId);
+  const alvo = missoes.find((m) => m.tipo === 'dar_kudos' && !m.concluida);
+  if (!alvo) return null;
+
+  const progresso = Math.min(alvo.progresso + 1, alvo.parametro);
+  const concluida = progresso >= alvo.parametro;
+
+  const { error } = await db
+    .from('missoes_do_dia')
+    .update({ progresso, concluida })
+    .eq('user_id', userId)
+    .eq('missao_id', alvo.missao_id)
+    .eq('dia', alvo.dia);
+  if (error) throw error;
+
+  if (!concluida) return null;
+
+  await concederFichas(userId, alvo.recompensa_fichas, 'missao', alvo.chave);
+  return { chave: alvo.chave, descricao: alvo.descricao, recompensa_fichas: alvo.recompensa_fichas };
+}
+
 // Hook chamado pelo controller após finalizarQuiz: aplica o resultado do
 // quiz ao progresso das missões do dia e paga as que concluírem AGORA.
 // Devolve as recém-concluídas para a tela de resultado celebrar.

@@ -4,7 +4,9 @@ import { makeDb, ok } from '../test/dbMock.js';
 vi.mock('../config/supabase.js', () => ({ db: { from: vi.fn() } }));
 
 const { db } = await import('../config/supabase.js');
-const { missoesDoDia, registrarQuizNasMissoes } = await import('./missaoService.js');
+const { missoesDoDia, registrarQuizNasMissoes, registrarKudosNaMissao } = await import(
+  './missaoService.js'
+);
 
 function configurarDb(filas) {
   const mock = makeDb(filas);
@@ -19,6 +21,8 @@ const CATALOGO = [
   { id: 2, chave: 'aprovar_1', tipo: 'aprovar_quiz', descricao: 'Aprove 1', parametro: 1, recompensa_fichas: 10 },
   { id: 3, chave: 'sem_dica_1', tipo: 'quiz_sem_dica', descricao: 'Sem dica', parametro: 1, recompensa_fichas: 15 },
   { id: 4, chave: 'poder_1', tipo: 'usar_poder', descricao: 'Use poder', parametro: 1, recompensa_fichas: 5 },
+  { id: 5, chave: 'kudos_1', tipo: 'dar_kudos', descricao: 'Reconheça um colega', parametro: 1, recompensa_fichas: 8 },
+  { id: 6, chave: 'kudos_2', tipo: 'dar_kudos', descricao: 'Reconheça 2 colegas', parametro: 2, recompensa_fichas: 12 },
 ];
 
 function atribuida(missao, extra = {}) {
@@ -142,5 +146,59 @@ describe('registrarQuizNasMissoes', () => {
     const concluidas = await registrarQuizNasMissoes('user-1', resultadoBase, 't1');
     expect(concluidas[0].chave).toBe('poder_1');
     expect(mock.chainsPara('poderes_usados')).toHaveLength(1);
+  });
+});
+
+describe('registrarKudosNaMissao', () => {
+  it('sem missão dar_kudos pendente hoje: não toca o banco de novo', async () => {
+    const mock = configurarDb({
+      missoes_do_dia: [ok([atribuida(CATALOGO[0])])], // só uma missão sorteada, e não é kudos
+    });
+
+    expect(await registrarKudosNaMissao('user-1')).toBeNull();
+    expect(mock.chainsPara('missoes_do_dia')).toHaveLength(1); // só a leitura
+  });
+
+  it('progride sem concluir e não paga fichas', async () => {
+    const mock = configurarDb({
+      missoes_do_dia: [ok([atribuida(CATALOGO[5])]), ok(null)],
+    });
+
+    expect(await registrarKudosNaMissao('user-1')).toBeNull();
+    expect(mock.chainsPara('missoes_do_dia')[1].update).toHaveBeenCalledWith({
+      progresso: 1,
+      concluida: false,
+    });
+    expect(mock.chainsPara('transacoes_fichas')).toHaveLength(0);
+  });
+
+  it('concluir paga fichas e devolve a missão', async () => {
+    const mock = configurarDb({
+      missoes_do_dia: [ok([atribuida(CATALOGO[4])]), ok(null)],
+      transacoes_fichas: [ok(null)],
+    });
+
+    const concluida = await registrarKudosNaMissao('user-1');
+    expect(concluida).toEqual({
+      chave: 'kudos_1',
+      descricao: 'Reconheça um colega',
+      recompensa_fichas: 8,
+    });
+    expect(mock.chainsPara('missoes_do_dia')[1].update).toHaveBeenCalledWith({
+      progresso: 1,
+      concluida: true,
+    });
+    expect(mock.chainsPara('transacoes_fichas')[0].insert).toHaveBeenCalledWith(
+      expect.objectContaining({ quantidade: 8, motivo: 'missao', referencia: 'kudos_1' })
+    );
+  });
+
+  it('missão já concluída não progride nem paga de novo', async () => {
+    const mock = configurarDb({
+      missoes_do_dia: [ok([atribuida(CATALOGO[4], { progresso: 1, concluida: true })])],
+    });
+
+    expect(await registrarKudosNaMissao('user-1')).toBeNull();
+    expect(mock.chainsPara('missoes_do_dia')).toHaveLength(1);
   });
 });

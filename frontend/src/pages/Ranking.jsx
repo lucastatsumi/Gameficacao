@@ -23,6 +23,9 @@ export default function Ranking() {
   const [codigoTurma, setCodigoTurma] = useState('');
   const [msgTurma, setMsgTurma] = useState(null);
   const [copiado, setCopiado] = useState(false);
+  const [kudosResumo, setKudosResumo] = useState(null);
+  const [kudosEnviados, setKudosEnviados] = useState(new Set());
+  const [kudosMsg, setKudosMsg] = useState(null);
 
   useEffect(() => {
     api
@@ -33,7 +36,31 @@ export default function Ranking() {
       .get('/fases')
       .then(setFases)
       .catch(() => {});
+    api
+      .get('/kudos')
+      .then(setKudosResumo)
+      .catch(() => {});
   }, []);
+
+  // Kudos entre colegas (roadmap 4.12): reconhecimento sem competição —
+  // 3 por semana, um por colega. O servidor decide fichas e teto; aqui só
+  // refletimos a resposta na UI.
+  async function darKudos(userId) {
+    setKudosMsg(null);
+    try {
+      const resultado = await api.post('/kudos', { para_usuario: userId });
+      setKudosEnviados((atual) => new Set(atual).add(userId));
+      setKudosResumo((atual) => (atual ? { ...atual, dados: atual.dados + 1, restantes: resultado.restantes } : atual));
+      setKudosMsg({
+        tipo: 'sucesso',
+        texto: resultado.fichas_concedidas
+          ? 'Kudos enviado! Seu colega ganhou fichas.'
+          : 'Kudos enviado!',
+      });
+    } catch (err) {
+      setKudosMsg({ tipo: 'erro', texto: err.message });
+    }
+  }
 
   const carregar = useCallback(async () => {
     setDados(null);
@@ -204,6 +231,18 @@ export default function Ranking() {
         </Link>
       )}
 
+      {kudosResumo && (
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+          <PixelIcon nome="heart" className="h-4 w-4 text-rose-400" />
+          Kudos restantes esta semana: {kudosResumo.restantes}/3
+          {kudosMsg && (
+            <span className={kudosMsg.tipo === 'erro' ? 'text-rose-400' : 'text-emerald-400'}>
+              — {kudosMsg.texto}
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="mt-6">
         {erro && <Alerta>{erro}</Alerta>}
         {!erro && !dados && (aba === 'global' || turmaId || faseId) && <Spinner />}
@@ -213,13 +252,22 @@ export default function Ranking() {
         {!erro && !dados && aba === 'fase' && !faseId && (
           <p className="text-sm text-slate-500">Selecione uma fase acima.</p>
         )}
-        {dados && <TabelaRanking dados={dados} meuId={perfil?.id} ehFase={aba === 'fase'} />}
+        {dados && (
+          <TabelaRanking
+            dados={dados}
+            meuId={perfil?.id}
+            ehFase={aba === 'fase'}
+            kudosRestantes={kudosResumo?.restantes ?? 0}
+            kudosEnviados={kudosEnviados}
+            aoDarKudos={darKudos}
+          />
+        )}
       </div>
     </div>
   );
 }
 
-function TabelaRanking({ dados, meuId, ehFase }) {
+function TabelaRanking({ dados, meuId, ehFase, kudosRestantes, kudosEnviados, aoDarKudos }) {
   const { ranking, minha_posicao: minha } = dados;
 
   if (!ranking.length) {
@@ -237,20 +285,29 @@ function TabelaRanking({ dados, meuId, ehFase }) {
             <th className="px-4 py-3">Jogador</th>
             {!ehFase && <th className="px-4 py-3">Nível</th>}
             <th className="px-4 py-3 text-right">{ehFase ? 'XP na fase' : 'XP total'}</th>
+            <th className="px-4 py-3" />
           </tr>
         </thead>
         <tbody>
           {ranking.map((linha) => (
-            <LinhaRanking key={linha.id} linha={linha} souEu={linha.id === meuId} ehFase={ehFase} />
+            <LinhaRanking
+              key={linha.id}
+              linha={linha}
+              souEu={linha.id === meuId}
+              ehFase={ehFase}
+              kudosRestantes={kudosRestantes}
+              jaEnviado={kudosEnviados.has(linha.id)}
+              aoDarKudos={aoDarKudos}
+            />
           ))}
           {minhaForaDoTopo && (
             <>
               <tr>
-                <td colSpan={ehFase ? 3 : 4} className="px-4 py-1 text-center text-slate-600">
+                <td colSpan={ehFase ? 4 : 5} className="px-4 py-1 text-center text-slate-600">
                   ⋯
                 </td>
               </tr>
-              <LinhaRanking linha={minha} souEu ehFase={ehFase} />
+              <LinhaRanking linha={minha} souEu ehFase={ehFase} kudosRestantes={0} jaEnviado aoDarKudos={aoDarKudos} />
             </>
           )}
         </tbody>
@@ -259,7 +316,7 @@ function TabelaRanking({ dados, meuId, ehFase }) {
   );
 }
 
-function LinhaRanking({ linha, souEu, ehFase }) {
+function LinhaRanking({ linha, souEu, ehFase, kudosRestantes, jaEnviado, aoDarKudos }) {
   return (
     <tr
       className={`border-t border-slate-800 ${souEu ? 'bg-indigo-500/10' : 'odd:bg-slate-950 even:bg-slate-900/40'}`}
@@ -286,6 +343,19 @@ function LinhaRanking({ linha, souEu, ehFase }) {
       {!ehFase && <td className="px-4 py-3 text-slate-400">Nv. {linha.nivel}</td>}
       <td className="px-4 py-3 text-right font-mono text-amber-300">
         {ehFase ? linha.xp_fase : linha.xp_total}
+      </td>
+      <td className="px-4 py-3 text-right">
+        {!souEu && (
+          <button
+            onClick={() => aoDarKudos(linha.id)}
+            disabled={jaEnviado || kudosRestantes <= 0}
+            title={jaEnviado ? 'Kudos já enviado' : 'Dar kudos'}
+            aria-label={`Dar kudos a ${linha.nome}`}
+            className="btn-pixel inline-flex items-center gap-1 bg-slate-800 px-2 py-1 text-xs text-slate-300 hover:bg-rose-500/20 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-800 disabled:hover:text-slate-300"
+          >
+            <PixelIcon nome="heart" className={`h-3.5 w-3.5 ${jaEnviado ? 'text-rose-400' : ''}`} />
+          </button>
+        )}
       </td>
     </tr>
   );

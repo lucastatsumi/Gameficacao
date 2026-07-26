@@ -344,17 +344,37 @@ veterano.*
 - Backend: `prestigio` (jogador, tema, ciclo) + filtro extra no sorteio
   de questões — reusa a infra da dificuldade adaptativa.
 
-### 4.12 Kudos entre colegas
+### 4.12 Kudos entre colegas ✅ implementado
 
 *Objetivo: reconhecimento social positivo — a única mecânica movida por
 generosidade, não competição.*
 
-- Cada jogador tem **3 kudos por semana** para dar a colegas (no ranking
-  ou após um desafio). Receber kudos rende fichas pequenas; dar kudos
-  conta para missão ("reconheça um colega").
-- Anti-conluio: kudos recíproco no mesmo dia não rende fichas; teto
-  semanal de fichas por kudos recebidos.
-- Backend: `kudos` (de, para, semana) com unique por par/semana.
+> **Como saiu**: `database/28_kudos.sql` (`kudos` com unique
+> `de_usuario+para_usuario+semana` e check `de_usuario <> para_usuario`) +
+> `kudosService.js` (10 testes) + rota `GET/POST /kudos` + botão de coração
+> em cada linha do Ranking (exceto a própria). `utils/semana.js` (já usado
+> pelas ligas) dá o rótulo da semana; **não** há coluna de fichas
+> acumuladas — `kudos.fichas_concedidas` grava, POR LINHA, se aquele kudos
+> específico rendeu fichas, e o teto semanal é contado somando essas
+> linhas (sem precisar reconsultar o ledger por intervalo de data).
+> Reciprocidade (A↔B no mesmo dia) e teto batido só bloqueiam as FICHAS —
+> o kudos em si sempre é registrado e conta para a missão. Missão diária
+> nova (`missoes_catalogo`, tipo `dar_kudos`) avançada por
+> `missaoService.registrarKudosNaMissao`, mesmo padrão server-side das
+> demais missões. Cadeia de migrations 01→28 reaplicada do zero em
+> Postgres 16 local (roles/stubs do Supabase simulados) para validar que
+> `28_kudos.sql` não quebra o histórico; unique e check testados com
+> inserts reais.
+
+- Cada jogador tem **3 kudos por semana** para dar a colegas, um botão de
+  coração por linha no Ranking. Receber kudos rende 3 fichas; dar kudos
+  conta para a missão diária "Reconheça um colega com kudos hoje".
+- Anti-conluio: kudos recíproco no mesmo dia (A dá pra B, B dá de volta
+  pra A no mesmo dia) não rende fichas para o segundo; teto semanal de 15
+  fichas por kudos recebidos (5 kudos "pagos"/semana).
+- Backend: `kudos` (de, para, semana) com unique por par/semana — o
+  próprio unique é a trava contra dar kudos duas vezes ao mesmo colega na
+  semana (409 amigável via código 23505).
 
 ### Mapa mecânica × objetivo × esforço
 
@@ -365,7 +385,7 @@ generosidade, não competição.*
 | Missões (4.3) | Motivo para abrir hoje | Médio | fichas (4.1) | ✅ diárias |
 | Desafio diário (4.8) | Ritual compartilhado | Médio | nada | ✅ |
 | Ligas semanais (4.5) | Competição justa | Médio | nada | ✅ |
-| Kudos (4.12) | Reconhecimento social | Baixo | fichas (4.1) | — |
+| Kudos (4.12) | Reconhecimento social | Baixo | fichas (4.1) | ✅ |
 | Raid boss (4.7) | Objetivo coletivo | Alto | equipes (H1) | — |
 | Cartas (4.9) | Colecionismo educativo | Alto | competências (H1/H3) | — |
 | Mascote de equipe (4.10) | Nudge social agregado | Baixo | equipes (H1) | — |
@@ -376,11 +396,15 @@ generosidade, não competição.*
 (economia+loja) → 4.3 (missões) → 4.8 (desafio diário)~~ ✅ **o núcleo do
 loop diário inteiro está implementado e validado**; ~~4.5 (ligas
 semanais)~~ ✅ **também implementado e validado** (243 testes de backend,
-24 de frontend, migração 27 aplicada e exercitada em Postgres 16 local).
-Próximos: 4.12 (kudos) → 4.7 (raid) → 4.10 (mascote) →
+24 de frontend, migração 27 aplicada e exercitada em Postgres 16 local);
+~~4.12 (kudos)~~ ✅ **também implementado e validado** (257 testes de
+backend, 24 de frontend, migração 28 aplicada sobre a cadeia inteira
+01→28 em Postgres 16 local).
+Próximos: 4.7 (raid) → 4.10 (mascote) →
 4.9 (cartas) → 4.6 (temporadas) → 4.11 (prestígio) — os quatro
 sociais/coletivos rendem mais depois que o Horizonte 1 criar equipes de
-verdade.
+verdade (kudos foi a exceção: não depende de equipe, é 1:1 entre
+colegas).
 
 ### Campanhas e torneios (empacotamento para o gestor)
 
