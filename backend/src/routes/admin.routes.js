@@ -27,3 +27,8 @@ adminRoutes.get('/relatorio/fases', adminController.relatorioFases);
 adminRoutes.get('/eventos', adminController.listarEventos);
 adminRoutes.post('/eventos', adminController.criarEvento);
 adminRoutes.delete('/eventos/:id', adminController.removerEvento);
+
+// Temporadas
+adminRoutes.get('/temporadas', adminController.listarTemporadas);
+adminRoutes.post('/temporadas', adminController.criarTemporada);
+adminRoutes.put('/temporadas/:temporadaId/trilha', adminController.definirTrilhaTemporada);

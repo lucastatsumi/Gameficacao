@@ -9,7 +9,9 @@ import { concederPoder } from './poderService.js';
 
 export async function listarCatalogo(userId) {
   const [{ data: itens, error }, possuidos, equipados] = await Promise.all([
-    db.from('itens_catalogo').select('*').order('preco', { ascending: true }),
+    // Cosméticos exclusivos de temporada (roadmap 4.6) nunca aparecem
+    // aqui: só são concedidos ao cruzar um marco da trilha, nunca comprados.
+    db.from('itens_catalogo').select('*').is('temporada_id', null).order('preco', { ascending: true }),
     itensDoJogador(userId),
     equipadosDoJogador(userId),
   ]);

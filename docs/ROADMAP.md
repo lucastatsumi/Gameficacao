@@ -253,10 +253,38 @@ premia veteranos para sempre; novato nunca alcança.*
   processa a promoção/rebaixamento (sem depender de cron externo, que
   este ambiente não tem como garantir).
 
-### 4.6 Temporadas e passe de missões
+### 4.6 Temporadas e passe de missões ✅ implementado
 
 *Objetivo: arco de longo prazo renovável — e o gancho corporativo
 perfeito para campanhas trimestrais de treinamento.*
+
+> **Como saiu**: `database/29_temporadas.sql` (`temporadas` + acumulador
+> `temporada_pontos` + trilha `temporada_recompensas` + resgates
+> `temporada_resgates` + view `ranking_temporada`; coluna
+> `itens_catalogo.temporada_id` marca cosmético exclusivo) +
+> `temporadaService.js` (22 testes) + rotas `GET /temporadas`,
+> `GET /temporadas/:id/hall-da-fama`, admin `POST/GET /admin/temporadas`
+> e `PUT /admin/temporadas/:id/trilha` + página `/temporada`. Pontos só
+> somam dentro de `[inicio, fim]` (mesma ideia de
+> `eventoService.eventoAtivoParaFase`) — o placar de uma temporada
+> encerrada já está "congelado" sozinho, sem precisar de snapshot nem
+> cron externo; `ranking_temporada` serve de hall da fama tanto para a
+> temporada ativa quanto para as encerradas. Hook em
+> `quizController.finalizar`, ao lado de `concederXpSemana`, soma o
+> mesmo `xp_ganho` (já filtrado pelo anti-farming de `finalizarQuiz`) aos
+> pontos da temporada ativa (se houver) e resgata automaticamente todo
+> degrau cruzado — o insert em `temporada_resgates` é a própria trava de
+> idempotência (23505 = já resgatado por outra requisição), mesma ideia
+> de `ligas_fechamentos`. Cosméticos da trilha reusam
+> `itens_catalogo`/`itens_do_jogador` (equipar/exibir de
+> `lojaService.js` sem mudança) — só que **concedidos** ao cruzar o
+> marco, nunca comprados; `lojaService.listarCatalogo` filtra
+> `temporada_id is null` para que nunca apareçam na loja normal. Cadeia
+> de migrations 01→29 reaplicada do zero em Postgres 16 local
+> (roles/stubs do Supabase simulados) para validar que `29_temporadas.sql`
+> não quebra o histórico; checks de exclusividade fichas/cosmético,
+> unique de posição/resgate e o filtro da loja testados com inserts
+> reais.
 
 - Temporada = 8–12 semanas com tema ("Temporada de Segurança Q1"),
   trilha de ~30 recompensas destravadas por **pontos de temporada** (=
@@ -389,7 +417,7 @@ generosidade, não competição.*
 | Raid boss (4.7) | Objetivo coletivo | Alto | equipes (H1) | — |
 | Cartas (4.9) | Colecionismo educativo | Alto | competências (H1/H3) | — |
 | Mascote de equipe (4.10) | Nudge social agregado | Baixo | equipes (H1) | — |
-| Temporadas + passe (4.6) | Arco de longo prazo | Alto | fichas, cosméticos | — |
+| Temporadas + passe (4.6) | Arco de longo prazo | Alto | fichas, cosméticos | ✅ |
 | Prestígio (4.11) | Rejogabilidade | Médio | trilhas por tema (H1) | — |
 
 **Sequência recomendada dentro do horizonte**: ~~4.4 (combo) → 4.1+4.2
@@ -399,12 +427,14 @@ semanais)~~ ✅ **também implementado e validado** (243 testes de backend,
 24 de frontend, migração 27 aplicada e exercitada em Postgres 16 local);
 ~~4.12 (kudos)~~ ✅ **também implementado e validado** (257 testes de
 backend, 24 de frontend, migração 28 aplicada sobre a cadeia inteira
-01→28 em Postgres 16 local).
+01→28 em Postgres 16 local); ~~4.6 (temporadas)~~ ✅ **também
+implementado e validado** (279 testes de backend, 24 de frontend,
+migração 29 aplicada sobre a cadeia inteira 01→29 em Postgres 16 local).
 Próximos: 4.7 (raid) → 4.10 (mascote) →
-4.9 (cartas) → 4.6 (temporadas) → 4.11 (prestígio) — os quatro
-sociais/coletivos rendem mais depois que o Horizonte 1 criar equipes de
-verdade (kudos foi a exceção: não depende de equipe, é 1:1 entre
-colegas).
+4.9 (cartas) → 4.11 (prestígio) — os quatro sociais/coletivos restantes
+rendem mais depois que o Horizonte 1 criar equipes de verdade (kudos e
+temporadas foram a exceção: kudos é 1:1 entre colegas, temporadas só
+precisava de fichas/cosméticos, que já existiam).
 
 ### Campanhas e torneios (empacotamento para o gestor)
 

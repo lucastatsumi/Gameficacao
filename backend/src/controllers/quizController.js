@@ -3,6 +3,7 @@ import * as poderService from '../services/poderService.js';
 import * as fichaService from '../services/fichaService.js';
 import * as missaoService from '../services/missaoService.js';
 import * as ligaService from '../services/ligaService.js';
+import * as temporadaService from '../services/temporadaService.js';
 
 export async function iniciar(req, res, next) {
   try {
@@ -100,6 +101,14 @@ export async function finalizar(req, res, next) {
     // da semana — a mesma regra anti-farming de finalizarQuiz já decide
     // quanto xp_ganho vale aqui.
     await ligaService.concederXpSemana(req.usuario.id, resultado.xp_ganho);
+
+    // Temporada (roadmap 4.6): mesmo xp_ganho alimenta os pontos da
+    // temporada ativa (se houver) e resgata automaticamente os degraus
+    // da trilha que o jogador acabou de cruzar.
+    resultado.temporada_recompensas = await temporadaService.concederPontosTemporada(
+      req.usuario.id,
+      resultado.xp_ganho
+    );
 
     res.json(resultado);
   } catch (err) {

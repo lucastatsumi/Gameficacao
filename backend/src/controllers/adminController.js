@@ -2,6 +2,7 @@ import * as turmaService from '../services/turmaService.js';
 import * as questaoService from '../services/questaoService.js';
 import * as relatorioService from '../services/relatorioService.js';
 import * as eventoService from '../services/eventoService.js';
+import * as temporadaService from '../services/temporadaService.js';
 
 // ---------- Turmas ----------
 
@@ -123,6 +124,32 @@ export async function removerEvento(req, res, next) {
   try {
     await eventoService.removerEvento(req.params.id);
     res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ---------- Temporadas ----------
+
+export async function criarTemporada(req, res, next) {
+  try {
+    res.status(201).json(await temporadaService.criarTemporada(req.body));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listarTemporadas(req, res, next) {
+  try {
+    res.json(await temporadaService.listarTemporadas());
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function definirTrilhaTemporada(req, res, next) {
+  try {
+    res.json(await temporadaService.definirTrilha(req.params.temporadaId, req.body?.degraus));
   } catch (err) {
     next(err);
   }
