@@ -182,6 +182,47 @@ function QuadroMissoes({ missoes }) {
   );
 }
 
+// Card da missão da semana — mesma ideia do quadro diário, mas com janela
+// de 7 dias (progresso também verificado só no servidor).
+function QuadroMissaoSemanal({ missoes }) {
+  if (!missoes?.length) return null;
+  return (
+    <div className="card-pixel mt-4 border-2 border-violet-500/30 bg-violet-500/5 p-3">
+      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-violet-300">
+        <PixelIcon nome="flag" className="h-4 w-4" />
+        Missão da semana
+      </p>
+      <div className="mt-2 grid gap-2 sm:grid-cols-3">
+        {missoes.map((m) => (
+          <div
+            key={m.chave}
+            className={`border-2 p-2 text-xs ${
+              m.concluida
+                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                : 'border-slate-800 bg-slate-900/60 text-slate-300'
+            }`}
+          >
+            <p className="flex items-center gap-1.5">
+              {m.concluida && <PixelIcon nome="check" className="h-3.5 w-3.5 shrink-0" />}
+              {m.descricao}
+            </p>
+            <p className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
+              <span>
+                {Math.min(m.progresso, m.parametro)}/{m.parametro}
+              </span>
+              <span className="flex items-center gap-1 text-violet-400">
+                <PixelIcon nome="star" className="h-3 w-3" />
+                {m.recompensa_fichas}
+                {m.item_recompensa_id ? ' + cosmético' : ''}
+              </span>
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Card do desafio diário: mesmas questões para todo mundo hoje, 1
 // tentativa por dia, com o pódio do dia.
 function CartaoDesafioDiario({ status }) {
@@ -228,6 +269,7 @@ export default function MapaFases() {
   const [fases, setFases] = useState(null);
   const [pendente, setPendente] = useState(null);
   const [missoes, setMissoes] = useState(null);
+  const [missoesSemana, setMissoesSemana] = useState(null);
   const [desafioDia, setDesafioDia] = useState(null);
   const [erro, setErro] = useState(null);
 
@@ -244,6 +286,10 @@ export default function MapaFases() {
       .get('/perfil/missoes')
       .then(setMissoes)
       .catch(() => {}); // idem: o mapa funciona sem o quadro de missões
+    api
+      .get('/perfil/missoes/semana')
+      .then(setMissoesSemana)
+      .catch(() => {}); // idem: o mapa funciona sem o quadro semanal
     api
       .get('/desafio-diario')
       .then(setDesafioDia)
@@ -295,6 +341,7 @@ export default function MapaFases() {
 
       <CartaoDesafioDiario status={desafioDia} />
       <QuadroMissoes missoes={missoes} />
+      <QuadroMissaoSemanal missoes={missoesSemana} />
 
       <div className="relative mt-6 space-y-5">
         {/* trilha vertical ligando as fases */}

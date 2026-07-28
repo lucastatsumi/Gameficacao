@@ -1,5 +1,6 @@
 import { db } from '../config/supabase.js';
 import { dataDeHoje } from '../utils/streak.js';
+import { semanaIso } from '../utils/semana.js';
 import { criarPrng, embaralharComSeed } from '../utils/seed.js';
 import { concederFichas } from './fichaService.js';
 
@@ -34,6 +35,37 @@ export async function missoesDoDia(userId) {
   if (erroInsert) throw erroInsert;
 
   return buscarAtribuidas(userId, dia);
+}
+
+// Missão semanal (roadmap v2, 4.3): mesma ideia das diárias, mas com
+// janela de 7 dias — `semana` é o rótulo ISO de utils/semana.js (mesmo
+// usado por ligas/kudos), então a virada acontece exatamente na mesma
+// segunda-feira das ligas. Todo catálogo com periodo='semana' é
+// atribuído (hoje só existe 1); não há sorteio porque não há o que
+// escolher entre uma opção só, mas o upsert idempotente segue o mesmo
+// padrão de concorrência das diárias.
+export async function missoesDaSemana(userId, agora = new Date()) {
+  const semana = semanaIso(agora);
+
+  const atribuidas = await buscarAtribuidasSemana(userId, semana);
+  if (atribuidas.length) return atribuidas;
+
+  const { data: catalogo, error } = await db
+    .from('missoes_catalogo')
+    .select('*')
+    .eq('periodo', 'semana');
+  if (error) throw error;
+  if (!catalogo?.length) return [];
+
+  const { error: erroInsert } = await db
+    .from('missoes_da_semana')
+    .upsert(
+      catalogo.map((m) => ({ user_id: userId, missao_id: m.id, semana })),
+      { onConflict: 'user_id,missao_id,semana', ignoreDuplicates: true }
+    );
+  if (erroInsert) throw erroInsert;
+
+  return buscarAtribuidasSemana(userId, semana);
 }
 
 // Hook chamado pelo kudosService após dar kudos: avança a missão diária
@@ -111,9 +143,56 @@ export async function registrarQuizNasMissoes(userId, resultado, tentativaId) {
   return concluidasAgora;
 }
 
+// Hook chamado pelo controller após finalizarQuiz, ao lado de
+// registrarQuizNasMissoes: mesma mecânica, mas acumulando na semana
+// inteira. Concluir paga fichas E concede o cosmético exclusivo (se a
+// missão tiver um) — o insert em itens_do_jogador ignora conflito porque
+// o jogador pode completar a mesma missão semanal de novo em semanas
+// futuras, mas o cosmético já é dele (compra única, mesma PK de lojaService).
+export async function registrarQuizNasMissoesSemanais(userId, resultado, agora = new Date()) {
+  const missoes = await missoesDaSemana(userId, agora);
+  const pendentes = missoes.filter((m) => !m.concluida);
+  if (!pendentes.length) return [];
+
+  const concluidasAgora = [];
+  for (const missao of pendentes) {
+    const delta = deltaDaMissao(missao.tipo, resultado, false);
+    if (delta <= 0) continue;
+
+    const progresso = Math.min(missao.progresso + delta, missao.parametro);
+    const concluida = progresso >= missao.parametro;
+
+    const { error } = await db
+      .from('missoes_da_semana')
+      .update({ progresso, concluida })
+      .eq('user_id', userId)
+      .eq('missao_id', missao.missao_id)
+      .eq('semana', missao.semana);
+    if (error) throw error;
+
+    if (concluida) {
+      await concederFichas(userId, missao.recompensa_fichas, 'missao_semanal', missao.chave);
+      if (missao.item_recompensa_id) {
+        const { error: erroItem } = await db
+          .from('itens_do_jogador')
+          .insert({ user_id: userId, item_id: missao.item_recompensa_id });
+        if (erroItem && erroItem.code !== '23505') throw erroItem; // 23505 = já tinha o item
+      }
+      concluidasAgora.push({
+        chave: missao.chave,
+        descricao: missao.descricao,
+        recompensa_fichas: missao.recompensa_fichas,
+        item_concedido: Boolean(missao.item_recompensa_id),
+      });
+    }
+  }
+  return concluidasAgora;
+}
+
 function deltaDaMissao(tipo, resultado, usouPoder) {
   switch (tipo) {
     case 'acertos_dia':
+    case 'acertos_semana':
       return resultado.acertos;
     case 'aprovar_quiz':
       return resultado.aprovada ? 1 : 0;
@@ -144,5 +223,29 @@ async function buscarAtribuidas(userId, dia) {
     descricao: m.missoes_catalogo.descricao,
     parametro: m.missoes_catalogo.parametro,
     recompensa_fichas: m.missoes_catalogo.recompensa_fichas,
+  }));
+}
+
+async function buscarAtribuidasSemana(userId, semana) {
+  const { data, error } = await db
+    .from('missoes_da_semana')
+    .select(
+      'missao_id, semana, progresso, concluida, missoes_catalogo ( chave, tipo, descricao, parametro, recompensa_fichas, item_recompensa_id )'
+    )
+    .eq('user_id', userId)
+    .eq('semana', semana);
+  if (error) throw error;
+
+  return (data ?? []).map((m) => ({
+    missao_id: m.missao_id,
+    semana: m.semana,
+    progresso: m.progresso,
+    concluida: m.concluida,
+    chave: m.missoes_catalogo.chave,
+    tipo: m.missoes_catalogo.tipo,
+    descricao: m.missoes_catalogo.descricao,
+    parametro: m.missoes_catalogo.parametro,
+    recompensa_fichas: m.missoes_catalogo.recompensa_fichas,
+    item_recompensa_id: m.missoes_catalogo.item_recompensa_id,
   }));
 }

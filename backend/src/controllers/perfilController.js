@@ -48,3 +48,11 @@ export async function missoes(req, res, next) {
     next(err);
   }
 }
+
+export async function missoesSemana(req, res, next) {
+  try {
+    res.json(await missaoService.missoesDaSemana(req.usuario.id));
+  } catch (err) {
+    next(err);
+  }
+}

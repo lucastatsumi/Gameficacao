@@ -97,6 +97,18 @@ export async function finalizar(req, res, next) {
       0
     );
 
+    // Missão da semana (roadmap 4.3): mesma ideia, mas acumulando acertos
+    // na janela de 7 dias — concluir também pode conceder um cosmético
+    // exclusivo, resolvido dentro do próprio missaoService.
+    resultado.missoes_semanais_concluidas = await missaoService.registrarQuizNasMissoesSemanais(
+      req.usuario.id,
+      resultado
+    );
+    resultado.fichas_ganhas += resultado.missoes_semanais_concluidas.reduce(
+      (soma, m) => soma + m.recompensa_fichas,
+      0
+    );
+
     // Liga semanal (roadmap 4.5): soma o XP desta tentativa ao acumulador
     // da semana — a mesma regra anti-farming de finalizarQuiz já decide
     // quanto xp_ganho vale aqui.

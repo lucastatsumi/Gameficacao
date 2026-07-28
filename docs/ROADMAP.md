@@ -182,18 +182,39 @@ identidade — sem pay-to-win.*
 - Backend: `itens_catalogo`, `itens_do_jogador`, `equipados` (jsonb no
   perfil). Compra é transação no ledger de fichas.
 
-### 4.3 Missões diárias e semanais (quadro de missões) ✅ diárias implementadas
+### 4.3 Missões diárias e semanais (quadro de missões) ✅ implementado
 
 *Objetivo: dar um motivo concreto para abrir o app HOJE, além do streak.*
 
-> **Como saiu**: `database/24_missoes.sql` (catálogo de 6 + atribuições
-> por jogador/dia) + `missaoService.js` (7 testes) + `utils/seed.js`
-> (PRNG mulberry32 determinístico — atribuições concorrentes convergem).
-> Progresso atualizado só no hook do controller pós-`finalizarQuiz`;
-> fichas pagas uma única vez por conclusão; quadro no MapaFases e
-> celebração no resultado. Missão SEMANAL ficou de fora desta rodada
-> (exige janela de 7 dias no acumulador — extensão natural do mesmo
-> modelo, `dia` vira `semana ISO`).
+> **Como saiu (diárias)**: `database/24_missoes.sql` (catálogo de 6 +
+> atribuições por jogador/dia) + `missaoService.js` (7 testes) +
+> `utils/seed.js` (PRNG mulberry32 determinístico — atribuições
+> concorrentes convergem). Progresso atualizado só no hook do controller
+> pós-`finalizarQuiz`; fichas pagas uma única vez por conclusão; quadro
+> no MapaFases e celebração no resultado.
+>
+> **Como saiu (semanal)**: `database/30_missoes_semanais.sql` — extensão
+> natural do mesmo modelo: `missoes_catalogo` ganha `periodo`
+> ('dia'|'semana') e `item_recompensa_id` opcional; nova tabela
+> `missoes_da_semana` (chave `user_id+missao_id+semana`) usa o rótulo
+> ISO de `utils/semana.js` (mesmo já usado por ligas/kudos), então a
+> virada acontece na mesma segunda-feira das ligas. `missaoService.js`
+> ganhou `missoesDaSemana`/`registrarQuizNasMissoesSemanais` (6 testes
+> novos, 285 no total) — mesmo hook de `finalizarQuiz`, progresso por
+> acertos acumulados na semana. Concluir paga fichas E concede um
+> cosmético exclusivo (`titulo_maratonista`); a coluna
+> `itens_catalogo.exclusivo` tira esse item da loja normal
+> (`lojaService.listarCatalogo` filtra, mesmo padrão de exclusividade que
+> `temporada_id` já usa) — o insert em `itens_do_jogador` ignora conflito
+> 23505 porque o jogador pode completar a missão de novo em semanas
+> futuras, mas o cosmético (compra única) já é dele. Quadro próprio no
+> MapaFases (`QuadroMissaoSemanal`) e celebração distinta na tela de
+> resultado. Cadeia de migrations 01→30 reaplicada do zero em Postgres 16
+> local (roles/stubs do Supabase simulados) para validar que
+> `30_missoes_semanais.sql` não quebra o histórico; fluxo completo
+> (atribuir → completar → pagar fichas → conceder cosmético → tentar
+> reconceder) exercitado com inserts reais, incluindo o conflito 23505
+> tratado pelo service e a exclusão do item da listagem da loja.
 
 - 3 missões diárias sorteadas por jogador ("acerte 5 questões de
   <tema>", "aprove 1 quiz sem usar dica", "vença 1 desafio contra
@@ -410,7 +431,7 @@ generosidade, não competição.*
 |---|---|---|---|---|
 | Combo no quiz (4.4) | Tensão momento-a-momento | Baixo | nada | ✅ |
 | Economia + loja (4.1, 4.2) | Propósito pós-nível | Médio | nada | ✅ |
-| Missões (4.3) | Motivo para abrir hoje | Médio | fichas (4.1) | ✅ diárias |
+| Missões (4.3) | Motivo para abrir hoje | Médio | fichas (4.1) | ✅ |
 | Desafio diário (4.8) | Ritual compartilhado | Médio | nada | ✅ |
 | Ligas semanais (4.5) | Competição justa | Médio | nada | ✅ |
 | Kudos (4.12) | Reconhecimento social | Baixo | fichas (4.1) | ✅ |
@@ -429,7 +450,11 @@ semanais)~~ ✅ **também implementado e validado** (243 testes de backend,
 backend, 24 de frontend, migração 28 aplicada sobre a cadeia inteira
 01→28 em Postgres 16 local); ~~4.6 (temporadas)~~ ✅ **também
 implementado e validado** (279 testes de backend, 24 de frontend,
-migração 29 aplicada sobre a cadeia inteira 01→29 em Postgres 16 local).
+migração 29 aplicada sobre a cadeia inteira 01→29 em Postgres 16 local);
+~~4.3 (missão semanal)~~ ✅ **também implementado e validado** (285
+testes de backend, 24 de frontend, migração 30 aplicada sobre a cadeia
+inteira 01→30 em Postgres 16 local) — fechando o núcleo de missões
+inteiro (diárias + semanal).
 Próximos: 4.7 (raid) → 4.10 (mascote) →
 4.9 (cartas) → 4.11 (prestígio) — os quatro sociais/coletivos restantes
 rendem mais depois que o Horizonte 1 criar equipes de verdade (kudos e

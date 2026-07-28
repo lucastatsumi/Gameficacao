@@ -68,6 +68,23 @@ export default function TelaResultado({ resultado, sons = true }) {
         </div>
       )}
 
+      {resultado.missoes_semanais_concluidas?.length > 0 && (
+        <div className="anim-pop card-pixel mt-4 border-2 border-violet-500/40 bg-violet-500/10 p-3 text-violet-300">
+          <p className="flex items-center justify-center gap-2 font-semibold">
+            <PixelIcon nome="flag" className="h-5 w-5" />
+            Missão da semana concluída!
+          </p>
+          {resultado.missoes_semanais_concluidas.map((m) => (
+            <p key={m.chave} className="mt-1 text-sm">
+              {m.descricao}{' '}
+              <span className="text-amber-300">
+                (+{m.recompensa_fichas} fichas{m.item_concedido ? ' + cosmético exclusivo' : ''})
+              </span>
+            </p>
+          ))}
+        </div>
+      )}
+
       {resultado.fichas_ganhas > 0 && (
         <div className="anim-pop card-pixel mt-4 flex items-center justify-center gap-2 border-2 border-cyan-500/40 bg-cyan-500/10 p-3 text-cyan-300">
           <PixelIcon nome="star" className="h-5 w-5" />

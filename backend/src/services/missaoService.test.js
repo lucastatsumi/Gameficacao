@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeDb, ok } from '../test/dbMock.js';
+import { fail, makeDb, ok } from '../test/dbMock.js';
 
 vi.mock('../config/supabase.js', () => ({ db: { from: vi.fn() } }));
 
 const { db } = await import('../config/supabase.js');
-const { missoesDoDia, registrarQuizNasMissoes, registrarKudosNaMissao } = await import(
-  './missaoService.js'
-);
+const {
+  missoesDoDia,
+  registrarQuizNasMissoes,
+  registrarKudosNaMissao,
+  missoesDaSemana,
+  registrarQuizNasMissoesSemanais,
+} = await import('./missaoService.js');
 
 function configurarDb(filas) {
   const mock = makeDb(filas);
@@ -37,6 +41,38 @@ function atribuida(missao, extra = {}) {
       descricao: missao.descricao,
       parametro: missao.parametro,
       recompensa_fichas: missao.recompensa_fichas,
+    },
+    ...extra,
+  };
+}
+
+const AGORA_SEMANA = new Date('2026-07-25T12:00:00Z'); // semanaIso -> '2026-W30'
+
+const CATALOGO_SEMANA = [
+  {
+    id: 7,
+    chave: 'acertos_semana_15',
+    tipo: 'acertos_semana',
+    descricao: 'Acumule 15 acertos na semana',
+    parametro: 15,
+    recompensa_fichas: 20,
+    item_recompensa_id: 9,
+  },
+];
+
+function atribuidaSemana(missao, extra = {}) {
+  return {
+    missao_id: missao.id,
+    semana: '2026-W30',
+    progresso: 0,
+    concluida: false,
+    missoes_catalogo: {
+      chave: missao.chave,
+      tipo: missao.tipo,
+      descricao: missao.descricao,
+      parametro: missao.parametro,
+      recompensa_fichas: missao.recompensa_fichas,
+      item_recompensa_id: missao.item_recompensa_id,
     },
     ...extra,
   };
@@ -200,5 +236,104 @@ describe('registrarKudosNaMissao', () => {
 
     expect(await registrarKudosNaMissao('user-1')).toBeNull();
     expect(mock.chainsPara('missoes_do_dia')).toHaveLength(1);
+  });
+});
+
+describe('missoesDaSemana', () => {
+  it('primeiro acesso da semana atribui todo o catálogo periodo=semana', async () => {
+    const mock = configurarDb({
+      missoes_da_semana: [ok([]), ok(null), ok([atribuidaSemana(CATALOGO_SEMANA[0])])],
+      missoes_catalogo: [ok(CATALOGO_SEMANA)],
+    });
+
+    const missoes = await missoesDaSemana('user-1', AGORA_SEMANA);
+    expect(missoes).toHaveLength(1);
+    expect(missoes[0]).toMatchObject({ chave: 'acertos_semana_15', semana: '2026-W30' });
+
+    const [selectChain] = mock.chainsPara('missoes_catalogo');
+    expect(selectChain.eq).toHaveBeenCalledWith('periodo', 'semana');
+
+    const upsert = mock.chainsPara('missoes_da_semana')[1].upsert;
+    expect(upsert).toHaveBeenCalledTimes(1);
+    expect(upsert.mock.calls[0][0]).toEqual([{ user_id: 'user-1', missao_id: 7, semana: '2026-W30' }]);
+  });
+
+  it('já atribuída na semana: devolve direto, sem sortear de novo', async () => {
+    const mock = configurarDb({
+      missoes_da_semana: [ok([atribuidaSemana(CATALOGO_SEMANA[0], { progresso: 6 })])],
+    });
+
+    const missoes = await missoesDaSemana('user-1', AGORA_SEMANA);
+    expect(missoes[0]).toMatchObject({ chave: 'acertos_semana_15', progresso: 6, parametro: 15 });
+    expect(mock.chainsPara('missoes_catalogo')).toHaveLength(0);
+  });
+});
+
+describe('registrarQuizNasMissoesSemanais', () => {
+  const resultadoBase = { acertos: 10 };
+
+  it('acumula progresso sem concluir e não paga fichas nem concede item', async () => {
+    const mock = configurarDb({
+      missoes_da_semana: [ok([atribuidaSemana(CATALOGO_SEMANA[0])]), ok(null)],
+    });
+
+    const concluidas = await registrarQuizNasMissoesSemanais('user-1', resultadoBase, AGORA_SEMANA);
+    expect(concluidas).toEqual([]);
+    expect(mock.chainsPara('missoes_da_semana')[1].update).toHaveBeenCalledWith({
+      progresso: 10,
+      concluida: false,
+    });
+    expect(mock.chainsPara('transacoes_fichas')).toHaveLength(0);
+    expect(mock.chainsPara('itens_do_jogador')).toHaveLength(0);
+  });
+
+  it('concluir paga fichas e concede o cosmético exclusivo uma única vez', async () => {
+    const mock = configurarDb({
+      missoes_da_semana: [ok([atribuidaSemana(CATALOGO_SEMANA[0], { progresso: 8 })]), ok(null)],
+      transacoes_fichas: [ok(null)],
+      itens_do_jogador: [ok(null)],
+    });
+
+    const concluidas = await registrarQuizNasMissoesSemanais('user-1', resultadoBase, AGORA_SEMANA);
+    expect(concluidas).toEqual([
+      {
+        chave: 'acertos_semana_15',
+        descricao: 'Acumule 15 acertos na semana',
+        recompensa_fichas: 20,
+        item_concedido: true,
+      },
+    ]);
+    expect(mock.chainsPara('missoes_da_semana')[1].update).toHaveBeenCalledWith({
+      progresso: 15, // trava no parametro mesmo com acertos sobrando
+      concluida: true,
+    });
+    expect(mock.chainsPara('transacoes_fichas')[0].insert).toHaveBeenCalledWith(
+      expect.objectContaining({ quantidade: 20, motivo: 'missao_semanal', referencia: 'acertos_semana_15' })
+    );
+    expect(mock.chainsPara('itens_do_jogador')[0].insert).toHaveBeenCalledWith({
+      user_id: 'user-1',
+      item_id: 9,
+    });
+  });
+
+  it('cosmético já possuído (semana anterior) não falha — ignora o conflito 23505', async () => {
+    const mock = configurarDb({
+      missoes_da_semana: [ok([atribuidaSemana(CATALOGO_SEMANA[0], { progresso: 14 })]), ok(null)],
+      transacoes_fichas: [ok(null)],
+      itens_do_jogador: [fail({ code: '23505' })],
+    });
+
+    const concluidas = await registrarQuizNasMissoesSemanais('user-1', resultadoBase, AGORA_SEMANA);
+    expect(concluidas[0].chave).toBe('acertos_semana_15');
+    expect(mock.chainsPara('itens_do_jogador')).toHaveLength(1);
+  });
+
+  it('missão já concluída não progride nem paga de novo', async () => {
+    const mock = configurarDb({
+      missoes_da_semana: [ok([atribuidaSemana(CATALOGO_SEMANA[0], { progresso: 15, concluida: true })])],
+    });
+
+    expect(await registrarQuizNasMissoesSemanais('user-1', resultadoBase, AGORA_SEMANA)).toEqual([]);
+    expect(mock.chainsPara('missoes_da_semana')).toHaveLength(1); // só a leitura
   });
 });
