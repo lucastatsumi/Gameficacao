@@ -1,4 +1,4 @@
-// Card grande de opção da Batalha de Complexidade — mesma lógica de
+// Card grande de opção do minigame "Prioridades em Ação" — mesma lógica de
 // certo/errado/selecionada do BotaoAlternativa, layout "vs" em vez de lista.
 export default function BotaoBatalha({ alt, feedback, selecionada, desabilitado, aoClicar }) {
   let estilo = 'border-slate-800 bg-slate-900/60 hover:border-fuchsia-500/60 card-pixel';

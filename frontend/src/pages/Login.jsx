@@ -15,7 +15,7 @@ const inputCls =
   'w-full border-2 border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none focus:border-indigo-500';
 
 export default function Login() {
-  const { sessao, login, cadastrar } = useAuth();
+  const { sessao, login, cadastrar, erroConexao } = useAuth();
   const { t } = useI18n();
   const [modo, setModo] = useState('login'); // 'login' | 'cadastro'
   const [nome, setNome] = useState('');
@@ -104,7 +104,7 @@ export default function Login() {
               className="w-16 sm:w-20"
             />
             <h1 className="font-pixel text-xl leading-relaxed text-indigo-300 sm:text-2xl">
-              DataQuest
+              LevelUp
             </h1>
           </div>
 
@@ -192,6 +192,9 @@ export default function Login() {
 
               <Alerta>{erro}</Alerta>
               <Alerta tipo="sucesso">{aviso}</Alerta>
+              {erroConexao && !erro && (
+                <Alerta>{t('login.erroConexao')}</Alerta>
+              )}
 
               <button
                 type="submit"

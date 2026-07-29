@@ -1,15 +1,18 @@
-# Serious Game — Estrutura de Dados (TCC)
+# LevelUp — Quiz Gameficado para Empresas
 
-Aplicação web gamificada para ensino de Estrutura de Dados a estudantes de
-Engenharia de Software / Ciência da Computação. Quiz contextualizado com
-cenários reais de desenvolvimento, sistema de XP, níveis, badges, mapa de
-fases desbloqueável e ranking.
+Plataforma web de quiz gameficado para **onboarding e reconhecimento de
+colaboradores**. Quiz contextualizado com cenários reais do dia a dia
+corporativo (cultura, segurança da informação, processos, compliance,
+comunicação), sistema de XP, níveis, badges, mapa de módulos desbloqueável
+e ranking de equipe.
 
-> **Direção do produto**: a próxima fase pivota a plataforma para o mercado
-> corporativo (empresa escolhe os temas, quizzes montados com IA, avaliação
-> com pontuação ponderada e rubricas) — ver [`docs/ROADMAP.md`](docs/ROADMAP.md).
-> O roadmap da fase educacional, já concluído, está arquivado em
-> [`docs/ROADMAP-v1.md`](docs/ROADMAP-v1.md).
+> **Origem do projeto**: nasceu como um serious game de Estrutura de Dados
+> para estudantes (TCC) — o roadmap dessa fase educacional, já concluído,
+> está arquivado em [`docs/ROADMAP-v1.md`](docs/ROADMAP-v1.md). O produto
+> pivotou para o mercado corporativo: o conteúdo de demonstração hoje é um
+> quiz de onboarding, e o próximo passo é deixar os temas configuráveis por
+> empresa (multi-tema, quizzes montados com IA, avaliação com pontuação
+> ponderada e rubricas) — ver [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Sumário
 
@@ -78,7 +81,10 @@ fases desbloqueável e ranking.
 │   ├── 25_desafio_diario.sql     #   Desafio diário (seed por data)
 │   ├── 26_fase_estruturas_avancadas.sql # Fase 8: grafos, hash, heaps, recursão
 │   ├── 27_ligas.sql              #   Ligas semanais (divisões, fechamento lazy)
-│   └── 28_kudos.sql              #   Kudos entre colegas (3/semana, anti-conluio)
+│   ├── 28_kudos.sql              #   Kudos entre colegas (3/semana, anti-conluio)
+│   ├── 29_temporadas.sql         #   Temporadas e passe de missões
+│   ├── 30_missoes_semanais.sql   #   Missão semanal (extensão das diárias)
+│   └── 31_pivot_tema_fases_badges.sql   # Pivô: módulos/badges -> onboarding corporativo
 ├── backend/
 │   └── src/
 │       ├── config/               # Cliente Supabase, variáveis de ambiente
