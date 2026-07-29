@@ -9,14 +9,23 @@ async function tokenAtual() {
 
 async function request(caminho, { method = 'GET', body } = {}) {
   const token = await tokenAtual();
-  const resposta = await fetch(`${API_URL}${caminho}`, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body != null ? JSON.stringify(body) : undefined,
-  });
+
+  let resposta;
+  try {
+    resposta = await fetch(`${API_URL}${caminho}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: body != null ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    // fetch só rejeita em falha de rede/CORS (o servidor inalcançável, a
+    // URL da API errada ou a origem bloqueada). O TypeError cru
+    // ("Failed to fetch") não ajuda o usuário — trocamos por algo acionável.
+    throw new Error('Não foi possível falar com o servidor. Verifique sua conexão e tente novamente.');
+  }
 
   if (resposta.status === 204) return null;
 

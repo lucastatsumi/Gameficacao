@@ -53,6 +53,21 @@ ou no bundle do backend — isso é importante especialmente para a
 
 ## Ressalvas operacionais conhecidas
 
+- **"Erro de fetch" / "Failed to fetch" na página inicial.** É o navegador
+  dizendo que **não conseguiu falar com a API** (`gameficacao-api.vercel.app`).
+  O mapa (`/`) chama `GET /api/fases` no carregamento; se essa chamada rejeita,
+  a tela mostra o erro. Causas prováveis, em ordem:
+  1. **Deploy defasado** — `git push` **não** redeploya (ver acima). Depois de
+     qualquer mudança, rode `vercel deploy --prod` em `backend/` e `frontend/`.
+  2. **Deployment Protection ligada no projeto da API** — se o projeto
+     `gameficacao-api` estiver com "Vercel Authentication" ativa, o `fetch` do
+     navegador recebe 401/403 e falha. Desligue em *Project Settings →
+     Deployment Protection*, ou adicione um bypass, deixando a API pública.
+  3. **`VITE_API_URL` errada no frontend** — tem que ser
+     `https://gameficacao-api.vercel.app/api`. Como é embutida no build, mudar
+     a env exige **rebuild/redeploy** do frontend, não só salvar na Vercel.
+  4. **CORS** — `FRONTEND_URL` no backend tem que bater com a origem do
+     frontend (`https://gameficacao-omega.vercel.app`).
 - **Supabase free-tier pausa o projeto após ~7 dias de inatividade.** Se a API
   parar de responder dados (mas `/health` continuar OK), é provavelmente isso.
   Reative pelo dashboard do Supabase, ou via Management API:

@@ -1,15 +1,21 @@
-# Serious Game — Estrutura de Dados (TCC)
+# Quiz gamificado corporativo (onboarding & treinamento)
 
-Aplicação web gamificada para ensino de Estrutura de Dados a estudantes de
-Engenharia de Software / Ciência da Computação. Quiz contextualizado com
-cenários reais de desenvolvimento, sistema de XP, níveis, badges, mapa de
-fases desbloqueável e ranking.
+Aplicação web gamificada de **treinamento por quiz para empresas**: onboarding
+de novos colaboradores, reforço de compliance/segurança e reconhecimento de
+quem se destaca. Quiz contextualizado com cenários reais do dia a dia,
+sistema de XP, níveis, badges, mapa de módulos desbloqueável, ligas, missões,
+loja de cosméticos e ranking.
 
-> **Direção do produto**: a próxima fase pivota a plataforma para o mercado
-> corporativo (empresa escolhe os temas, quizzes montados com IA, avaliação
-> com pontuação ponderada e rubricas) — ver [`docs/ROADMAP.md`](docs/ROADMAP.md).
-> O roadmap da fase educacional, já concluído, está arquivado em
-> [`docs/ROADMAP-v1.md`](docs/ROADMAP-v1.md).
+> **Conteúdo atual (demo)**: 8 módulos de onboarding corporativo — Boas-vindas
+> & Cultura, Segurança da Informação, Processos & Ferramentas, Comunicação &
+> Colaboração, Compliance & Conduta, dois minigames (Prioridades em Ação e
+> Passo a Passo) e Excelência & Reconhecimento. O pivô de conteúdo foi
+> aplicado no banco pelas migrations `31`/`32`/`32b`.
+>
+> **Origem**: o projeto nasceu como serious game de Estrutura de Dados (TCC);
+> esse histórico está arquivado em [`docs/ROADMAP-v1.md`](docs/ROADMAP-v1.md).
+> A evolução corporativa em curso (multi-tema por empresa, geração de questões
+> com IA, pontuação ponderada) está em [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Sumário
 

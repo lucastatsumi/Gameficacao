@@ -39,6 +39,17 @@ diferencia um treinamento corporativo de um formulário chato.
 
 ## Horizonte 1 — Fundação multi-tema
 
+> **Andamento — pivô de conteúdo aplicado (parcial).** O catálogo de demo
+> deixou de ser Estrutura de Dados e passou a ser **onboarding corporativo**:
+> 8 módulos (Boas-vindas & Cultura, Segurança da Informação, Processos &
+> Ferramentas, Comunicação & Colaboração, Compliance & Conduta, os minigames
+> Prioridades em Ação e Passo a Passo, e Excelência & Reconhecimento) com 61
+> questões reescritas para cenários de trabalho. Migrations `31`/`32`/`32b`
+> (UPDATEs sobre fases/badges/questões — o schema não mudou, a lógica de jogo
+> continua data-driven). Copy do frontend (login/hero) e README atualizados.
+> **Ainda falta** a estrutura de fato: tabela `temas`, `fases.tema_id`,
+> seleção de temas por empresa e trilhas por equipe — descrito abaixo.
+
 O objetivo é generalizar o domínio sem reescrever o que funciona.
 
 - **Tabela `temas`** — a unidade que a empresa seleciona. `fases` viram

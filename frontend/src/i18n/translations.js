@@ -28,10 +28,10 @@ export const traducoes = {
     'login.pressStart': 'PRESS START',
     'login.newGame': 'NEW GAME',
     'login.subtitulo':
-      'Domine Estruturas de Dados jogando: resolva cenários reais de programação, ganhe XP, desbloqueie fases e dispute o ranking com a sua turma.',
-    'login.feature1': '6 fases: de Listas a Estruturas Avançadas',
+      'Aprenda jogando o que a sua empresa precisa que você domine: resolva cenários reais do dia a dia, ganhe XP, desbloqueie módulos e dispute o ranking com o seu time.',
+    'login.feature1': '8 módulos: de Boas-vindas a Excelência & Reconhecimento',
     'login.feature2': 'Quiz com timer e feedback',
-    'login.feature3': 'XP, níveis e 12 conquistas',
+    'login.feature3': 'XP, níveis e conquistas',
     'login.insertCoin': '▼ INSERT COIN ▼',
     'login.contaCriada':
       'Conta criada! Se a confirmação por e-mail estiver ativa no projeto, confirme antes de entrar.',
@@ -75,10 +75,10 @@ export const traducoes = {
     'login.pressStart': 'PRESS START',
     'login.newGame': 'NEW GAME',
     'login.subtitulo':
-      'Master Data Structures by playing: solve real programming scenarios, earn XP, unlock stages, and compete on the leaderboard with your class.',
-    'login.feature1': '6 stages: from Lists to Advanced Structures',
+      'Learn what your company needs you to master, by playing: solve real day-to-day scenarios, earn XP, unlock modules, and compete on the leaderboard with your team.',
+    'login.feature1': '8 modules: from Onboarding to Excellence & Recognition',
     'login.feature2': 'Timed quizzes with feedback',
-    'login.feature3': 'XP, levels, and 12 achievements',
+    'login.feature3': 'XP, levels, and achievements',
     'login.insertCoin': '▼ INSERT COIN ▼',
     'login.contaCriada':
       'Account created! If email confirmation is enabled on this project, confirm it before logging in.',
