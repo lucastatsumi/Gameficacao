@@ -84,7 +84,8 @@ e ranking de equipe.
 │   ├── 28_kudos.sql              #   Kudos entre colegas (3/semana, anti-conluio)
 │   ├── 29_temporadas.sql         #   Temporadas e passe de missões
 │   ├── 30_missoes_semanais.sql   #   Missão semanal (extensão das diárias)
-│   └── 31_pivot_tema_fases_badges.sql   # Pivô: módulos/badges -> onboarding corporativo
+│   ├── 31_pivot_tema_fases_badges.sql   # Pivô: módulos/badges -> onboarding corporativo
+│   └── 32_pivot_tema_questoes.sql       # Pivô: banco de questões -> onboarding corporativo
 ├── backend/
 │   └── src/
 │       ├── config/               # Cliente Supabase, variáveis de ambiente
