@@ -74,7 +74,7 @@ export default function AbaEventos() {
           <input
             value={dados.nome}
             onChange={(e) => mudar('nome', e.target.value)}
-            placeholder="Nome do evento (ex.: Semana das Árvores)"
+            placeholder="Nome do evento (ex.: Semana da Comunicação)"
             className={inputCls}
             required
           />

@@ -28,14 +28,15 @@ export const traducoes = {
     'login.pressStart': 'PRESS START',
     'login.newGame': 'NEW GAME',
     'login.subtitulo':
-      'Domine Estruturas de Dados jogando: resolva cenários reais de programação, ganhe XP, desbloqueie fases e dispute o ranking com a sua turma.',
-    'login.feature1': '6 fases: de Listas a Estruturas Avançadas',
+      'Onboarding e treinamento gameficados: responda quizzes da sua empresa, ganhe XP, desbloqueie módulos e dispute o ranking com o seu time.',
+    'login.feature1': 'Módulos de onboarding, segurança e compliance',
     'login.feature2': 'Quiz com timer e feedback',
-    'login.feature3': 'XP, níveis e 12 conquistas',
+    'login.feature3': 'XP, níveis e conquistas — reconhecimento em jogo',
     'login.insertCoin': '▼ INSERT COIN ▼',
     'login.contaCriada':
       'Conta criada! Se a confirmação por e-mail estiver ativa no projeto, confirme antes de entrar.',
     'login.nomeObrigatorio': 'Informe seu nome',
+    'login.erroConexao': 'Não foi possível conectar ao serviço. Tente novamente em instantes.',
 
     'mapa.titulo': 'Mapa de Fases',
     'mapa.subtitulo': 'Acerte pelo menos 70% do quiz para concluir a fase e desbloquear a próxima.',
@@ -75,14 +76,15 @@ export const traducoes = {
     'login.pressStart': 'PRESS START',
     'login.newGame': 'NEW GAME',
     'login.subtitulo':
-      'Master Data Structures by playing: solve real programming scenarios, earn XP, unlock stages, and compete on the leaderboard with your class.',
-    'login.feature1': '6 stages: from Lists to Advanced Structures',
+      'Gamified onboarding and training: take your company\'s quizzes, earn XP, unlock modules, and compete on the leaderboard with your team.',
+    'login.feature1': 'Onboarding, security, and compliance modules',
     'login.feature2': 'Timed quizzes with feedback',
-    'login.feature3': 'XP, levels, and 12 achievements',
+    'login.feature3': 'XP, levels, and achievements — recognition, gamified',
     'login.insertCoin': '▼ INSERT COIN ▼',
     'login.contaCriada':
       'Account created! If email confirmation is enabled on this project, confirm it before logging in.',
     'login.nomeObrigatorio': 'Please enter your name',
+    'login.erroConexao': "Couldn't connect to the service. Please try again shortly.",
 
     'mapa.titulo': 'Stage Map',
     'mapa.subtitulo': 'Score at least 70% on the quiz to complete the stage and unlock the next one.',

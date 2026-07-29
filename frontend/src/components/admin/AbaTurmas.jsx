@@ -13,7 +13,7 @@ export default function AbaTurmas() {
   const [copiado, setCopiado] = useState(false);
 
   async function copiarConvite(turma) {
-    const texto = `Entre na turma "${turma.nome}" no DataQuest com o código: ${turma.codigo_acesso}`;
+    const texto = `Entre na turma "${turma.nome}" no LevelUp com o código: ${turma.codigo_acesso}`;
     try {
       await navigator.clipboard.writeText(texto);
       setCopiado(turma.id);

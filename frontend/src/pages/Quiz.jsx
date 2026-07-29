@@ -461,7 +461,7 @@ export default function Quiz() {
         </div>
       )}
 
-      {/* alternativas — layout normal ou "VS" da Batalha de Complexidade */}
+      {/* alternativas — layout normal ou "VS" do minigame Prioridades em Ação */}
       {questao.formato === 'batalha_complexidade' ? (
         <div className="relative mt-6">
           {!alternativaEscondida && (

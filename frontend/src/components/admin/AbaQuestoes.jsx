@@ -327,8 +327,8 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
           className={`${inputCls} disabled:opacity-50`}
         >
           <option value="padrao">Múltipla escolha (4 alternativas)</option>
-          <option value="batalha_complexidade">Batalha de Complexidade (2 alternativas)</option>
-          <option value={FORMATO_SEQUENCIA}>Reordenar algoritmo (passos em sequência)</option>
+          <option value="batalha_complexidade">Prioridades em Ação — comparar 2 opções</option>
+          <option value={FORMATO_SEQUENCIA}>Passo a Passo — reordenar etapas de um processo</option>
         </select>
         <select
           value={dados.dificuldade}
@@ -388,7 +388,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
       {dados.formato === FORMATO_SEQUENCIA ? (
         <div className="space-y-2">
           <p className="text-xs text-slate-500">
-            Digite os passos do algoritmo NA ORDEM CERTA — essa ordem vira o gabarito. O
+            Digite os passos do processo NA ORDEM CERTA — essa ordem vira o gabarito. O
             jogo embaralha a exibição a cada tentativa.
           </p>
           {dados.passos.map((passo, i) => (

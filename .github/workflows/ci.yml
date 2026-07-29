@@ -13,6 +13,13 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      # Testes unitários usam Supabase mockado (backend/src/test/dbMock.js) — nunca
+      # abrem conexão real — mas config/env.js exige essas variáveis já no import,
+      # então precisam de qualquer valor não vazio para o processo nem iniciar.
+      SUPABASE_URL: https://ci-placeholder.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key
+      SUPABASE_ANON_KEY: ci-placeholder-anon-key
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

@@ -90,7 +90,7 @@ export default function FormQuiz({ form, aoFechar, aoSalvar }) {
       <input
         value={dados.titulo}
         onChange={(e) => mudar('titulo', e.target.value)}
-        placeholder="Título do quiz (ex.: Desafio relâmpago de Pilhas)"
+        placeholder="Título do quiz (ex.: Desafio relâmpago de Segurança da Informação)"
         aria-label="Título do quiz"
         className={inputCls}
         required

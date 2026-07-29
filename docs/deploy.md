@@ -53,6 +53,21 @@ ou no bundle do backend — isso é importante especialmente para a
 
 ## Ressalvas operacionais conhecidas
 
+- **`git push` sozinho NÃO corrige produção — não há deploy automático (ver
+  acima).** Incidente real (2026-07-29): 4 commits com features inteiras
+  (ligas, kudos, temporadas, missão semanal) foram mergeados em `main` e
+  tiveram suas migrations aplicadas no Supabase via MCP, mas o deploy da
+  Vercel nunca foi refeito — o frontend/backend em produção continuaram
+  rodando um build várias semanas mais antigo, sem as rotas novas
+  (`/ligas`, `/kudos`, `/temporadas`, `/perfil/missoes/semana`). Resultado:
+  a home page (que chama `/perfil/missoes/semana` ao carregar) recebia 404
+  do backend antigo — reportado como "erro de fetch na página inicial".
+  Some ainda mais: as migrations 27–30 também nunca tinham sido aplicadas no
+  banco (só existiam como arquivo em `database/`), então mesmo depois de
+  redeployar o backend novo, ele quebraria contra tabelas inexistentes. As
+  duas coisas — código deployado E schema do banco — precisam estar
+  sincronizadas com o que está em `main`; checar as duas antes de fechar
+  qualquer investigação de "erro de fetch" em produção.
 - **Supabase free-tier pausa o projeto após ~7 dias de inatividade.** Se a API
   parar de responder dados (mas `/health` continuar OK), é provavelmente isso.
   Reative pelo dashboard do Supabase, ou via Management API:
