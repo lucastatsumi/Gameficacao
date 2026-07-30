@@ -327,8 +327,8 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
           className={`${inputCls} disabled:opacity-50`}
         >
           <option value="padrao">Múltipla escolha (4 alternativas)</option>
-          <option value="batalha_complexidade">Batalha de Complexidade (2 alternativas)</option>
-          <option value={FORMATO_SEQUENCIA}>Reordenar algoritmo (passos em sequência)</option>
+          <option value="batalha_complexidade">Duelo — escolha entre 2 alternativas</option>
+          <option value={FORMATO_SEQUENCIA}>Ordenar etapas (passos em sequência)</option>
         </select>
         <select
           value={dados.dificuldade}

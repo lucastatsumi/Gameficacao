@@ -8,8 +8,8 @@ import PixelIcon from '../components/ui/PixelIcon.jsx';
 import pixelNuvem from '../assets/img/pixel-nuvem.svg';
 import pixelEstrela from '../assets/img/pixel-estrela.svg';
 
-// Ícone pixel de cada fase: Listas, Pilhas, Filas, Árvores, Ordenação,
-// Batalha de Complexidade e Reordenar Algoritmo (fases bônus)
+// Ícone pixel de cada módulo da trilha (cultura, segurança, processos,
+// comunicação, compliance) mais os módulos bônus de formato especial.
 const ICONES_FASE = ['arrow-right', 'coins', 'users', 'map-pin', 'chart-bar-big', 'fire', 'reload'];
 
 function NoFase({ fase, indice }) {

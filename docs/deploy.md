@@ -75,18 +75,43 @@ ou no bundle do backend — isso é importante especialmente para a
   quem recusa ler é o `fetch`/XHR da página maliciosa, ao comparar o header
   `Access-Control-Allow-Origin` com a própria origem). Ferramentas como
   `curl` não reforçam CORS — não é um jeito válido de testar o bloqueio.
-- **`gameficacao-api` sem variáveis de ambiente configuradas** (regressão
-  conhecida): o projeto atual está retornando `FUNCTION_INVOCATION_FAILED`
-  em toda rota porque `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`/
-  `SUPABASE_ANON_KEY` não estão setadas nele — `backend/src/config/env.js`
-  lança erro no cold start assim que falta alguma. Provavelmente essas
-  variáveis existiam no projeto antigo `gameficacao-backend` e não foram
-  copiadas quando o backend migrou para o projeto `gameficacao-api`. Não há
-  ferramenta de agente para ler/escrever env vars da Vercel (e a
-  `service_role` nunca deveria passar por um agente) — configure manualmente
-  em Project Settings → Environment Variables (ambiente **Production**) e
-  redeploy. Sem isso, o backend inteiro fica fora do ar mesmo com o frontend
-  saudável.
+- **`gameficacao-api` fora do ar por deploy incompleto** (diagnóstico
+  2026-07-30, via conector Vercel): o deploy de produção **atual** retorna
+  `FUNCTION_INVOCATION_FAILED` em toda rota. Os *runtime logs* mostram a
+  causa real: `Error [ERR_MODULE_NOT_FOUND]: Cannot find module
+  '/var/task/src/routes/index.js'`. Ou seja, **não é falta de env var** — o
+  bundle enviado nos últimos deploys manuais (feitos via CLI, `source: cli`,
+  sem metadata de git) subiu **incompleto**, sem a pasta `src/routes/`. As
+  variáveis de ambiente ESTÃO configuradas no projeto: o deploy anterior
+  `dpl_Ghz55DK7…` (commit `db6706e`, `main`) continua **READY e saudável** —
+  `/health` responde `{"status":"ok"}` e `/api/fases` responde `401`
+  (autenticação), provando que o Express sobe, o cliente Supabase inicializa
+  e o CORS aponta para `https://gameficacao-omega.vercel.app`.
+
+  **Correção imediata (2 cliques, sem código):** Vercel → projeto
+  `gameficacao-api` → aba **Deployments** → localizar o deploy saudável de
+  `db6706e` → menu **⋯ → Instant Rollback / Promote to Production**. Isso
+  reaponta o domínio `gameficacao-api.vercel.app` para o build completo e
+  derruba o `500` na hora. Como o conteúdo do quiz vem do banco (já pivotado
+  para o tema corporativo nas migrations 31–32), a home volta a exibir as
+  fases corporativas assim que a API responde.
+
+  **Correção durável (recomendada):** conectar o repositório em
+  Project Settings → Git (nos DOIS projetos, com Root Directory `frontend` e
+  `backend`). Aí um `git push` na `main` dispara deploy automático a partir
+  do checkout COMPLETO — elimina de vez os deploys manuais parciais que
+  causaram tanto este `ERR_MODULE_NOT_FOUND` no backend quanto o
+  `Rollup failed to resolve /src/main.jsx` que fez o último build do
+  frontend `gameficacao` falhar (mesma causa: upload sem a pasta `src/`).
+  Enquanto o deploy manual for a única via, rode-o sempre a partir da
+  **raiz de cada subprojeto** (`cd frontend && vercel deploy --prod`,
+  `cd backend && vercel deploy --prod`) para garantir a árvore inteira.
+
+  > Nota de ferramentas: o conector Vercel disponível ao agente expõe
+  > `deploy_to_vercel` (upload inline de arquivos) mas **não** expõe
+  > promote/rollback nem escrita de env var; e reenviar a árvore inteira
+  > inline não é confiável. Por isso a correção de produção acima é uma ação
+  > de 1–2 cliques no dashboard, não algo que o agente aplicou sozinho.
 - **Vulnerabilidade conhecida, baixo risco:** `npm audit` no frontend acusa
   `esbuild ≤0.24.2` (via Vite 5) — permite que qualquer site enviado ao
   navegador do desenvolvedor leia respostas do **dev server local**
