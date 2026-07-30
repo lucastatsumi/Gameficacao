@@ -17,11 +17,16 @@
 - **Backend** — projeto Vercel `gameficacao-api`. O Express roda como função
   serverless: `backend/api/index.js` reexporta o `app` de `src/app.js`, e
   `backend/vercel.json` faz rewrite de toda rota para `/api`.
-- **Ambos os projetos estão conectados ao GitHub** (Project Settings → Git):
-  um `git push` em `main` dispara build e deploy automático em produção para
-  `gameficacao` (frontend) e `gameficacao-api` (backend). Deploys manuais via
-  `vercel deploy --prod` continuam funcionando (não têm metadata de commit),
-  mas não são mais a via normal.
+- **Nenhum dos dois projetos tem integração Git↔Vercel ativa** (confirmado
+  em 2026-07-30: um push em `main` não gerou nenhum deploy novo, mesmo
+  minutos depois). Os deploys existentes têm `gitCommitSha`/`gitCommitRef`
+  no metadata porque foram feitos com `vercel deploy --prod` rodado a partir
+  de um checkout local (a CLI lê o git local e anexa esse metadata; isso não
+  exige nem implica um webhook configurado). Ou seja: **`git push` sozinho
+  NUNCA atualiza produção.** Para publicar um commit novo, rode manualmente
+  em cada pasta (`cd frontend && vercel deploy --prod` /
+  `cd backend && vercel deploy --prod`), ou conecte o repositório em
+  Project Settings → Git no dashboard da Vercel para automatizar isso.
 - **Vercel Authentication (SSO protection)**: os três projetos (`gameficacao`,
   `gameficacao-api`, `gameficacao-backend`) vêm com "Deployment Protection"
   habilitada por padrão para todos os domínios `*.vercel.app`. Isso bloqueia
