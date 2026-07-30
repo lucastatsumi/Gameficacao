@@ -17,19 +17,19 @@
 - **Backend** — projeto Vercel `gameficacao-api`. O Express roda como função
   serverless: `backend/api/index.js` reexporta o `app` de `src/app.js`, e
   `backend/vercel.json` faz rewrite de toda rota para `/api`.
-- **Ambos os deploys foram feitos via Vercel CLI** (`vercel deploy --prod`),
-  linkando cada pasta a um projeto Vercel — **não** há integração Git↔Vercel
-  configurada ainda. Ou seja: dar `git push` **não** dispara um redeploy
-  automático. Para atualizar produção depois de um push, rode manualmente em
-  cada pasta:
-  ```bash
-  cd backend && vercel deploy --prod
-  cd frontend && vercel deploy --prod
-  ```
-  Alternativa melhor a médio prazo: conectar o repositório GitHub aos dois
-  projetos no dashboard da Vercel (Project Settings → Git) para deploy
-  automático a cada push em `main`. Isso também habilitaria Preview
-  Deployments por PR.
+- **Ambos os projetos estão conectados ao GitHub** (Project Settings → Git):
+  um `git push` em `main` dispara build e deploy automático em produção para
+  `gameficacao` (frontend) e `gameficacao-api` (backend). Deploys manuais via
+  `vercel deploy --prod` continuam funcionando (não têm metadata de commit),
+  mas não são mais a via normal.
+- **Vercel Authentication (SSO protection)**: os três projetos (`gameficacao`,
+  `gameficacao-api`, `gameficacao-backend`) vêm com "Deployment Protection"
+  habilitada por padrão para todos os domínios `*.vercel.app`. Isso bloqueia
+  QUALQUER visitante anônimo (inclusive o próprio frontend chamando a API) —
+  já causou um "erro de fetch" na home em produção. Está configurado para
+  `preview` apenas (produção pública) em `gameficacao` e `gameficacao-api`;
+  confirme esse estado em Project Settings → Deployment Protection antes de
+  cada diagnóstico de "site fora do ar".
 
 ## Variáveis de ambiente
 
@@ -70,6 +70,18 @@ ou no bundle do backend — isso é importante especialmente para a
   quem recusa ler é o `fetch`/XHR da página maliciosa, ao comparar o header
   `Access-Control-Allow-Origin` com a própria origem). Ferramentas como
   `curl` não reforçam CORS — não é um jeito válido de testar o bloqueio.
+- **`gameficacao-api` sem variáveis de ambiente configuradas** (regressão
+  conhecida): o projeto atual está retornando `FUNCTION_INVOCATION_FAILED`
+  em toda rota porque `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`/
+  `SUPABASE_ANON_KEY` não estão setadas nele — `backend/src/config/env.js`
+  lança erro no cold start assim que falta alguma. Provavelmente essas
+  variáveis existiam no projeto antigo `gameficacao-backend` e não foram
+  copiadas quando o backend migrou para o projeto `gameficacao-api`. Não há
+  ferramenta de agente para ler/escrever env vars da Vercel (e a
+  `service_role` nunca deveria passar por um agente) — configure manualmente
+  em Project Settings → Environment Variables (ambiente **Production**) e
+  redeploy. Sem isso, o backend inteiro fica fora do ar mesmo com o frontend
+  saudável.
 - **Vulnerabilidade conhecida, baixo risco:** `npm audit` no frontend acusa
   `esbuild ≤0.24.2` (via Vite 5) — permite que qualquer site enviado ao
   navegador do desenvolvedor leia respostas do **dev server local**

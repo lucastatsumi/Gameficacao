@@ -50,7 +50,7 @@ export default function Layout() {
         <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3">
           <NavLink to="/" className="flex items-center gap-2">
             <img src={pixelGamepad} alt="" aria-hidden className="w-9" />
-            <span className="font-pixel text-xs text-indigo-300">DataQuest</span>
+            <span className="font-pixel text-xs text-indigo-300">TeamQuest</span>
           </NavLink>
 
           <nav className="flex">

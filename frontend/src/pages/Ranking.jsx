@@ -81,7 +81,7 @@ export default function Ranking() {
   // Qualquer participante (aluno ou professor) pode convidar: copia o
   // código de acesso da turma para compartilhar
   async function copiarConvite(turma) {
-    const texto = `Entre na minha turma "${turma.nome}" no DataQuest com o código: ${turma.codigo_acesso}`;
+    const texto = `Entre na minha equipe "${turma.nome}" no TeamQuest com o código: ${turma.codigo_acesso}`;
     try {
       await navigator.clipboard.writeText(texto);
       setCopiado(turma.id);

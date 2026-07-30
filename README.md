@@ -1,15 +1,18 @@
-# Serious Game — Estrutura de Dados (TCC)
+# TeamQuest — Onboarding e Reconhecimento Gamificados
 
-Aplicação web gamificada para ensino de Estrutura de Dados a estudantes de
-Engenharia de Software / Ciência da Computação. Quiz contextualizado com
-cenários reais de desenvolvimento, sistema de XP, níveis, badges, mapa de
-fases desbloqueável e ranking.
+Plataforma web gamificada de treinamento por quiz para empresas: qualifica o
+onboarding de novos colaboradores (cultura, segurança da informação,
+processos, comunicação, compliance) e reconhece/recompensa o time no dia a
+dia. Quiz contextualizado com cenários reais do ambiente corporativo,
+sistema de XP, níveis, badges, mapa de módulos desbloqueável e ranking.
 
-> **Direção do produto**: a próxima fase pivota a plataforma para o mercado
-> corporativo (empresa escolhe os temas, quizzes montados com IA, avaliação
-> com pontuação ponderada e rubricas) — ver [`docs/ROADMAP.md`](docs/ROADMAP.md).
-> O roadmap da fase educacional, já concluído, está arquivado em
-> [`docs/ROADMAP-v1.md`](docs/ROADMAP-v1.md).
+> **Direção do produto**: a base já nasceu como jogo sério de Estrutura de
+> Dados (TCC) e pivotou para o mercado corporativo — mecânica de
+> gamificação 100% reaproveitada, conteúdo do quiz e copy trocados para
+> onboarding/reconhecimento. Próximos passos (multi-tema por empresa,
+> quizzes montados com IA, avaliação com pontuação ponderada e rubricas) em
+> [`docs/ROADMAP.md`](docs/ROADMAP.md). O roadmap da fase educacional
+> original está arquivado em [`docs/ROADMAP-v1.md`](docs/ROADMAP-v1.md).
 
 ## Sumário
 

@@ -28,8 +28,8 @@ export const traducoes = {
     'login.pressStart': 'PRESS START',
     'login.newGame': 'NEW GAME',
     'login.subtitulo':
-      'Domine Estruturas de Dados jogando: resolva cenários reais de programação, ganhe XP, desbloqueie fases e dispute o ranking com a sua turma.',
-    'login.feature1': '6 fases: de Listas a Estruturas Avançadas',
+      'Aprenda a cultura, os processos e as políticas da empresa jogando: resolva cenários reais do dia a dia, ganhe XP, desbloqueie módulos e dispute o ranking com a sua equipe.',
+    'login.feature1': '8 módulos: da Cultura ao Reconhecimento',
     'login.feature2': 'Quiz com timer e feedback',
     'login.feature3': 'XP, níveis e 12 conquistas',
     'login.insertCoin': '▼ INSERT COIN ▼',
@@ -75,8 +75,8 @@ export const traducoes = {
     'login.pressStart': 'PRESS START',
     'login.newGame': 'NEW GAME',
     'login.subtitulo':
-      'Master Data Structures by playing: solve real programming scenarios, earn XP, unlock stages, and compete on the leaderboard with your class.',
-    'login.feature1': '6 stages: from Lists to Advanced Structures',
+      'Learn your company culture, processes, and policies by playing: solve real day-to-day scenarios, earn XP, unlock modules, and compete on the leaderboard with your team.',
+    'login.feature1': '8 modules: from Culture to Recognition',
     'login.feature2': 'Timed quizzes with feedback',
     'login.feature3': 'XP, levels, and 12 achievements',
     'login.insertCoin': '▼ INSERT COIN ▼',

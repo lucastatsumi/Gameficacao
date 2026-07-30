@@ -104,7 +104,7 @@ export default function Login() {
               className="w-16 sm:w-20"
             />
             <h1 className="font-pixel text-xl leading-relaxed text-indigo-300 sm:text-2xl">
-              DataQuest
+              TeamQuest
             </h1>
           </div>
 
