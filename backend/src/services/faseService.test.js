@@ -1,5 +1,11 @@
-import { describe, it, expect } from 'vitest';
-import { montarMapaFases } from './faseService.js';
+import { describe, it, expect, vi } from 'vitest';
+
+// faseService.js importa config/supabase.js (que valida env vars e lança se
+// faltarem). Como aqui só testamos a função pura montarMapaFases, mockamos o
+// db para o import não exigir SUPABASE_* — igual aos demais testes de service.
+vi.mock('../config/supabase.js', () => ({ db: { from: vi.fn() } }));
+
+const { montarMapaFases } = await import('./faseService.js');
 
 function fase(id, ordem, fase_requisito_id = null) {
   return { id, nome: `Fase ${ordem}`, descricao: `Descrição ${ordem}`, ordem, fase_requisito_id };
