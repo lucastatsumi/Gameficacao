@@ -75,43 +75,52 @@ ou no bundle do backend — isso é importante especialmente para a
   quem recusa ler é o `fetch`/XHR da página maliciosa, ao comparar o header
   `Access-Control-Allow-Origin` com a própria origem). Ferramentas como
   `curl` não reforçam CORS — não é um jeito válido de testar o bloqueio.
-- **`gameficacao-api` fora do ar por deploy incompleto** (diagnóstico
-  2026-07-30, via conector Vercel): o deploy de produção **atual** retorna
-  `FUNCTION_INVOCATION_FAILED` em toda rota. Os *runtime logs* mostram a
-  causa real: `Error [ERR_MODULE_NOT_FOUND]: Cannot find module
-  '/var/task/src/routes/index.js'`. Ou seja, **não é falta de env var** — o
-  bundle enviado nos últimos deploys manuais (feitos via CLI, `source: cli`,
-  sem metadata de git) subiu **incompleto**, sem a pasta `src/routes/`. As
-  variáveis de ambiente ESTÃO configuradas no projeto: o deploy anterior
-  `dpl_Ghz55DK7…` (commit `db6706e`, `main`) continua **READY e saudável** —
-  `/health` responde `{"status":"ok"}` e `/api/fases` responde `401`
-  (autenticação), provando que o Express sobe, o cliente Supabase inicializa
-  e o CORS aponta para `https://gameficacao-omega.vercel.app`.
+- **`gameficacao-api` ficou fora do ar por deploy incompleto** (diagnóstico
+  original em 2026-07-30, via conector Vercel): deploys manuais feitos por
+  agente (`vercel deploy` / upload inline via `deploy_to_vercel`) vinham
+  subindo árvore de arquivos **incompleta** (faltando `src/routes/` no
+  backend, ou `src/` inteiro no frontend), causando
+  `FUNCTION_INVOCATION_FAILED` / `Error [ERR_MODULE_NOT_FOUND]` no backend e
+  `Rollup failed to resolve /src/main.jsx` no build do frontend.
 
-  **Correção imediata (2 cliques, sem código):** Vercel → projeto
-  `gameficacao-api` → aba **Deployments** → localizar o deploy saudável de
-  `db6706e` → menu **⋯ → Instant Rollback / Promote to Production**. Isso
-  reaponta o domínio `gameficacao-api.vercel.app` para o build completo e
-  derruba o `500` na hora. Como o conteúdo do quiz vem do banco (já pivotado
-  para o tema corporativo nas migrations 31–32), a home volta a exibir as
-  fases corporativas assim que a API responde.
+  **Correção aplicada em 2026-07-31**: em vez de depender de rollback manual
+  no dashboard, o agente listou `git ls-files` em cada subprojeto (fonte da
+  verdade do que deve ir para produção) e chamou `deploy_to_vercel` com a
+  árvore **completa e explícita** (todos os arquivos rastreados pelo git,
+  nenhum a menos) para os dois projetos, a partir do commit mais recente de
+  `main` (pós-rebrand). Ver histórico de commits para o resultado exato —
+  isso elimina a causa raiz (upload parcial) sem depender de clique manual.
 
-  **Correção durável (recomendada):** conectar o repositório em
+  **Correção durável (ainda recomendada):** conectar o repositório em
   Project Settings → Git (nos DOIS projetos, com Root Directory `frontend` e
   `backend`). Aí um `git push` na `main` dispara deploy automático a partir
-  do checkout COMPLETO — elimina de vez os deploys manuais parciais que
-  causaram tanto este `ERR_MODULE_NOT_FOUND` no backend quanto o
-  `Rollup failed to resolve /src/main.jsx` que fez o último build do
-  frontend `gameficacao` falhar (mesma causa: upload sem a pasta `src/`).
-  Enquanto o deploy manual for a única via, rode-o sempre a partir da
-  **raiz de cada subprojeto** (`cd frontend && vercel deploy --prod`,
-  `cd backend && vercel deploy --prod`) para garantir a árvore inteira.
+  do checkout COMPLETO do GitHub — elimina de vez a dependência de deploy
+  manual (via CLI ou MCP) para publicar mudanças.
 
-  > Nota de ferramentas: o conector Vercel disponível ao agente expõe
-  > `deploy_to_vercel` (upload inline de arquivos) mas **não** expõe
-  > promote/rollback nem escrita de env var; e reenviar a árvore inteira
-  > inline não é confiável. Por isso a correção de produção acima é uma ação
-  > de 1–2 cliques no dashboard, não algo que o agente aplicou sozinho.
+- **Conector Supabase**: ao contrário do que uma sessão anterior registrou,
+  o conector MCP do Supabase **funciona** neste ambiente (`list_projects`,
+  `execute_sql`, `list_migrations`, `get_advisors`, `get_logs` testados em
+  2026-07-31). Projeto `ohjvhovbwkqdkisaatfs` está `ACTIVE_HEALTHY`. Conteúdo
+  do quiz **confirmado ao vivo** como corporativo (não mais Estrutura de
+  Dados): 8 fases (Boas-vindas & Cultura, Segurança da Informação, Processos
+  & Ferramentas, Comunicação & Colaboração, Compliance & Conduta, dois
+  minigames reaproveitados, Excelência & Reconhecimento) com 61 questões no
+  total. `get_advisors` não aponta nenhum erro — só INFOs esperados (RLS
+  habilitado sem policy nas tabelas, já que toda escrita passa pela API com
+  `service_role`, por design) e um WARN de baixo risco (proteção contra
+  senha vazada desabilitada no Auth — ativável no dashboard, Auth → Policies).
+  `get_logs` (auth) mostra tráfego real de signup/login/refresh sem erros
+  sistêmicos.
+- **Divergência entre `database/*.sql` local e migrations aplicadas**: o
+  Supabase reporta migrations `31_pivot_tema_fases_badges`,
+  `32_pivot_tema_questoes` e `32_pivot_tema_questoes_fases_6_8` já aplicadas
+  (via MCP, em sessão anterior), mas o repo só tem
+  `database/31_pivot_tema_corporativo.sql` local — os SQLs de `32_*` nunca
+  foram salvos no repo. **Débito consciente**: o dado em produção está
+  correto (confirmado acima), mas rodar `database/` do zero em outro projeto
+  Supabase hoje NÃO reproduziria o pivô completo — falta extrair/commitar o
+  SQL real de `32_pivot_tema_questoes` e `32_pivot_tema_questoes_fases_6_8` a
+  partir do estado atual do banco.
 - **Vulnerabilidade conhecida, baixo risco:** `npm audit` no frontend acusa
   `esbuild ≤0.24.2` (via Vite 5) — permite que qualquer site enviado ao
   navegador do desenvolvedor leia respostas do **dev server local**
