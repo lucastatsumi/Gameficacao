@@ -4,6 +4,7 @@ import * as fichaService from '../services/fichaService.js';
 import * as missaoService from '../services/missaoService.js';
 import * as ligaService from '../services/ligaService.js';
 import * as temporadaService from '../services/temporadaService.js';
+import * as raidService from '../services/raidService.js';
 
 export async function iniciar(req, res, next) {
   try {
@@ -121,6 +122,13 @@ export async function finalizar(req, res, next) {
       req.usuario.id,
       resultado.xp_ganho
     );
+
+    // Raid boss de equipe (roadmap 4.7): self-sufficient — consulta a
+    // própria tentativa (acertos + dificuldade) em vez de reusar
+    // resultado.xp_ganho, já que o dano depende da dificuldade de cada
+    // questão, não do XP. No-op se o jogador não está em turma com raid
+    // ativo.
+    resultado.raid = await raidService.aplicarDano(req.usuario.id, req.body?.tentativa_id);
 
     res.json(resultado);
   } catch (err) {

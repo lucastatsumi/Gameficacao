@@ -13,6 +13,7 @@ import { desafioDiarioRoutes } from './desafioDiario.routes.js';
 import { ligasRoutes } from './ligas.routes.js';
 import { kudosRoutes } from './kudos.routes.js';
 import { temporadasRoutes } from './temporadas.routes.js';
+import { raidsRoutes } from './raids.routes.js';
 
 export const rotas = Router();
 
@@ -33,3 +34,4 @@ rotas.use('/desafio-diario', desafioDiarioRoutes);
 rotas.use('/ligas', ligasRoutes);
 rotas.use('/kudos', kudosRoutes);
 rotas.use('/temporadas', temporadasRoutes);
+rotas.use('/raids', raidsRoutes);

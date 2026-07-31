@@ -314,10 +314,47 @@ perfeito para campanhas trimestrais de treinamento.*
 - Backend: `temporadas` (período, tema) + acumulador por jogador; a
   mesma mecânica de eventos temporários dá o esqueleto do período.
 
-### 4.7 Raid boss de equipe
+### 4.7 Raid boss de equipe ✅ implementado
 
 *Objetivo: transformar treinamento individual em objetivo coletivo — o
 colaborador que não faria o quiz por si faz pela equipe.*
+
+> **Como saiu**: `database/33_raid_boss.sql` (`raids` + índice único
+> parcial `raids_turma_ativo_unico` limitando a UM raid `status='ativo'`
+> por turma + `raid_contribuicoes`) + `raidService.js` (18 testes) + rotas
+> `POST /raids/:turmaId/lancar` (gestor, `exigirProfessor` +
+> `exigirTurmaDoProfessor` — a mesma trava reusada de `turmaService.js`)
+> e `GET /raids/:turmaId` (qualquer matriculado da turma OU o professor
+> dono — `raidAtivo` valida acesso internamente e devolve 404 em vez de
+> vazar dados de raid de turma alheia para quem não pertence a ela;
+> gap encontrado e corrigido na revisão desta entrega). A "equipe" do
+> roadmap H1 é literalmente `turmas`/`matriculas` já existentes — nenhuma
+> multi-tenancy nova. `hp_total = membros × 40`, janela de 7 dias; o
+> índice único parcial É a trava contra lançar dois raids ativos na mesma
+> turma (23505 vira "Esta turma já tem um raid ativo", mesma ideia de
+> `ligas_fechamentos`/`temporada_resgates`). Dano só entra por
+> `raidService.aplicarDano`, hook chamado em `quizController.finalizar` ao
+> lado de `concederXpSemana`/`concederPontosTemporada` — mas,
+> diferentemente deles, é **self-sufficient**: consulta a própria
+> tentativa (`respostas` + `questoes.dificuldade`) em vez de receber o
+> resultado já calculado, porque o dano depende de dificuldade (fácil 1 /
+> média 2 / difícil 4), não de XP — isso evitou qualquer mudança em
+> `quizService.js`. Nas últimas 24h antes do `fim` o dano dobra
+> ("enfurece"); HP nunca fica negativo (`greatest(0, ...)` em JS antes do
+> update). Derrota é destravada por um **update condicional** como lock
+> (`.eq('status','ativo')` na cláusula WHERE + checar se a linha foi
+> afetada) em vez do padrão usual de insert-como-lock, já que aqui a linha
+> já existe — só quem conseguir flipar `status` para `'derrotado'` credita
+> `FICHAS_RECOMPENSA_DERROTA` (20, mesma escala de
+> `temporada_recompensas`) para **todos** os matriculados da turma via
+> `concederFichas`, não só quem contribuiu (decisão deliberada do
+> roadmap). Badge de derrota **adiada**: o motor de badges
+> (`badgeService.js`) é fechado sobre um enum fixo `tipo_condicao_badge`
+> avaliado a partir do contexto de `quizService.finalizarQuiz`; encaixar
+> uma condição "raid derrotado" exigiria migrar o enum e ensinar
+> `condicaoAtendida` sobre um contexto que só existe depois da chamada a
+> `quizService` — mais risco do que o escopo desta entrega pedia, então
+> ficou de fora por ora (fichas cobrem a recompensa coletiva).
 
 - O gestor lança um chefe com **HP compartilhado** calibrado pelo
   tamanho da equipe (ex.: membros × 40). Janela de 1 semana.
@@ -435,7 +472,7 @@ generosidade, não competição.*
 | Desafio diário (4.8) | Ritual compartilhado | Médio | nada | ✅ |
 | Ligas semanais (4.5) | Competição justa | Médio | nada | ✅ |
 | Kudos (4.12) | Reconhecimento social | Baixo | fichas (4.1) | ✅ |
-| Raid boss (4.7) | Objetivo coletivo | Alto | equipes (H1) | — |
+| Raid boss (4.7) | Objetivo coletivo | Alto | equipes (H1) | ✅ |
 | Cartas (4.9) | Colecionismo educativo | Alto | competências (H1/H3) | — |
 | Mascote de equipe (4.10) | Nudge social agregado | Baixo | equipes (H1) | — |
 | Temporadas + passe (4.6) | Arco de longo prazo | Alto | fichas, cosméticos | ✅ |
@@ -454,12 +491,17 @@ migração 29 aplicada sobre a cadeia inteira 01→29 em Postgres 16 local);
 ~~4.3 (missão semanal)~~ ✅ **também implementado e validado** (285
 testes de backend, 24 de frontend, migração 30 aplicada sobre a cadeia
 inteira 01→30 em Postgres 16 local) — fechando o núcleo de missões
-inteiro (diárias + semanal).
-Próximos: 4.7 (raid) → 4.10 (mascote) →
-4.9 (cartas) → 4.11 (prestígio) — os quatro sociais/coletivos restantes
-rendem mais depois que o Horizonte 1 criar equipes de verdade (kudos e
-temporadas foram a exceção: kudos é 1:1 entre colegas, temporadas só
-precisava de fichas/cosméticos, que já existiam).
+inteiro (diárias + semanal); ~~4.7 (raid boss)~~ ✅ **também implementado
+e validado** (303 testes de backend, migração 33 aplicada) — reusou
+`turmas`/`matriculas` como a "equipe" em vez de esperar por
+multi-tenancy nova do Horizonte 1, então acabou não precisando ficar no
+fim da fila.
+Próximos: 4.10 (mascote) →
+4.9 (cartas) → 4.11 (prestígio) — os três sociais/coletivos restantes
+ainda rendem mais depois que o Horizonte 1 amadurecer o conceito de
+equipe (kudos, temporadas e raid foram exceções: kudos é 1:1 entre
+colegas, temporadas só precisava de fichas/cosméticos, e raid só
+precisava da turma que já existe).
 
 ### Campanhas e torneios (empacotamento para o gestor)
 
