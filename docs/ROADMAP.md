@@ -403,18 +403,29 @@ o aprendizado em vez de distrair dele.*
 - Backend: `cartas_catalogo` (1 por competência) + `cartas_do_jogador`;
   a checagem de maestria roda no mesmo hook das badges.
 
-### 4.10 Mascote da equipe
+### 4.10 Mascote da equipe ✅ implementado (MVP)
 
 *Objetivo: nudge social gentil — sinalizar queda de engajamento coletivo
 sem expor ninguém individualmente.*
 
-- Cada equipe tem um mascote pixel procedural com humor semanal: radiante
-  (≥80% dos membros ativos na semana) → feliz → neutro → dormindo (<20%).
-  Evolui de forma (filhote → adulto → lendário) com semanas consecutivas
-  de equipe ativa.
-- Aparece no topo do ranking da equipe. NUNCA mostra quem está ativo ou
-  não — só o agregado (decisão deliberada de privacidade).
-- Backend: cálculo derivado de `respostas` por semana, sem tabela nova.
+> **Como saiu**: `mascoteService.js` (5 testes) + `GET /mascote/:turmaId`
+> (mesmo padrão 404 de acesso do `raidService` — matriculado ou professor
+> dono, IDOR já coberto de saída) + card `CartaoMascote` no `MapaFases`
+> (busca a primeira turma do jogador via `GET /turmas` e é sem-op se ele
+> não estiver em nenhuma). Humor = % de `matriculas` da turma com pelo
+> menos uma `tentativas.finalizada_em` na semana ISO corrente (radiante
+> ≥80% → feliz ≥50% → neutro ≥20% → dormindo). Forma evolui contando, sem
+> tabela nova, quantas semanas consecutivas (olhando até 12 semanas pro
+> passado) tiveram ≥50% de ativos: filhote → adulto (3+) → lendário (8+).
+> Nunca expõe quem individualmente jogou ou não — só o agregado, por
+> design. **Débito consciente**: o card usa os ícones pixel existentes
+> (zap/heart/gamepad/clock) em vez de arte procedural nova por
+> forma×humor (12 combinações) — fica pro próximo passo se o produto
+> quiser investir nisso. Também descobrimos, ao mapear o padrão de acesso
+> por turma para este card, que o raid boss (4.7) ficou só no backend —
+> tem rota e testes, mas nenhuma tela/botão no frontend para lançar ou
+> acompanhar um raid; registrado aqui como próximo item de dívida, não
+> deste MVP.
 
 ### 4.11 Prestígio (Nova Jornada+)
 
@@ -474,7 +485,7 @@ generosidade, não competição.*
 | Kudos (4.12) | Reconhecimento social | Baixo | fichas (4.1) | ✅ |
 | Raid boss (4.7) | Objetivo coletivo | Alto | equipes (H1) | ✅ |
 | Cartas (4.9) | Colecionismo educativo | Alto | competências (H1/H3) | — |
-| Mascote de equipe (4.10) | Nudge social agregado | Baixo | equipes (H1) | — |
+| Mascote de equipe (4.10) | Nudge social agregado | Baixo | equipes (H1) | ✅ |
 | Temporadas + passe (4.6) | Arco de longo prazo | Alto | fichas, cosméticos | ✅ |
 | Prestígio (4.11) | Rejogabilidade | Médio | trilhas por tema (H1) | — |
 
@@ -495,13 +506,18 @@ inteiro (diárias + semanal); ~~4.7 (raid boss)~~ ✅ **também implementado
 e validado** (303 testes de backend, migração 33 aplicada) — reusou
 `turmas`/`matriculas` como a "equipe" em vez de esperar por
 multi-tenancy nova do Horizonte 1, então acabou não precisando ficar no
-fim da fila.
-Próximos: 4.10 (mascote) →
-4.9 (cartas) → 4.11 (prestígio) — os três sociais/coletivos restantes
+fim da fila; ~~4.10 (mascote de equipe)~~ ✅ **também implementado e
+validado** (308 testes de backend, migração nenhuma — cálculo 100%
+derivado de `tentativas`/`matriculas` existentes) — MVP com os ícones
+pixel já existentes em vez de arte procedural nova por combinação
+forma×humor, e revelou que 4.7 (raid boss) ainda não tem frontend (só
+backend+testes), registrado como dívida no detalhe da seção 4.10.
+Próximos: 4.9 (cartas) → 4.11 (prestígio) — os dois itens restantes
 ainda rendem mais depois que o Horizonte 1 amadurecer o conceito de
-equipe (kudos, temporadas e raid foram exceções: kudos é 1:1 entre
-colegas, temporadas só precisava de fichas/cosméticos, e raid só
-precisava da turma que já existe).
+equipe (kudos, temporadas, raid e mascote foram exceções: kudos é 1:1 entre
+colegas, temporadas só precisava de fichas/cosméticos, raid só
+precisava da turma que já existe, e mascote é só leitura agregada da
+mesma turma).
 
 ### Campanhas e torneios (empacotamento para o gestor)
 

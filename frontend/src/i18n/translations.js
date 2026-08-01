@@ -36,6 +36,8 @@ export const traducoes = {
     'login.contaCriada':
       'Conta criada! Se a confirmação por e-mail estiver ativa no projeto, confirme antes de entrar.',
     'login.nomeObrigatorio': 'Informe seu nome',
+    'login.erroConexao':
+      'Não foi possível conectar ao servidor agora. Verifique sua internet e tente novamente em instantes.',
 
     'mapa.titulo': 'Mapa de Fases',
     'mapa.subtitulo': 'Acerte pelo menos 70% do quiz para concluir a fase e desbloquear a próxima.',
@@ -83,6 +85,8 @@ export const traducoes = {
     'login.contaCriada':
       'Account created! If email confirmation is enabled on this project, confirm it before logging in.',
     'login.nomeObrigatorio': 'Please enter your name',
+    'login.erroConexao':
+      "Couldn't connect to the server right now. Check your internet connection and try again shortly.",
 
     'mapa.titulo': 'Stage Map',
     'mapa.subtitulo': 'Score at least 70% on the quiz to complete the stage and unlock the next one.',

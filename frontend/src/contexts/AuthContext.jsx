@@ -8,6 +8,7 @@ export function AuthProvider({ children }) {
   const [sessao, setSessao] = useState(null);
   const [perfil, setPerfil] = useState(null);
   const [carregando, setCarregando] = useState(true);
+  const [erroConexao, setErroConexao] = useState(false);
 
   const carregarPerfil = useCallback(async () => {
     try {
@@ -18,10 +19,16 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSessao(data.session);
-      if (!data.session) setCarregando(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSessao(data.session);
+        if (!data.session) setCarregando(false);
+      })
+      .catch(() => {
+        setErroConexao(true);
+        setCarregando(false);
+      });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_evento, novaSessao) => {
       setSessao(novaSessao);
@@ -59,6 +66,7 @@ export function AuthProvider({ children }) {
         sessao,
         perfil,
         carregando,
+        erroConexao,
         login,
         cadastrar,
         sair,
