@@ -15,7 +15,7 @@ const inputCls =
   'w-full border-2 border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none focus:border-indigo-500';
 
 export default function Login() {
-  const { sessao, login, cadastrar } = useAuth();
+  const { sessao, login, cadastrar, erroConexao } = useAuth();
   const { t } = useI18n();
   const [modo, setModo] = useState('login'); // 'login' | 'cadastro'
   const [nome, setNome] = useState('');
@@ -192,6 +192,7 @@ export default function Login() {
 
               <Alerta>{erro}</Alerta>
               <Alerta tipo="sucesso">{aviso}</Alerta>
+              {erroConexao && <Alerta>{t('login.erroConexao')}</Alerta>}
 
               <button
                 type="submit"

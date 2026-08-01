@@ -264,6 +264,32 @@ function CartaoDesafioDiario({ status }) {
   );
 }
 
+// Mascote da equipe (roadmap 4.10): nudge social agregado — nunca mostra
+// quem está ativo ou não, só o humor coletivo da turma na semana.
+const MASCOTE_POR_HUMOR = {
+  radiante: { icone: 'zap', cor: 'text-amber-300', texto: 'radiante — a equipe está a todo vapor!' },
+  feliz: { icone: 'heart', cor: 'text-emerald-300', texto: 'feliz — boa parte da equipe ativa essa semana' },
+  neutro: { icone: 'gamepad', cor: 'text-slate-300', texto: 'neutro — poucos colegas jogaram essa semana' },
+  dormindo: { icone: 'clock', cor: 'text-slate-500', texto: 'cochilando — ninguém jogou essa semana ainda' },
+};
+const MASCOTE_POR_FORMA = { filhote: 'Filhote', adulto: 'Adulto', lendario: 'Lendário' };
+
+function CartaoMascote({ mascote }) {
+  if (!mascote) return null;
+  const humor = MASCOTE_POR_HUMOR[mascote.humor] ?? MASCOTE_POR_HUMOR.neutro;
+  return (
+    <div className="card-pixel mt-4 flex items-center gap-3 border-2 border-violet-500/30 bg-violet-500/5 p-3">
+      <PixelIcon nome={humor.icone} className={`h-6 w-6 shrink-0 ${humor.cor}`} />
+      <p className="text-xs text-slate-400">
+        <span className="font-semibold uppercase tracking-wide text-violet-300">
+          Mascote da equipe ({MASCOTE_POR_FORMA[mascote.forma] ?? mascote.forma}):
+        </span>{' '}
+        {humor.texto}
+      </p>
+    </div>
+  );
+}
+
 export default function MapaFases() {
   const { t } = useI18n();
   const [fases, setFases] = useState(null);
@@ -271,6 +297,7 @@ export default function MapaFases() {
   const [missoes, setMissoes] = useState(null);
   const [missoesSemana, setMissoesSemana] = useState(null);
   const [desafioDia, setDesafioDia] = useState(null);
+  const [mascote, setMascote] = useState(null);
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
@@ -294,6 +321,13 @@ export default function MapaFases() {
       .get('/desafio-diario')
       .then(setDesafioDia)
       .catch(() => {}); // idem para o card do desafio diário
+    // Mascote da equipe (roadmap 4.10): só existe se o jogador está em
+    // alguma turma — nunca bloqueia o mapa se a chamada falhar.
+    api
+      .get('/turmas')
+      .then((turmas) => turmas[0] && api.get(`/mascote/${turmas[0].id}`))
+      .then((dados) => dados && setMascote(dados))
+      .catch(() => {});
   }, []);
 
   if (erro) return <Alerta>{erro}</Alerta>;
@@ -340,6 +374,7 @@ export default function MapaFases() {
       )}
 
       <CartaoDesafioDiario status={desafioDia} />
+      <CartaoMascote mascote={mascote} />
       <QuadroMissoes missoes={missoes} />
       <QuadroMissaoSemanal missoes={missoesSemana} />
 
