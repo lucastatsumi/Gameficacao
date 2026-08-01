@@ -8,6 +8,7 @@ node_modules/
 # Builds
 frontend/dist/
 backend/dist/
+dist-api/
 
 # Sistema / editor
 .DS_Store
