@@ -97,6 +97,34 @@ ou no bundle do backend — isso é importante especialmente para a
   do checkout COMPLETO do GitHub — elimina de vez a dependência de deploy
   manual (via CLI ou MCP) para publicar mudanças.
 
+  **Reincidência confirmada em 2026-08-02** (via conectores Vercel +
+  Supabase): a produção estava quebrada de novo com o MESMO padrão de upload
+  parcial.
+  - **Backend** (`gameficacao-api`): o deployment de produção estava `READY`
+    (build passou) mas a função crashava em runtime com
+    `Error [ERR_MODULE_NOT_FOUND]: Cannot find module
+    '/var/task/src/utils/httpError.js'` — o último deploy manual subiu a
+    árvore SEM o diretório `src/utils/`. Toda chamada retornava HTTP 500
+    `FUNCTION_INVOCATION_FAILED`, e era ESSA a causa do "erro de fetch na
+    página inicial" (o front chama `https://gameficacao-api.vercel.app/api`).
+  - **Frontend** (`gameficacao`): TODOS os deploys recentes estavam em
+    `ERROR` (`Could not resolve "./pages/Login.jsx"` — `src/` incompleto),
+    então o alias `gameficacao-omega` continuava servindo um build antigo de
+    2026-07-29 com a marca velha ("DataQuest — Estrutura de Dados").
+  - **Supabase** (`ohjvhovbwkqdkisaatfs`): `ACTIVE_HEALTHY`, `get_advisors`
+    sem erros — só INFO (RLS sem policy, por design) e 1 WARN (proteção de
+    senha vazada desativada). Conteúdo já corporativo. Ou seja: o banco NÃO
+    era o problema; o problema era 100% deploy incompleto na Vercel.
+
+  **Re-correção 2026-08-02**: re-deploy da árvore COMPLETA (via `git ls-files`
+  em cada subprojeto, incluindo `src/utils/` no backend) com `deploy_to_vercel`,
+  para `gameficacao-api` e `gameficacao`. O bundle do backend também pode ser
+  gerado como arquivo único com esbuild
+  (`npx esbuild api/index.js --bundle --platform=node --format=esm
+  --packages=external`) para eliminar de vez o risco de "faltou um módulo".
+  Ainda assim, a correção durável real segue sendo a integração Git↔Vercel
+  acima.
+
 - **Conector Supabase**: ao contrário do que uma sessão anterior registrou,
   o conector MCP do Supabase **funciona** neste ambiente (`list_projects`,
   `execute_sql`, `list_migrations`, `get_advisors`, `get_logs` testados em
