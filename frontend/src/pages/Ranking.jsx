@@ -11,6 +11,15 @@ import pixelPodio from '../assets/img/pixel-podio.svg';
 // cores das medalhas do pódio (ouro, prata, bronze)
 const CORES_MEDALHA = ['text-amber-400', 'text-slate-300', 'text-amber-700'];
 
+// Mascote da equipe (4.10): humor semanal -> ícone/cor/rótulo em pt-br
+const MASCOTE_HUMOR = {
+  radiante: { rotulo: 'Radiante', icone: 'fire', cor: 'text-amber-400' },
+  feliz: { rotulo: 'Feliz', icone: 'heart', cor: 'text-emerald-400' },
+  neutro: { rotulo: 'Neutro', icone: 'users', cor: 'text-slate-300' },
+  dormindo: { rotulo: 'Dormindo', icone: 'clock', cor: 'text-indigo-300' },
+};
+const MASCOTE_FORMA = { filhote: 'Filhote', adulto: 'Adulto', lendario: 'Lendário' };
+
 export default function Ranking() {
   const { perfil } = useAuth();
   const [aba, setAba] = useState('global'); // 'global' | 'turma' | 'fase'
@@ -26,6 +35,7 @@ export default function Ranking() {
   const [kudosResumo, setKudosResumo] = useState(null);
   const [kudosEnviados, setKudosEnviados] = useState(new Set());
   const [kudosMsg, setKudosMsg] = useState(null);
+  const [mascote, setMascote] = useState(null);
 
   useEffect(() => {
     api
@@ -77,6 +87,20 @@ export default function Ranking() {
   useEffect(() => {
     carregar();
   }, [carregar]);
+
+  // Mascote da equipe (roadmap 4.10): humor semanal agregado da turma —
+  // nunca expõe quem individualmente esteve ativo. Refaz a busca sempre
+  // que a turma escolhida muda; falha silenciosa (não deve travar a página).
+  useEffect(() => {
+    if (aba !== 'turma' || !turmaId) {
+      setMascote(null);
+      return;
+    }
+    api
+      .get(`/turmas/${turmaId}/mascote`)
+      .then(setMascote)
+      .catch(() => setMascote(null));
+  }, [aba, turmaId]);
 
   // Qualquer participante (aluno ou professor) pode convidar: copia o
   // código de acesso da turma para compartilhar
@@ -217,6 +241,24 @@ export default function Ranking() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Mascote da equipe (4.10): só o agregado semanal, nunca quem individualmente
+          está ativo. Badge simples por ora — a ilustração pixel procedural completa
+          fica para uma iteração futura do roadmap. */}
+      {aba === 'turma' && turmaId && mascote && (
+        <div className="card-pixel mt-4 flex items-center gap-3 border-2 border-slate-800 bg-slate-900/60 p-4">
+          <PixelIcon nome={MASCOTE_HUMOR[mascote.humor].icone} className={`h-8 w-8 shrink-0 ${MASCOTE_HUMOR[mascote.humor].cor}`} />
+          <div className="text-sm">
+            <p className="font-pixel text-[11px] text-slate-200">
+              Mascote da equipe: {MASCOTE_HUMOR[mascote.humor].rotulo}
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              {mascote.percentual_ativos}% da turma ativa esta semana · Forma:{' '}
+              {MASCOTE_FORMA[mascote.forma]}
+            </p>
+          </div>
         </div>
       )}
 

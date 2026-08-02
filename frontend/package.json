@@ -1,7 +1,7 @@
 {
-  "name": "serious-game-frontend",
+  "name": "teamquest-frontend",
   "version": "1.0.0",
-  "description": "Frontend do serious game para aprendizagem de Estrutura de Dados (TCC)",
+  "description": "Frontend do TeamQuest, plataforma gamificada de onboarding e reconhecimento para empresas",
   "type": "module",
   "scripts": {
     "dev": "vite",

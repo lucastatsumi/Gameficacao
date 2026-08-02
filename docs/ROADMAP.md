@@ -403,10 +403,25 @@ o aprendizado em vez de distrair dele.*
 - Backend: `cartas_catalogo` (1 por competência) + `cartas_do_jogador`;
   a checagem de maestria roda no mesmo hook das badges.
 
-### 4.10 Mascote da equipe
+### 4.10 Mascote da equipe ✅ implementado
 
 *Objetivo: nudge social gentil — sinalizar queda de engajamento coletivo
 sem expor ninguém individualmente.*
+
+> **Como saiu**: sem tabela nova — `mascoteService.js` (13 testes) deriva
+> tudo de `tentativas`/`matriculas` agrupadas por semana ISO
+> (`utils/semana.js`, mesmo rótulo `'YYYY-Www'` já usado por
+> ligas/kudos/missões semanais); só a CONTAGEM de usuários distintos
+> ativos por semana sai da função — quem individualmente esteve ativo
+> nunca vaza. Humor por limiar do % da semana atual (radiante ≥80% →
+> feliz ≥50% → neutro ≥20% → dormindo); forma por semanas consecutivas
+> (não-dormentes) contadas para trás a partir da semana ANTERIOR, com
+> teto de segurança de 26 semanas (adulto ≥4, lendário ≥12).
+> `exigirAcessoATurma` (matriculado OU professor dono, 404 caso contrário)
+> foi extraído de `raidService.js` para `turmaService.js` e reusado por
+> ambos. Rota `GET /turmas/:turmaId/mascote`; exibido como badge simples
+> (ícone + texto) no topo da aba "Turma" do `Ranking.jsx` — a ilustração
+> pixel procedural completa fica para uma iteração futura.
 
 - Cada equipe tem um mascote pixel procedural com humor semanal: radiante
   (≥80% dos membros ativos na semana) → feliz → neutro → dormindo (<20%).

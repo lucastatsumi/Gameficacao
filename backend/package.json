@@ -1,7 +1,7 @@
 {
-  "name": "serious-game-backend",
+  "name": "teamquest-backend",
   "version": "1.0.0",
-  "description": "API do serious game para aprendizagem de Estrutura de Dados (TCC)",
+  "description": "API do TeamQuest, plataforma gamificada de onboarding e reconhecimento para empresas",
   "type": "module",
   "main": "src/server.js",
   "scripts": {

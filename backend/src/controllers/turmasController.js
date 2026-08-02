@@ -1,4 +1,5 @@
 import * as turmaService from '../services/turmaService.js';
+import { mascoteDaTurma } from '../services/mascoteService.js';
 
 export async function entrar(req, res, next) {
   try {
@@ -12,6 +13,14 @@ export async function entrar(req, res, next) {
 export async function minhas(req, res, next) {
   try {
     res.json(await turmaService.minhasTurmas(req.usuario.id));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function mascote(req, res, next) {
+  try {
+    res.json(await mascoteDaTurma(req.usuario.id, req.params.turmaId));
   } catch (err) {
     next(err);
   }

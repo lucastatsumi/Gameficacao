@@ -5,3 +5,4 @@ export const turmasRoutes = Router();
 
 turmasRoutes.post('/entrar', turmasController.entrar);
 turmasRoutes.get('/', turmasController.minhas);
+turmasRoutes.get('/:turmaId/mascote', turmasController.mascote);

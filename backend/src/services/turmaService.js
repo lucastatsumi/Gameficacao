@@ -80,6 +80,31 @@ export async function exigirTurmaDoProfessor(professorId, turmaId) {
   return data;
 }
 
+// Acesso "de leitura" à turma: matriculado OU professor dono — mesma
+// checagem usada por raidService.raidAtivo e mascoteService.mascoteDaTurma
+// (extraída daqui para não duplicar a trava de privacidade/pertencimento).
+// 404 tanto para turma inexistente quanto para quem não pertence a ela
+// (não confirma nem nega a existência da turma para estranhos).
+export async function exigirAcessoATurma(userId, turmaId) {
+  const { data: matricula, error: erroMatricula } = await db
+    .from('matriculas')
+    .select('turma_id')
+    .eq('turma_id', turmaId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (erroMatricula) throw erroMatricula;
+  if (matricula) return;
+
+  const { data: turma, error: erroTurma } = await db
+    .from('turmas')
+    .select('id')
+    .eq('id', turmaId)
+    .eq('professor_id', userId)
+    .maybeSingle();
+  if (erroTurma) throw erroTurma;
+  if (!turma) throw new HttpError(404, 'Turma não encontrada entre as suas turmas');
+}
+
 export async function alunosDaTurma(professorId, turmaId) {
   await exigirTurmaDoProfessor(professorId, turmaId);
 

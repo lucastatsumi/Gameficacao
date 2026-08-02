@@ -1,6 +1,6 @@
 import { db } from '../config/supabase.js';
 import { HttpError } from '../utils/httpError.js';
-import { exigirTurmaDoProfessor } from './turmaService.js';
+import { exigirTurmaDoProfessor, exigirAcessoATurma } from './turmaService.js';
 import { concederFichas } from './fichaService.js';
 
 // Raid boss de equipe (roadmap v2, 4.7): transforma treinamento individual
@@ -103,26 +103,6 @@ export async function aplicarDano(userId, tentativaId, agora = new Date()) {
 }
 
 // ---------------------------------------------------------------
-
-async function exigirAcessoATurma(userId, turmaId) {
-  const { data: matricula, error: erroMatricula } = await db
-    .from('matriculas')
-    .select('turma_id')
-    .eq('turma_id', turmaId)
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (erroMatricula) throw erroMatricula;
-  if (matricula) return;
-
-  const { data: turma, error: erroTurma } = await db
-    .from('turmas')
-    .select('id')
-    .eq('id', turmaId)
-    .eq('professor_id', userId)
-    .maybeSingle();
-  if (erroTurma) throw erroTurma;
-  if (!turma) throw new HttpError(404, 'Turma não encontrada entre as suas turmas');
-}
 
 async function membrosDaTurma(turmaId) {
   const { data, error } = await db.from('matriculas').select('user_id').eq('turma_id', turmaId);
