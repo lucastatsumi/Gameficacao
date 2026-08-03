@@ -390,10 +390,38 @@ desafio no café.*
 - Ranking do dia (acertos, depois tempo) separado do ranking geral;
   participar mantém o streak diário existente.
 
-### 4.9 Cartas colecionáveis de conhecimento
+### 4.9 Cartas colecionáveis de conhecimento ✅ implementado
 
 *Objetivo: colecionismo que É revisão de conteúdo — a recompensa reforça
 o aprendizado em vez de distrair dele.*
+
+> **Como saiu**: `database/34_cartas.sql` (`cartas_do_jogador`, chave
+> primária composta `(user_id, fase_id)` — a própria PK é a trava de
+> concorrência, mesma ideia de `ligas_fechamentos`/`temporada_resgates`) +
+> `cartaService.js` (10 testes) + rota `GET /cartas`
+> (`cartaController.listar`). **Adaptado para usar fases em vez de
+> competências, que ainda não existem — revisitar quando H1 chegar**: o
+> roadmap original amarra a carta a uma tag de competência (Horizonte 1,
+> não implementado), então esta entrega usa as 8 `fases` já existentes
+> como unidade de maestria — uma carta por fase, sem `cartas_catalogo`
+> separado (`fases` já É o catálogo). `verificarCartaFase` é
+> self-sufficient, mesmo padrão de `raidService.aplicarDano`: reconsulta a
+> própria tentativa por id para achar `fase_id` em vez de reusar o
+> `resultado` já calculado, então não mexeu em `quizService.js`.
+> `fase_id` null (tentativa de quiz custom ou desafio diário — constraint
+> `tentativa_origem` de `25_desafio_diario.sql`) é no-op, assim como já
+> possuir a carta. Caso contrário agrega TODAS as tentativas finalizadas
+> do jogador naquela fase (não só a atual) e revela a carta quando o total
+> acumulado bate os dois limiares: **>= 10 questões respondidas e >= 80%
+> de acerto agregado**. 23505 no insert (concorrência) é ignorado, mesma
+> ideia de `raidService`/`temporadaService`/`missaoService`. Chamado em
+> `quizController.finalizar` logo após o raid, escrevendo
+> `resultado.carta_nova`. Frontend: seção compacta "Álbum de Cartas" no
+> `Perfil.jsx` (mesmo padrão visual grid/dim-grayscale já usado pelas
+> badges), sem página nova; nenhuma chave de i18n nova porque `Perfil.jsx`
+> já não usa `i18n/translations.js` para seu texto (só `nav.perfil` está
+> lá). 326 testes de backend (10 novos), 24 de frontend, migração 34
+> aplicada.
 
 - Dominar uma competência (ex.: ≥80% de acerto em ≥10 questões daquela
   tag) **revela a carta** daquele conceito: frente com arte procedural
@@ -488,8 +516,8 @@ generosidade, não competição.*
 | Ligas semanais (4.5) | Competição justa | Médio | nada | ✅ |
 | Kudos (4.12) | Reconhecimento social | Baixo | fichas (4.1) | ✅ |
 | Raid boss (4.7) | Objetivo coletivo | Alto | equipes (H1) | ✅ |
-| Cartas (4.9) | Colecionismo educativo | Alto | competências (H1/H3) | — |
-| Mascote de equipe (4.10) | Nudge social agregado | Baixo | equipes (H1) | — |
+| Cartas (4.9) | Colecionismo educativo | Alto | competências (H1/H3) | ✅ |
+| Mascote de equipe (4.10) | Nudge social agregado | Baixo | equipes (H1) | ✅ |
 | Temporadas + passe (4.6) | Arco de longo prazo | Alto | fichas, cosméticos | ✅ |
 | Prestígio (4.11) | Rejogabilidade | Médio | trilhas por tema (H1) | — |
 
@@ -510,13 +538,15 @@ inteiro (diárias + semanal); ~~4.7 (raid boss)~~ ✅ **também implementado
 e validado** (303 testes de backend, migração 33 aplicada) — reusou
 `turmas`/`matriculas` como a "equipe" em vez de esperar por
 multi-tenancy nova do Horizonte 1, então acabou não precisando ficar no
-fim da fila.
-Próximos: 4.10 (mascote) →
-4.9 (cartas) → 4.11 (prestígio) — os três sociais/coletivos restantes
-ainda rendem mais depois que o Horizonte 1 amadurecer o conceito de
-equipe (kudos, temporadas e raid foram exceções: kudos é 1:1 entre
-colegas, temporadas só precisava de fichas/cosméticos, e raid só
-precisava da turma que já existe).
+fim da fila; ~~4.10 (mascote)~~ ✅ **também implementado** (sem tabela
+nova, deriva de `tentativas`/`matriculas`); ~~4.9 (cartas)~~ ✅ **também
+implementado e validado** (326 testes de backend, 24 de frontend,
+migração 34 aplicada) — adaptado para usar `fases` em vez de
+competências (H1, ainda não existe), mesmo raciocínio de reusar o que já
+existe em vez de esperar o Horizonte 1.
+Próximo: 4.11 (prestígio) — o único mecânico coletivo/social ainda
+pendente, e o único que realmente depende de trilhas por tema (H1) para
+fazer sentido.
 
 ### Campanhas e torneios (empacotamento para o gestor)
 

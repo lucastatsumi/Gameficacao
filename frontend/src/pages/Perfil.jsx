@@ -12,20 +12,27 @@ export default function Perfil() {
   const [badges, setBadges] = useState(null);
   const [historico, setHistorico] = useState(null);
   const [revisao, setRevisao] = useState(null);
+  const [cartas, setCartas] = useState(null);
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
-    Promise.all([api.get('/perfil/badges'), api.get('/perfil/historico'), api.get('/perfil/revisao')])
-      .then(([b, h, r]) => {
+    Promise.all([
+      api.get('/perfil/badges'),
+      api.get('/perfil/historico'),
+      api.get('/perfil/revisao'),
+      api.get('/cartas'),
+    ])
+      .then(([b, h, r, c]) => {
         setBadges(b);
         setHistorico(h);
         setRevisao(r);
+        setCartas(c);
       })
       .catch((err) => setErro(err.message));
   }, []);
 
   if (erro) return <Alerta>{erro}</Alerta>;
-  if (!perfil || !badges || !historico || !revisao) return <Spinner texto="Carregando perfil..." />;
+  if (!perfil || !badges || !historico || !revisao || !cartas) return <Spinner texto="Carregando perfil..." />;
 
   const conquistadas = badges.filter((b) => b.conquistada).length;
 
@@ -182,6 +189,40 @@ export default function Perfil() {
               <div className="text-3xl">{badge.icone}</div>
               <p className="mt-2 text-xs font-semibold text-slate-200">{badge.nome}</p>
               <p className="mt-1 text-[11px] leading-tight text-slate-500">{badge.descricao}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* álbum de cartas — uma por fase dominada (>=10 questões, >=80% de acerto) */}
+      <section>
+        <h2 className="flex items-center gap-2 font-pixel text-sm text-slate-100">
+          <PixelIcon nome="book-open" className="h-5 w-5 text-cyan-400" />
+          Álbum de Cartas{' '}
+          <span className="font-sans text-sm font-normal text-slate-400">
+            ({cartas.conquistadas}/{cartas.total})
+          </span>
+        </h2>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {cartas.cartas.map((carta) => (
+            <div
+              key={carta.fase_id}
+              title={
+                carta.conquistada
+                  ? `Conquistada em ${new Date(carta.conquistada_em).toLocaleDateString('pt-BR')}`
+                  : 'Domine esta fase (10+ questões, 80%+ de acerto) para revelar a carta'
+              }
+              className={`card-pixel border-2 p-4 text-center transition-colors ${
+                carta.conquistada
+                  ? 'border-cyan-500/40 bg-cyan-500/10'
+                  : 'border-slate-800 bg-slate-900/40 opacity-50 grayscale'
+              }`}
+            >
+              <PixelIcon
+                nome="book-open"
+                className={`mx-auto h-6 w-6 ${carta.conquistada ? 'text-cyan-300' : 'text-slate-600'}`}
+              />
+              <p className="mt-2 text-xs font-semibold text-slate-200">{carta.fase_nome}</p>
             </div>
           ))}
         </div>

@@ -5,6 +5,7 @@ import * as missaoService from '../services/missaoService.js';
 import * as ligaService from '../services/ligaService.js';
 import * as temporadaService from '../services/temporadaService.js';
 import * as raidService from '../services/raidService.js';
+import * as cartaService from '../services/cartaService.js';
 
 export async function iniciar(req, res, next) {
   try {
@@ -129,6 +130,13 @@ export async function finalizar(req, res, next) {
     // questão, não do XP. No-op se o jogador não está em turma com raid
     // ativo.
     resultado.raid = await raidService.aplicarDano(req.usuario.id, req.body?.tentativa_id);
+
+    // Carta colecionável (roadmap 4.9, adaptado para usar fases em vez de
+    // competências): self-sufficient — mesmo padrão de raidService.aplicarDano,
+    // reconsulta a própria tentativa (fase_id) em vez de reusar `resultado`,
+    // então também não precisa mexer em quizService. No-op se a fase já
+    // não render carta nova (limiares não batidos ou carta já conquistada).
+    resultado.carta_nova = await cartaService.verificarCartaFase(req.usuario.id, req.body?.tentativa_id);
 
     res.json(resultado);
   } catch (err) {
