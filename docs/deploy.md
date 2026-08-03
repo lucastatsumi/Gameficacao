@@ -111,16 +111,16 @@ ou no bundle do backend — isso é importante especialmente para a
   senha vazada desabilitada no Auth — ativável no dashboard, Auth → Policies).
   `get_logs` (auth) mostra tráfego real de signup/login/refresh sem erros
   sistêmicos.
-- **Divergência entre `database/*.sql` local e migrations aplicadas**: o
-  Supabase reporta migrations `31_pivot_tema_fases_badges`,
-  `32_pivot_tema_questoes` e `32_pivot_tema_questoes_fases_6_8` já aplicadas
-  (via MCP, em sessão anterior), mas o repo só tem
-  `database/31_pivot_tema_corporativo.sql` local — os SQLs de `32_*` nunca
-  foram salvos no repo. **Débito consciente**: o dado em produção está
-  correto (confirmado acima), mas rodar `database/` do zero em outro projeto
-  Supabase hoje NÃO reproduziria o pivô completo — falta extrair/commitar o
-  SQL real de `32_pivot_tema_questoes` e `32_pivot_tema_questoes_fases_6_8` a
-  partir do estado atual do banco.
+- **Divergência entre `database/*.sql` local e migrations aplicadas —
+  RESOLVIDA em 2026-08-03**: o Supabase reporta as migrations
+  `31_pivot_tema_fases_badges`, `32_pivot_tema_questoes` e
+  `32_pivot_tema_questoes_fases_6_8` aplicadas separadamente em produção, mas
+  o repo consolida as três num único `database/31_pivot_tema_corporativo.sql`
+  (1365 linhas, cobre fases 1–8 incluindo os dois minigames). Verificado ao
+  vivo nesta sessão (`execute_sql` comparando enunciados de fase 6 e 7 contra
+  o arquivo local): o conteúdo bate exatamente. Rodar `database/` do zero em
+  outro projeto Supabase hoje reproduz o pivô completo — a nota anterior
+  registrando esse débito estava desatualizada.
 - **Vulnerabilidade conhecida, baixo risco:** `npm audit` no frontend acusa
   `esbuild ≤0.24.2` (via Vite 5) — permite que qualquer site enviado ao
   navegador do desenvolvedor leia respostas do **dev server local**
