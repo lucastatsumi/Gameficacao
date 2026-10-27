@@ -4,7 +4,7 @@ import { makeDb, ok } from '../test/dbMock.js';
 vi.mock('../config/supabase.js', () => ({ db: { from: vi.fn() } }));
 
 const { db } = await import('../config/supabase.js');
-const { extrairJson, gerarRascunhos, aprovarRascunho, descartarRascunho } = await import(
+const { extrairJson, gerarRascunhos, aprovarRascunho, descartarRascunho, ancorarNoMaterial } = await import(
   './iaService.js'
 );
 
@@ -122,5 +122,46 @@ describe('revisão de rascunhos', () => {
     expect(mock.chainsPara('rascunhos_questoes')[1].update).toHaveBeenCalledWith({
       status: 'aprovado',
     });
+  });
+});
+
+describe('geração a partir de documento da empresa', () => {
+  const MATERIAL = 'Política: todo incidente deve ser reportado   em até 24 horas ao time de segurança.';
+
+  it('ancora: aceita trecho literal (ignorando espaços/caixa) e cita a fonte', () => {
+    const q = ancorarNoMaterial(
+      { ...QUESTAO_OK, trecho_fonte: 'reportado em até 24 horas' },
+      MATERIAL
+    );
+    const correta = q.alternativas.find((a) => a.correta);
+    expect(correta.explicacao).toContain('Fonte: "reportado em até 24 horas"');
+  });
+
+  it('descarta trecho que não está no documento ou ausente', () => {
+    expect(ancorarNoMaterial({ ...QUESTAO_OK, trecho_fonte: 'prazo de 72 horas' }, MATERIAL)).toBeNull();
+    expect(ancorarNoMaterial(QUESTAO_OK, MATERIAL)).toBeNull();
+  });
+
+  it('gerarRascunhos com material: só passa a questão ancorada', async () => {
+    mockFetch(
+      respostaClaude([
+        { ...QUESTAO_OK, trecho_fonte: 'até 24 horas' },
+        { ...QUESTAO_OK, trecho_fonte: 'inventado pela IA' },
+      ])
+    );
+    const mock = configurarDb({ rascunhos_questoes: [ok([{ id: 'r1' }])] });
+    const r = await gerarRascunhos('p1', { fase_id: 1, tema: 'Segurança', material: MATERIAL });
+    expect(r.descartadas).toBe(1);
+    const linhas = mock.chainsPara('rascunhos_questoes')[0].insert.mock.calls[0][0];
+    expect(linhas).toHaveLength(1);
+    expect(JSON.stringify(linhas[0].payload)).toContain('Fonte:');
+    // o documento vai no prompt, dentro de <documento>
+    expect(global.fetch.mock.calls[0][1].body).toContain('<documento>');
+  });
+
+  it('400 para material grande demais', async () => {
+    await expect(
+      gerarRascunhos('p1', { fase_id: 1, tema: 'x', material: 'a'.repeat(12001) })
+    ).rejects.toMatchObject({ status: 400 });
   });
 });

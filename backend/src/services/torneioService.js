@@ -117,13 +117,30 @@ export async function encerrarTorneio(gestorId, torneioId, agora = new Date()) {
   if (error) throw error;
   if (!atualizado?.length) throw new HttpError(409, 'Torneio já encerrado');
 
+  const tituloId = await idDoTituloCampeao();
   for (const equipe of placar.slice(0, FICHAS_PODIO.length)) {
     if (equipe.xp_total === 0) continue; // ninguém jogou: sem prêmio
     for (const userId of equipe.membros_ids) {
       await concederFichas(userId, FICHAS_PODIO[equipe.posicao - 1], 'torneio_podio', torneioId);
+      if (equipe.posicao === 1 && tituloId) {
+        const { error: erroItem } = await db
+          .from('itens_do_jogador')
+          .insert({ user_id: userId, item_id: tituloId });
+        if (erroItem && erroItem.code !== '23505') throw erroItem; // já tinha o título
+      }
     }
   }
   return placar.map(({ membros_ids: _ids, ...resto }) => resto);
+}
+
+async function idDoTituloCampeao() {
+  const { data, error } = await db
+    .from('itens_catalogo')
+    .select('id')
+    .eq('chave', 'titulo_campeao_torneio')
+    .maybeSingle();
+  if (error) throw error;
+  return data?.id ?? null; // migração 44 ausente: segue só com as fichas
 }
 
 export async function listarTorneios(gestorId) {

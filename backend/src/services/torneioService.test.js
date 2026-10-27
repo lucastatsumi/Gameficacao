@@ -85,7 +85,9 @@ describe('encerrarTorneio', () => {
     const mock = configurarDb({
       torneios: [ok(torneio), ok([{ id: 't1' }])],
       tentativas: [ok([{ user_id: 'u1', xp_ganho: 50 }])],
+      itens_catalogo: [ok({ id: 9 })],
       transacoes_fichas: [ok(null)],
+      itens_do_jogador: [ok(null)],
     });
     const placar = await encerrarTorneio('g', 't1', depois);
     expect(placar[0]).toMatchObject({ turma_id: 'a', posicao: 1 });
@@ -97,6 +99,11 @@ describe('encerrarTorneio', () => {
       quantidade: 30,
       motivo: 'torneio_podio',
       referencia: 't1',
+    });
+    // campeão (posição 1) também recebe o título exclusivo
+    expect(mock.chainsPara('itens_do_jogador')[0].insert).toHaveBeenCalledWith({
+      user_id: 'u1',
+      item_id: 9,
     });
   });
 });

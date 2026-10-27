@@ -7,7 +7,7 @@ import { inputCls } from './inputCls.js';
 // entra no banco de questões sem o clique em "Aprovar".
 export default function AbaIA() {
   const [fases, setFases] = useState([]);
-  const [form, setForm] = useState({ fase_id: '', tema: '', nivel: 'media', quantidade: 3 });
+  const [form, setForm] = useState({ fase_id: '', tema: '', nivel: 'media', quantidade: 3, material: '' });
   const [rascunhos, setRascunhos] = useState([]);
   const [gerando, setGerando] = useState(false);
   const [info, setInfo] = useState(null);
@@ -36,6 +36,7 @@ export default function AbaIA() {
     try {
       const r = await api.post('/admin/ia/gerar', {
         ...form,
+        material: form.material.trim() || null,
         fase_id: Number(form.fase_id),
         quantidade: Number(form.quantidade),
       });
@@ -131,6 +132,14 @@ export default function AbaIA() {
           className={inputCls}
           value={form.quantidade}
           onChange={(e) => setForm({ ...form, quantidade: e.target.value })}
+        />
+        <textarea
+          className={`${inputCls} sm:col-span-2`}
+          rows={5}
+          maxLength={12000}
+          placeholder="(Opcional) Cole aqui um trecho de política/manual interno: as questões serão ancoradas nele, citando o trecho-fonte."
+          value={form.material}
+          onChange={(e) => setForm({ ...form, material: e.target.value })}
         />
         <button className="btn-pixel px-4 sm:col-span-2" disabled={gerando}>
           {gerando ? 'Gerando...' : 'Gerar rascunhos com IA'}

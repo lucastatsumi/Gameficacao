@@ -72,8 +72,10 @@ O objetivo é generalizar o domínio sem reescrever o que funciona.
 > descartar). Rascunhos ficam em tabela própria em vez de status em
 > `questoes`, o que garante que nada gerado chega ao quiz sem aprovação.
 > Testado com a API mockada; **não foi exercitado contra a API real** (sem
-> chave neste ambiente). Pendentes: auditoria por IA do banco existente e
-> geração a partir de documento da empresa (exige storage).
+> chave neste ambiente). Auditoria por IA ✅ (migração 41). Geração a partir
+> de documento ✅ na versão **texto colado** (até 12 mil caracteres; cada
+> questão precisa citar um trecho literal presente no texto, senão é
+> descartada). Upload de arquivo (PDF/DOCX) segue pendente: exige storage.
 
 O agente `question-researcher` (`.claude/agents/`) já é o protótipo
 conceitual: gerar questões com fontes confiáveis, alternativas plausíveis
@@ -567,7 +569,8 @@ precisava da turma que já existe).
 > encerrar paga fichas ao pódio (30/15/10 por membro) com transição
 > condicional anti-pagamento-duplo. Diferença do texto abaixo: agrega o XP
 > da janela, não os desafios assíncronos (que não registram vitória).
-> Cosmético de pódio e **campanha temática mensal** seguem pendentes.
+> Cosmético de pódio ✅ (migração 44: título exclusivo "Campeão do Torneio"
+> para a equipe campeã). Campanha temática mensal ✅ (migração 42).
 
 - **Campanha temática mensal** — evento temporário de 30 dias com badge
   exclusiva e ranking próprio ("Outubro da Segurança") — composição de
