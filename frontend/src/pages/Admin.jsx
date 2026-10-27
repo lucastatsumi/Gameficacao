@@ -6,6 +6,7 @@ import AbaRelatorio from '../components/admin/AbaRelatorio.jsx';
 import AbaEventos from '../components/admin/AbaEventos.jsx';
 import AbaTemas from '../components/admin/AbaTemas.jsx';
 import AbaIA from '../components/admin/AbaIA.jsx';
+import AbaCampanhas from '../components/admin/AbaCampanhas.jsx';
 
 export default function Admin() {
   const [aba, setAba] = useState('turmas');
@@ -24,6 +25,7 @@ export default function Admin() {
           ['questoes', 'pencil', 'Questões'],
           ['ia', 'zap', 'IA'],
           ['relatorio', 'chart-bar-big', 'Relatório'],
+          ['campanhas', 'flag', 'Campanhas'],
           ['eventos', 'fire', 'Eventos'],
         ].map(([valor, icone, rotulo]) => (
           <button
@@ -47,6 +49,7 @@ export default function Admin() {
         {aba === 'questoes' && <AbaQuestoes />}
         {aba === 'ia' && <AbaIA />}
         {aba === 'relatorio' && <AbaRelatorio />}
+        {aba === 'campanhas' && <AbaCampanhas />}
         {aba === 'eventos' && <AbaEventos />}
       </div>
     </div>

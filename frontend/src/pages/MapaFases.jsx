@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../services/api.js';
 import { useI18n } from '../contexts/I18nContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import CampanhasETorneios from '../components/mapa/CampanhasETorneios.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import Alerta from '../components/ui/Alerta.jsx';
 import PixelIcon from '../components/ui/PixelIcon.jsx';
@@ -450,6 +451,7 @@ export default function MapaFases() {
       <CartaoDesafioDiario status={desafioDia} />
       <QuadroMissoes missoes={missoes} />
       <QuadroMissaoSemanal missoes={missoesSemana} />
+      <CampanhasETorneios />
 
       <div className="relative mt-6 space-y-5">
         {/* trilha vertical ligando as fases */}

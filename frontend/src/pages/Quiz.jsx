@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
@@ -23,6 +23,9 @@ export default function Quiz() {
   // /quiz/:faseId (campanha), /quiz/custom/:quizId (quiz da turma) ou
   // /quiz/diario (desafio diário — mesmas questões pra todo mundo hoje)
   const { faseId, quizId } = useParams();
+  // Veio de um convite de desafio: ao finalizar, registra o resultado
+  // (base do torneio entre equipes)
+  const desafioId = useSearchParams()[0].get('desafio');
   const ehDesafioDiario = faseId === 'diario';
   const { recarregarPerfil, perfil } = useAuth();
 
@@ -285,6 +288,15 @@ export default function Quiz() {
       setEnviando(true);
       try {
         const res = await api.post('/quiz/finalizar', { tentativa_id: quiz.tentativa_id });
+        if (desafioId) {
+          try {
+            res.desafio = await api.post(`/desafios/${desafioId}/resultado`, {
+              tentativa_id: quiz.tentativa_id,
+            });
+          } catch {
+            // resultado do desafio é bônus: não bloqueia a tela de resultado
+          }
+        }
         setResultado(res);
         recarregarPerfil(); // atualiza XP/nível na navbar
       } catch (err) {
@@ -349,6 +361,11 @@ export default function Quiz() {
           <p className="mt-1 text-sm text-slate-400">
             Questão {indice + 1} de {quiz.questoes.length}
             {quiz.quiz && <span className="ml-2 text-indigo-300">· Quiz da equipe</span>}
+            {quiz.prestigio && (
+              <span className="ml-2 text-amber-300">
+                · ★ Nova Jornada+ (ciclo {quiz.prestigio.ciclo})
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">

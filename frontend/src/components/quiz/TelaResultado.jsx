@@ -149,6 +149,35 @@ export default function TelaResultado({ resultado, sons = true }) {
         </div>
       )}
 
+      {resultado.desafio && (
+        <div
+          className={`anim-pop card-pixel mt-4 border-2 p-3 ${
+            resultado.desafio.venceu
+              ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+              : 'border-slate-700 bg-slate-900/60 text-slate-300'
+          }`}
+        >
+          <p className="flex items-center justify-center gap-2 font-semibold">
+            <PixelIcon nome="zap" className="h-5 w-5" />
+            {resultado.desafio.venceu
+              ? `Desafio vencido! ${resultado.desafio.acertos} × ${resultado.desafio.acertos_alvo} — ponto para sua equipe no torneio.`
+              : `Desafio não batido desta vez (${resultado.desafio.acertos} × ${resultado.desafio.acertos_alvo}).`}
+          </p>
+        </div>
+      )}
+
+      {resultado.cartas_novas?.length > 0 && (
+        <div className="anim-pop card-pixel mt-4 border-2 border-amber-500/40 bg-amber-500/10 p-3 text-amber-200">
+          <p className="flex items-center justify-center gap-2 font-semibold">
+            <PixelIcon nome="book-open" className="h-5 w-5" />
+            Carta revelada: {resultado.cartas_novas.map((c) => c.nome).join(', ')}
+          </p>
+          <Link to="/perfil" className="mt-1 block text-xs underline">
+            Ver no álbum
+          </Link>
+        </div>
+      )}
+
       {resultado.badges_novas?.length > 0 && (
         <div className="anim-pop card-pixel mt-6 border-2 border-amber-500/40 bg-amber-500/10 p-4">
           <p className="flex items-center justify-center gap-2 font-semibold text-amber-300">

@@ -26,15 +26,29 @@ export default function AbaCampanhas() {
     meta_quizzes: 5,
     multiplicador_xp: 1.5,
   });
-  const [torneio, setTorneio] = useState({ nome: '', inicio: hojeMais(0), fim: hojeMais(14), fichas_premio: 50 });
+  const [torneio, setTorneio] = useState({
+    nome: '',
+    inicio: hojeMais(0),
+    fim: hojeMais(14),
+    fichas_premio: 50,
+  });
 
   const carregar = useCallback(() => {
-    api.get('/admin/campanhas').then(setCampanhas).catch((err) => setErro(err.message));
-    api.get('/admin/torneios').then(setTorneios).catch((err) => setErro(err.message));
+    api
+      .get('/admin/campanhas')
+      .then(setCampanhas)
+      .catch((err) => setErro(err.message));
+    api
+      .get('/admin/torneios')
+      .then(setTorneios)
+      .catch((err) => setErro(err.message));
   }, []);
 
   useEffect(() => {
-    api.get('/admin/temas').then(setTemas).catch(() => {});
+    api
+      .get('/admin/temas')
+      .then(setTemas)
+      .catch(() => {});
     carregar();
   }, [carregar]);
 
@@ -71,7 +85,7 @@ export default function AbaCampanhas() {
               meta_quizzes: Number(campanha.meta_quizzes),
               multiplicador_xp: Number(campanha.multiplicador_xp),
             },
-            () => setCampanha((c) => ({ ...c, nome: '', descricao: '' }))
+            () => setCampanha((c) => ({ ...c, nome: '', descricao: '' })),
           )
         }
         className="card-pixel space-y-2 border-2 border-rose-500/30 bg-rose-500/5 p-4"
@@ -114,19 +128,44 @@ export default function AbaCampanhas() {
         <div className="grid gap-2 sm:grid-cols-4">
           <label className="text-xs text-slate-400">
             Início
-            <input type="date" value={campanha.inicio} onChange={(e) => setCampanha((c) => ({ ...c, inicio: e.target.value }))} className={inputCls} required />
+            <input
+              type="date"
+              value={campanha.inicio}
+              onChange={(e) => setCampanha((c) => ({ ...c, inicio: e.target.value }))}
+              className={inputCls}
+              required
+            />
           </label>
           <label className="text-xs text-slate-400">
             Fim
-            <input type="date" value={campanha.fim} onChange={(e) => setCampanha((c) => ({ ...c, fim: e.target.value }))} className={inputCls} required />
+            <input
+              type="date"
+              value={campanha.fim}
+              onChange={(e) => setCampanha((c) => ({ ...c, fim: e.target.value }))}
+              className={inputCls}
+              required
+            />
           </label>
           <label className="text-xs text-slate-400">
             Meta (quizzes aprovados)
-            <input type="number" min={1} value={campanha.meta_quizzes} onChange={(e) => setCampanha((c) => ({ ...c, meta_quizzes: e.target.value }))} className={inputCls} />
+            <input
+              type="number"
+              min={1}
+              value={campanha.meta_quizzes}
+              onChange={(e) => setCampanha((c) => ({ ...c, meta_quizzes: e.target.value }))}
+              className={inputCls}
+            />
           </label>
           <label className="text-xs text-slate-400">
             Multiplicador de XP
-            <input type="number" min={1.1} step={0.1} value={campanha.multiplicador_xp} onChange={(e) => setCampanha((c) => ({ ...c, multiplicador_xp: e.target.value }))} className={inputCls} />
+            <input
+              type="number"
+              min={1.1}
+              step={0.1}
+              value={campanha.multiplicador_xp}
+              onChange={(e) => setCampanha((c) => ({ ...c, multiplicador_xp: e.target.value }))}
+              className={inputCls}
+            />
           </label>
         </div>
         <button className="btn-pixel flex items-center gap-1.5 bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500">
@@ -158,16 +197,20 @@ export default function AbaCampanhas() {
           enviar(
             e,
             '/admin/torneios',
-            { ...torneio, ...periodo(torneio.inicio, torneio.fim), fichas_premio: Number(torneio.fichas_premio) },
-            () => setTorneio((t) => ({ ...t, nome: '' }))
+            {
+              ...torneio,
+              ...periodo(torneio.inicio, torneio.fim),
+              fichas_premio: Number(torneio.fichas_premio),
+            },
+            () => setTorneio((t) => ({ ...t, nome: '' })),
           )
         }
         className="card-pixel space-y-2 border-2 border-amber-500/30 bg-amber-500/5 p-4"
       >
         <h3 className="font-semibold text-slate-100">Novo torneio entre equipes</h3>
         <p className="text-xs text-slate-500">
-          No período, cada desafio vencido por um membro soma 1 ponto para a equipe dele. Ao final, a
-          equipe campeã recebe as fichas (pagas automaticamente no primeiro acesso após o fim).
+          No período, cada desafio vencido por um membro soma 1 ponto para a equipe dele. Ao final,
+          a equipe campeã recebe as fichas (pagas automaticamente no primeiro acesso após o fim).
         </p>
         <div className="grid gap-2 sm:grid-cols-4">
           <input
@@ -180,15 +223,33 @@ export default function AbaCampanhas() {
           />
           <label className="text-xs text-slate-400">
             Início
-            <input type="date" value={torneio.inicio} onChange={(e) => setTorneio((t) => ({ ...t, inicio: e.target.value }))} className={inputCls} required />
+            <input
+              type="date"
+              value={torneio.inicio}
+              onChange={(e) => setTorneio((t) => ({ ...t, inicio: e.target.value }))}
+              className={inputCls}
+              required
+            />
           </label>
           <label className="text-xs text-slate-400">
             Fim
-            <input type="date" value={torneio.fim} onChange={(e) => setTorneio((t) => ({ ...t, fim: e.target.value }))} className={inputCls} required />
+            <input
+              type="date"
+              value={torneio.fim}
+              onChange={(e) => setTorneio((t) => ({ ...t, fim: e.target.value }))}
+              className={inputCls}
+              required
+            />
           </label>
           <label className="text-xs text-slate-400">
             Fichas por membro da campeã
-            <input type="number" min={1} value={torneio.fichas_premio} onChange={(e) => setTorneio((t) => ({ ...t, fichas_premio: e.target.value }))} className={inputCls} />
+            <input
+              type="number"
+              min={1}
+              value={torneio.fichas_premio}
+              onChange={(e) => setTorneio((t) => ({ ...t, fichas_premio: e.target.value }))}
+              className={inputCls}
+            />
           </label>
         </div>
         <button className="btn-pixel flex items-center gap-1.5 bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-500">
@@ -206,7 +267,10 @@ export default function AbaCampanhas() {
         ) : (
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
             {torneios.map((t) => (
-              <div key={t.id} className="card-pixel border-2 border-slate-800 bg-slate-900/60 p-3 text-sm">
+              <div
+                key={t.id}
+                className="card-pixel border-2 border-slate-800 bg-slate-900/60 p-3 text-sm"
+              >
                 <p className="font-semibold text-slate-100">
                   {t.nome} <span className="text-xs text-slate-500">({t.status})</span>
                 </p>
@@ -216,7 +280,9 @@ export default function AbaCampanhas() {
                       {p.posicao}º {p.nome} — {p.vitorias} vitória(s) · {p.membros} membro(s)
                     </li>
                   ))}
-                  {t.placar.length === 0 && <li className="text-slate-500">Nenhuma equipe ainda.</li>}
+                  {t.placar.length === 0 && (
+                    <li className="text-slate-500">Nenhuma equipe ainda.</li>
+                  )}
                 </ol>
               </div>
             ))}

@@ -71,6 +71,7 @@ describe('certificado', () => {
       desempenho_competencias: [ok([])],
       progresso_fase: [ok([{ fase_id: 101, concluida: true }])],
       tentativas: [ok([])],
+      prestigios: [ok(null)],
     });
     await expect(certificado(usuario, 1)).rejects.toMatchObject({ status: 403 });
   });

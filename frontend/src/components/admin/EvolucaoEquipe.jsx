@@ -15,12 +15,15 @@ function GraficoNota({ pontos }) {
   const [foco, setFoco] = useState(null);
   const validos = pontos.filter((p) => p.score_medio != null);
   if (validos.length === 0) {
-    return <p className="mt-3 text-sm text-slate-500">Ainda sem tentativas avaliadas nesta equipe.</p>;
+    return (
+      <p className="mt-3 text-sm text-slate-500">Ainda sem tentativas avaliadas nesta equipe.</p>
+    );
   }
 
   const largura = L - M.esq - M.dir;
   const altura = A - M.topo - M.base;
-  const x = (i) => M.esq + (validos.length === 1 ? largura / 2 : (i * largura) / (validos.length - 1));
+  const x = (i) =>
+    M.esq + (validos.length === 1 ? largura / 2 : (i * largura) / (validos.length - 1));
   const y = (v) => M.topo + altura - (v / 100) * altura;
   const caminho = validos.map((p, i) => `${i ? 'L' : 'M'}${x(i)},${y(p.score_medio)}`).join(' ');
   const atual = foco != null ? validos[foco] : null;
@@ -103,7 +106,10 @@ export default function EvolucaoEquipe() {
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
-    api.get('/admin/turmas').then(setTurmas).catch(() => {});
+    api
+      .get('/admin/turmas')
+      .then(setTurmas)
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -120,8 +126,8 @@ export default function EvolucaoEquipe() {
     <section>
       <h3 className="text-sm font-semibold text-slate-200">Evolução da equipe</h3>
       <p className="mt-1 text-xs text-slate-500">
-        Nota média acumulada (0–100), um ponto por dia — o registro do dia é feito no primeiro acesso
-        a este painel.
+        Nota média acumulada (0–100), um ponto por dia — o registro do dia é feito no primeiro
+        acesso a este painel.
       </p>
       <select
         value={turmaId}
@@ -155,14 +161,17 @@ export default function EvolucaoEquipe() {
                 {dados.competencias.map((c) => {
                   const inicio = c.pontos[0]?.pct;
                   const fim = c.pontos.at(-1)?.pct;
-                  const delta = inicio != null && fim != null ? Math.round((fim - inicio) * 10) / 10 : null;
+                  const delta =
+                    inicio != null && fim != null ? Math.round((fim - inicio) * 10) / 10 : null;
                   return (
                     <tr key={c.competencia_id} className="border-t border-slate-800 text-slate-300">
                       <td className="py-1">{c.nome}</td>
                       <td className="py-1 text-right">{inicio ?? '—'}%</td>
                       <td className="py-1 text-right">{fim ?? '—'}%</td>
                       <td className="py-1 text-right">
-                        {delta == null ? '—' : `${delta > 0 ? '▲ +' : delta < 0 ? '▼ ' : ''}${delta} p.p.`}
+                        {delta == null
+                          ? '—'
+                          : `${delta > 0 ? '▲ +' : delta < 0 ? '▼ ' : ''}${delta} p.p.`}
                       </td>
                     </tr>
                   );

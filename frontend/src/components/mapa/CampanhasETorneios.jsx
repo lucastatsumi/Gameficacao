@@ -11,7 +11,10 @@ export default function CampanhasETorneios() {
   const [ranking, setRanking] = useState(null); // { campanha, ranking }
 
   useEffect(() => {
-    api.get('/perfil/campanhas').then(setCampanhas).catch(() => {});
+    api
+      .get('/perfil/campanhas')
+      .then(setCampanhas)
+      .catch(() => {});
     api
       .get('/perfil/torneios')
       .then((lista) => setTorneios(lista.filter((t) => t.status !== 'futuro').slice(0, 2)))
@@ -32,20 +35,28 @@ export default function CampanhasETorneios() {
   return (
     <div className="mt-4 grid gap-3 sm:grid-cols-2">
       {campanhas.map((c) => (
-        <div key={c.id} className="card-pixel border-2 border-rose-500/30 bg-rose-500/5 p-3 text-xs">
+        <div
+          key={c.id}
+          className="card-pixel border-2 border-rose-500/30 bg-rose-500/5 p-3 text-xs"
+        >
           <p className="flex items-center gap-2 font-semibold uppercase tracking-wide text-rose-300">
             <PixelIcon nome="flag" className="h-4 w-4" />
             Campanha: {c.nome}
           </p>
           {c.descricao && <p className="mt-1 text-slate-400">{c.descricao}</p>}
           <p className="mt-2 text-slate-300">
-            {c.cumprida ? '✔ Meta cumprida — badge garantida!' : `${c.aprovadas}/${c.meta_quizzes} quizzes aprovados`}
+            {c.cumprida
+              ? '✔ Meta cumprida — badge garantida!'
+              : `${c.aprovadas}/${c.meta_quizzes} quizzes aprovados`}
             <span className="text-slate-500">
               {' '}
               · até {new Date(c.fim).toLocaleDateString('pt-BR')}
             </span>
           </p>
-          <button onClick={() => verRanking(c.id)} className="mt-2 text-rose-300 hover:text-rose-200">
+          <button
+            onClick={() => verRanking(c.id)}
+            className="mt-2 text-rose-300 hover:text-rose-200"
+          >
             {ranking?.campanha.id === c.id ? 'Fechar ranking' : 'Ver ranking da campanha'}
           </button>
           {ranking?.campanha.id === c.id && (
@@ -55,13 +66,18 @@ export default function CampanhasETorneios() {
                   {r.posicao}º {r.nome} — {r.xp} XP
                 </li>
               ))}
-              {ranking.ranking.length === 0 && <li className="text-slate-500">Ninguém pontuou ainda.</li>}
+              {ranking.ranking.length === 0 && (
+                <li className="text-slate-500">Ninguém pontuou ainda.</li>
+              )}
             </ol>
           )}
         </div>
       ))}
       {torneios.map((t) => (
-        <div key={t.id} className="card-pixel border-2 border-amber-500/30 bg-amber-500/5 p-3 text-xs">
+        <div
+          key={t.id}
+          className="card-pixel border-2 border-amber-500/30 bg-amber-500/5 p-3 text-xs"
+        >
           <p className="flex items-center gap-2 font-semibold uppercase tracking-wide text-amber-300">
             <PixelIcon nome="trophy" className="h-4 w-4" />
             Torneio: {t.nome} {t.status === 'encerrado' && '(encerrado)'}

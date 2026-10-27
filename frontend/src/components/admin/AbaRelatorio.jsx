@@ -3,6 +3,7 @@ import { api } from '../../services/api.js';
 import Spinner from '../ui/Spinner.jsx';
 import Alerta from '../ui/Alerta.jsx';
 import MatrizEquipe from './MatrizEquipe.jsx';
+import EvolucaoEquipe from './EvolucaoEquipe.jsx';
 
 export default function AbaRelatorio() {
   const [fases, setFases] = useState([]);
@@ -12,7 +13,10 @@ export default function AbaRelatorio() {
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
-    api.get('/fases').then(setFases).catch(() => {});
+    api
+      .get('/fases')
+      .then(setFases)
+      .catch(() => {});
     api
       .get('/admin/relatorio/fases')
       .then(setPorFase)
@@ -29,13 +33,15 @@ export default function AbaRelatorio() {
 
   return (
     <div className="space-y-6">
+      <EvolucaoEquipe />
+
       <MatrizEquipe />
 
       <section>
         <h3 className="text-sm font-semibold text-slate-200">Desempenho por fase</h3>
         <p className="mt-1 text-xs text-slate-500">
-          Taxa de aprovação de todas as tentativas finalizadas em cada fase — mostra em que ponto
-          da trilha a empresa mais trava.
+          Taxa de aprovação de todas as tentativas finalizadas em cada fase — mostra em que ponto da
+          trilha a empresa mais trava.
         </p>
         {!porFase ? (
           <Spinner />
@@ -104,7 +110,10 @@ export default function AbaRelatorio() {
             </thead>
             <tbody>
               {linhas.map((l) => (
-                <tr key={l.questao_id} className="border-t border-slate-800 odd:bg-slate-950 even:bg-slate-900/40">
+                <tr
+                  key={l.questao_id}
+                  className="border-t border-slate-800 odd:bg-slate-950 even:bg-slate-900/40"
+                >
                   <td className="px-4 py-3">{l.enunciado_resumo}...</td>
                   <td className="px-4 py-3 text-slate-400">{l.dificuldade}</td>
                   <td className="px-4 py-3 text-right font-mono">{l.total_respostas}</td>

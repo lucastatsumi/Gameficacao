@@ -102,10 +102,27 @@ export async function resumoPorTema(usuario, tema) {
   const scoreMedio = scores.length
     ? Math.round((10 * scores.reduce((a, b) => a + b, 0)) / scores.length) / 10
     : null;
-  const trilhaConcluida = faseIds.length > 0 && concluidas.length === faseIds.length;
-  const concluidoEm = trilhaConcluida
+  let trilhaConcluida = faseIds.length > 0 && concluidas.length === faseIds.length;
+  let concluidoEm = trilhaConcluida
     ? concluidas.map((p) => p.concluida_em).filter(Boolean).sort().at(-1) ?? null
     : null;
+  // Prestígio reinicia o progresso dos módulos, mas quem prestigiou já
+  // concluiu a trilha antes: a conquista (e o certificado) continua valendo.
+  if (!trilhaConcluida && faseIds.length) {
+    const { data: primeiro, error: erroPrestigio } = await db
+      .from('prestigios')
+      .select('iniciado_em')
+      .eq('user_id', usuario.id)
+      .eq('tema_id', tema.id)
+      .order('ciclo')
+      .limit(1)
+      .maybeSingle();
+    if (erroPrestigio) throw erroPrestigio;
+    if (primeiro) {
+      trilhaConcluida = true;
+      concluidoEm = primeiro.iniciado_em;
+    }
+  }
 
   return {
     tema_id: tema.id,

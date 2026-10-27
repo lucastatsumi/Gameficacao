@@ -40,8 +40,10 @@ export function BarraPct({ pct, rotulo }) {
 export default function PainelAvaliacao() {
   const [proficiencia, setProficiencia] = useState(null);
   const [competencias, setCompetencias] = useState(null);
+  const [prestigio, setPrestigio] = useState({ estrelas: 0, por_tema: [] });
+  const [msgPrestigio, setMsgPrestigio] = useState(null);
 
-  useEffect(() => {
+  function carregar() {
     api
       .get('/perfil/proficiencia')
       .then(setProficiencia)
@@ -50,7 +52,32 @@ export default function PainelAvaliacao() {
       .get('/perfil/competencias')
       .then(setCompetencias)
       .catch(() => setCompetencias([]));
-  }, []);
+    api
+      .get('/perfil/prestigio')
+      .then(setPrestigio)
+      .catch(() => {});
+  }
+
+  useEffect(carregar, []);
+
+  // Prestígio (4.11): recomeça a trilha com modificadores; score e
+  // competências não resetam
+  async function novaJornada(p) {
+    if (
+      !window.confirm(
+        `Começar a Nova Jornada+ em "${p.tema}"? O progresso dos módulos reinicia (sem questões fáceis e com 25% menos tempo). Nota, competências e certificado continuam.`,
+      )
+    )
+      return;
+    setMsgPrestigio(null);
+    try {
+      const r = await api.post(`/perfil/prestigio/${p.tema_id}`);
+      setMsgPrestigio(`Nova Jornada+ iniciada — ciclo ${r.ciclo}. Boa sorte!`);
+      carregar();
+    } catch (err) {
+      setMsgPrestigio(err.message);
+    }
+  }
 
   if (!proficiencia || !competencias) return null;
 
@@ -60,6 +87,13 @@ export default function PainelAvaliacao() {
         <PixelIcon nome="chart-bar-big" className="h-5 w-5 text-indigo-300" />
         Avaliação por tema
       </h2>
+      {prestigio.estrelas > 0 && (
+        <p className="mt-1 text-xs text-amber-300">
+          {'★'.repeat(Math.min(prestigio.estrelas, 10))} {prestigio.estrelas} estrela(s) de
+          prestígio
+        </p>
+      )}
+      {msgPrestigio && <p className="mt-1 text-xs text-slate-300">{msgPrestigio}</p>}
       <p className="mt-1 text-xs text-slate-500">
         Nota 0–100 ponderada por dificuldade, velocidade e sequência de acertos. Separada do XP: é o
         que mede a sua proficiência.
@@ -98,6 +132,21 @@ export default function PainelAvaliacao() {
                 <PixelIcon nome="trophy" className="h-3.5 w-3.5" />
                 Certificado
               </Link>
+            )}
+            {p.trilha_concluida && p.modulos_concluidos === p.total_modulos && (
+              <button
+                onClick={() => novaJornada(p)}
+                className="btn-pixel ml-2 mt-3 inline-flex items-center gap-1.5 bg-slate-700 px-3 py-1.5 text-xs font-semibold text-amber-200 hover:bg-slate-600"
+              >
+                <PixelIcon nome="star" className="h-3.5 w-3.5" />
+                Nova Jornada+
+              </button>
+            )}
+            {prestigio.por_tema.some((x) => x.tema_id === p.tema_id) && (
+              <p className="mt-2 text-xs text-amber-300">
+                ★ Ciclo {prestigio.por_tema.find((x) => x.tema_id === p.tema_id).ciclo} da Nova
+                Jornada+
+              </p>
             )}
             <ul className="mt-3 space-y-1.5">
               {competencias

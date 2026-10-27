@@ -49,7 +49,11 @@ function Carta({ carta }) {
       onClick={() => carta.revelada && setVerso((v) => !v)}
       disabled={!carta.revelada}
       aria-pressed={verso}
-      aria-label={carta.revelada ? `Carta ${carta.nome} — ver ${verso ? 'frente' : 'verso'}` : `Carta ${carta.nome} (não revelada)`}
+      aria-label={
+        carta.revelada
+          ? `Carta ${carta.nome} — ver ${verso ? 'frente' : 'verso'}`
+          : `Carta ${carta.nome} (não revelada)`
+      }
       className={`card-pixel flex h-48 w-36 shrink-0 flex-col items-center border-2 p-3 text-center transition-colors ${
         carta.revelada
           ? 'border-amber-500/50 bg-slate-900 hover:border-amber-400'
@@ -57,7 +61,9 @@ function Carta({ carta }) {
       }`}
     >
       {verso ? (
-        <p className="overflow-y-auto text-left text-[11px] leading-snug text-slate-200">{carta.resumo}</p>
+        <p className="overflow-y-auto text-left text-[11px] leading-snug text-slate-200">
+          {carta.resumo}
+        </p>
       ) : (
         <>
           <ArteCarta semente={carta.id} revelada={carta.revelada} />
@@ -75,7 +81,10 @@ export default function AlbumCartas() {
   const [albuns, setAlbuns] = useState(null);
 
   useEffect(() => {
-    api.get('/perfil/cartas').then(setAlbuns).catch(() => setAlbuns([]));
+    api
+      .get('/perfil/cartas')
+      .then(setAlbuns)
+      .catch(() => setAlbuns([]));
   }, []);
 
   if (!albuns?.length) return null;

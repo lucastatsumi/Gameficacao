@@ -36,7 +36,7 @@ export default function Desafio() {
         <p className="mt-1 font-pixel text-2xl text-amber-300">{desafio.acertos_alvo} acertos</p>
       </div>
       <Link
-        to={`/quiz/${desafio.fase.id}`}
+        to={`/quiz/${desafio.fase.id}?desafio=${desafio.id}`}
         className="btn-pixel mt-6 flex items-center justify-center gap-2 bg-indigo-600 px-6 py-3 font-pixel text-[10px] text-white transition-colors hover:bg-indigo-500"
       >
         <PixelIcon nome="play" className="h-4 w-4" />
