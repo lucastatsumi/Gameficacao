@@ -1,3 +1,4 @@
+import * as cartaService from '../services/cartaService.js';
 import * as quizService from '../services/quizService.js';
 import * as poderService from '../services/poderService.js';
 import * as fichaService from '../services/fichaService.js';
@@ -129,6 +130,9 @@ export async function finalizar(req, res, next) {
     // questão, não do XP. No-op se o jogador não está em turma com raid
     // ativo.
     resultado.raid = await raidService.aplicarDano(req.usuario.id, req.body?.tentativa_id);
+
+    // Cartas colecionáveis (roadmap 4.9): competências dominadas revelam cartas.
+    resultado.cartas_novas = await cartaService.verificarCartas(req.usuario.id);
 
     res.json(resultado);
   } catch (err) {

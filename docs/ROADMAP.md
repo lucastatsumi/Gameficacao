@@ -397,7 +397,14 @@ desafio no café.*
 - Ranking do dia (acertos, depois tempo) separado do ranking geral;
   participar mantém o streak diário existente.
 
-### 4.9 Cartas colecionáveis de conhecimento
+### 4.9 Cartas colecionáveis de conhecimento ✅ implementado
+
+> **Como saiu**: migração 37 (`cartas_catalogo`, `cartas_do_jogador`; as
+> competências iniciais herdam o nome da fase), `cartaService.js` (4 testes)
+> chamado no fim de `finalizar` (`cartas_novas` na resposta), álbum em
+> `GET /avaliacao/cartas` exibido na página Avaliação. Resumo só é enviado
+> para cartas conquistadas. Arte SVG procedural e badge de álbum completo
+> ficam para iteração futura.
 
 *Objetivo: colecionismo que É revisão de conteúdo — a recompensa reforça
 o aprendizado em vez de distrair dele.*
@@ -503,7 +510,7 @@ generosidade, não competição.*
 | Ligas semanais (4.5) | Competição justa | Médio | nada | ✅ |
 | Kudos (4.12) | Reconhecimento social | Baixo | fichas (4.1) | ✅ |
 | Raid boss (4.7) | Objetivo coletivo | Alto | equipes (H1) | ✅ |
-| Cartas (4.9) | Colecionismo educativo | Alto | competências (H1/H3) | — |
+| Cartas (4.9) | Colecionismo educativo | Alto | competências (H1/H3) | ✅ |
 | Mascote de equipe (4.10) | Nudge social agregado | Baixo | equipes (H1) | ✅ |
 | Temporadas + passe (4.6) | Arco de longo prazo | Alto | fichas, cosméticos | ✅ |
 | Prestígio (4.11) | Rejogabilidade | Médio | trilhas por tema (H1) | ✅ |

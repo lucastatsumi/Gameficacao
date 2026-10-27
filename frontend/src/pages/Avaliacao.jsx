@@ -17,6 +17,7 @@ export default function Avaliacao() {
   const [competencias, setCompetencias] = useState([]);
   const [certificado, setCertificado] = useState(null);
   const [prestigios, setPrestigios] = useState([]);
+  const [cartas, setCartas] = useState([]);
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
@@ -24,11 +25,13 @@ export default function Avaliacao() {
       api.get('/avaliacao/proficiencia'),
       api.get('/avaliacao/competencias'),
       api.get('/avaliacao/prestigio'),
+      api.get('/avaliacao/cartas'),
     ])
-      .then(([p, c, pr]) => {
+      .then(([p, c, pr, ca]) => {
         setProficiencia(p);
         setCompetencias(c);
         setPrestigios(pr);
+        setCartas(ca);
       })
       .catch((err) => setErro(err.message));
   }, []);
@@ -118,6 +121,19 @@ export default function Avaliacao() {
             </tbody>
           </table>
         )}
+      </section>
+
+      <section className="mt-6 print:hidden">
+        <h2 className="font-semibold">Álbum de cartas</h2>
+        <p className="text-sm opacity-70">Domine uma competência (80% de acerto em 10+ respostas) para revelar a carta.</p>
+        <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {cartas.map((c) => (
+            <div key={c.competencia} className={`card-pixel p-3 ${c.conquistada ? '' : 'opacity-40'}`}>
+              <p className="font-semibold">{c.conquistada ? c.competencia : '???'}</p>
+              {c.conquistada && <p className="mt-1 text-xs opacity-80">{c.resumo}</p>}
+            </div>
+          ))}
+        </div>
       </section>
 
       {certificado && (

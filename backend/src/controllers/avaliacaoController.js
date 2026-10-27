@@ -1,4 +1,5 @@
 import * as avaliacaoService from '../services/avaliacaoService.js';
+import * as cartaService from '../services/cartaService.js';
 
 export async function proficiencia(req, res, next) {
   try {
@@ -19,6 +20,14 @@ export async function competencias(req, res, next) {
 export async function certificado(req, res, next) {
   try {
     res.json(await avaliacaoService.certificadoDoTema(req.usuario, req.params.temaId));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function album(req, res, next) {
+  try {
+    res.json(await cartaService.album(req.usuario.id));
   } catch (err) {
     next(err);
   }

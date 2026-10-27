@@ -9,3 +9,4 @@ avaliacaoRoutes.get('/competencias', avaliacaoController.competencias);
 avaliacaoRoutes.get('/certificado/:temaId', avaliacaoController.certificado);
 avaliacaoRoutes.get('/prestigio', prestigioController.status);
 avaliacaoRoutes.post('/prestigio/:temaId', prestigioController.prestigiar);
+avaliacaoRoutes.get('/cartas', avaliacaoController.album);
