@@ -5,6 +5,7 @@ import AbaQuestoes from '../components/admin/AbaQuestoes.jsx';
 import AbaRelatorio from '../components/admin/AbaRelatorio.jsx';
 import AbaEventos from '../components/admin/AbaEventos.jsx';
 import AbaTemas from '../components/admin/AbaTemas.jsx';
+import AbaIA from '../components/admin/AbaIA.jsx';
 
 export default function Admin() {
   const [aba, setAba] = useState('turmas');
@@ -21,6 +22,7 @@ export default function Admin() {
           ['turmas', 'users', 'Equipes'],
           ['temas', 'book-open', 'Temas'],
           ['questoes', 'pencil', 'Questões'],
+          ['ia', 'zap', 'IA'],
           ['relatorio', 'chart-bar-big', 'Relatório'],
           ['eventos', 'fire', 'Eventos'],
         ].map(([valor, icone, rotulo]) => (
@@ -43,6 +45,7 @@ export default function Admin() {
         {aba === 'turmas' && <AbaTurmas />}
         {aba === 'temas' && <AbaTemas />}
         {aba === 'questoes' && <AbaQuestoes />}
+        {aba === 'ia' && <AbaIA />}
         {aba === 'relatorio' && <AbaRelatorio />}
         {aba === 'eventos' && <AbaEventos />}
       </div>

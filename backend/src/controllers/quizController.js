@@ -6,6 +6,7 @@ import * as missaoService from '../services/missaoService.js';
 import * as ligaService from '../services/ligaService.js';
 import * as temporadaService from '../services/temporadaService.js';
 import * as raidService from '../services/raidService.js';
+import * as respostaAbertaService from '../services/respostaAbertaService.js';
 
 export async function iniciar(req, res, next) {
   try {
@@ -147,6 +148,14 @@ export async function finalizar(req, res, next) {
 export async function usarPoder(req, res, next) {
   try {
     res.json(await poderService.usarPoder(req.usuario.id, req.body));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function responderAberta(req, res, next) {
+  try {
+    res.json(await respostaAbertaService.responderAberta(req.usuario, req.body));
   } catch (err) {
     next(err);
   }

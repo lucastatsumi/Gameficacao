@@ -80,7 +80,10 @@ export async function sincronizarCompetencias(questaoId, faseId, competenciaIds)
   }
 }
 
-export async function criarQuestao(professorId, dados) {
+// `extras`: colunas de rascunho de IA (status_revisao, origem, fonte_trecho,
+// nota_ia, substitui_questao_id, ativa: false) — ver iaService. A validação
+// é a MESMA das questões humanas: IA não tem caminho privilegiado.
+export async function criarQuestao(professorId, dados, extras = {}) {
   const questao = validarPayload(dados);
 
   const { data: criada, error } = await db
@@ -97,7 +100,9 @@ export async function criarQuestao(professorId, dados) {
       formato: questao.formato,
       passos: questao.passos,
       ordem_correta: questao.ordem_correta,
+      rubrica: questao.rubrica,
       criada_por: professorId,
+      ...extras,
     })
     .select()
     .single();
@@ -150,6 +155,7 @@ export async function atualizarQuestao(questaoId, dados) {
       dica: questao.dica,
       passos: questao.passos,
       ordem_correta: questao.ordem_correta,
+      rubrica: questao.rubrica,
     })
     .eq('id', questaoId);
   if (error) throw error;
@@ -209,7 +215,10 @@ const LETRAS_POR_FORMATO = {
 
 // 'reordenar_algoritmo' não usa `alternativas` — ver database/14_reordenar_algoritmo.sql.
 const FORMATO_SEQUENCIA = 'reordenar_algoritmo';
-const FORMATOS_VALIDOS = [...Object.keys(LETRAS_POR_FORMATO), FORMATO_SEQUENCIA];
+// 'resposta_aberta': texto livre corrigido por IA contra a rubrica — ver
+// database/38_ia_questoes_abertas.sql.
+export const FORMATO_ABERTA = 'resposta_aberta';
+const FORMATOS_VALIDOS = [...Object.keys(LETRAS_POR_FORMATO), FORMATO_SEQUENCIA, FORMATO_ABERTA];
 
 function validarCamposComuns(dados) {
   const {
@@ -304,14 +313,89 @@ function validarPassos(passos) {
   return { passos: passosComId, ordem_correta: passosComId.map((p) => p.id) };
 }
 
+// Rubrica: critérios com peso (> 0) e, opcional, uma resposta de
+// referência que orienta a correção. Normaliza os pesos para somar 100.
+function validarRubrica(rubrica) {
+  const criterios = rubrica?.criterios;
+  if (!Array.isArray(criterios) || !criterios.length || criterios.length > 8) {
+    throw new HttpError(400, 'A rubrica precisa de 1 a 8 critérios');
+  }
+  for (const c of criterios) {
+    if (!c.criterio?.trim()) throw new HttpError(400, 'Todo critério da rubrica precisa de descrição');
+    if (!(Number(c.peso) > 0)) throw new HttpError(400, 'Todo critério da rubrica precisa de peso > 0');
+  }
+  const total = criterios.reduce((s, c) => s + Number(c.peso), 0);
+  return {
+    criterios: criterios.map((c) => ({
+      criterio: c.criterio.trim(),
+      peso: Math.round((1000 * Number(c.peso)) / total) / 10,
+    })),
+    referencia: rubrica.referencia?.trim() || null,
+  };
+}
+
 export function validarPayload(dados) {
   const comuns = validarCamposComuns(dados);
 
   if (comuns.formato === FORMATO_SEQUENCIA) {
     const { passos, ordem_correta } = validarPassos(dados?.passos);
-    return { ...comuns, passos, ordem_correta, alternativas: [] };
+    return { ...comuns, passos, ordem_correta, alternativas: [], rubrica: null };
+  }
+
+  if (comuns.formato === FORMATO_ABERTA) {
+    return {
+      ...comuns,
+      passos: null,
+      ordem_correta: null,
+      alternativas: [],
+      rubrica: validarRubrica(dados?.rubrica),
+    };
   }
 
   const alternativas = validarAlternativas(comuns.formato, dados?.alternativas);
-  return { ...comuns, passos: null, ordem_correta: null, alternativas };
+  return { ...comuns, passos: null, ordem_correta: null, alternativas, rubrica: null };
+}
+
+// ---------- Revisão de rascunhos de IA (Horizonte 2) ----------
+
+async function buscarRascunho(questaoId) {
+  const { data, error } = await db
+    .from('questoes')
+    .select('id, status_revisao, substitui_questao_id')
+    .eq('id', questaoId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data || data.status_revisao !== 'pendente_revisao') {
+    throw new HttpError(404, 'Rascunho não encontrado ou já revisado');
+  }
+  return data;
+}
+
+// Aprovar liga a questão. Se o rascunho veio da auditoria, a questão
+// original é desativada (soft-delete) — o histórico de respostas dela fica.
+export async function aprovarRascunho(questaoId) {
+  const rascunho = await buscarRascunho(questaoId);
+  const { error } = await db
+    .from('questoes')
+    .update({ status_revisao: 'aprovada', ativa: true })
+    .eq('id', questaoId);
+  if (error) throw error;
+  if (rascunho.substitui_questao_id) {
+    const { error: erroOriginal } = await db
+      .from('questoes')
+      .update({ ativa: false })
+      .eq('id', rascunho.substitui_questao_id);
+    if (erroOriginal) throw erroOriginal;
+  }
+  return { id: questaoId, status_revisao: 'aprovada' };
+}
+
+export async function descartarRascunho(questaoId) {
+  await buscarRascunho(questaoId);
+  const { error } = await db
+    .from('questoes')
+    .update({ status_revisao: 'descartada', ativa: false })
+    .eq('id', questaoId);
+  if (error) throw error;
+  return { id: questaoId, status_revisao: 'descartada' };
 }

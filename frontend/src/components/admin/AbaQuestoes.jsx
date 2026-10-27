@@ -9,6 +9,17 @@ import { inputCls } from './inputCls.js';
 // com LETRAS_POR_FORMATO em backend/src/services/questaoService.js.
 const LETRAS_POR_FORMATO = { padrao: ['A', 'B', 'C', 'D'], batalha_complexidade: ['A', 'B'] };
 const FORMATO_SEQUENCIA = 'reordenar_algoritmo';
+const FORMATO_ABERTA = 'resposta_aberta';
+
+function rubricaVazia() {
+  return {
+    criterios: [
+      { criterio: '', peso: 50 },
+      { criterio: '', peso: 50 },
+    ],
+    referencia: '',
+  };
+}
 
 function alternativasVazias(formato) {
   if (!LETRAS_POR_FORMATO[formato]) return [];
@@ -31,13 +42,15 @@ function questaoVazia(formato = 'padrao') {
     codigo_snippet: '',
     linguagem: 'texto',
     dificuldade: 'media',
-    tempo_limite_seg: formato === 'batalha_complexidade' ? 15 : 60,
+    tempo_limite_seg:
+      formato === 'batalha_complexidade' ? 15 : formato === FORMATO_ABERTA ? 180 : 60,
     xp_valor: formato === 'batalha_complexidade' ? 20 : 10,
     dica: '',
     formato,
     alternativas: alternativasVazias(formato),
     passos: passosVazios(formato),
     competencia_ids: [],
+    rubrica: formato === FORMATO_ABERTA ? rubricaVazia() : null,
   };
 }
 
@@ -168,6 +181,16 @@ export default function AbaQuestoes() {
                         desativada
                       </span>
                     )}
+                    {q.formato === FORMATO_ABERTA && (
+                      <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-amber-300">
+                        resposta aberta
+                      </span>
+                    )}
+                    {q.status_revisao === 'pendente_revisao' && (
+                      <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-violet-300">
+                        rascunho da IA · aguardando revisão
+                      </span>
+                    )}
                     {!temasEditaveis.has(q.tema_id) && (
                       <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-sky-300">
                         catálogo · somente leitura
@@ -209,6 +232,9 @@ export default function AbaQuestoes() {
                                   .map((p) => ({ texto: p.texto }))
                               : passosVazios(q.formato),
                           competencia_ids: q.competencia_ids ?? [],
+                          rubrica: q.rubrica
+                            ? { ...q.rubrica, referencia: q.rubrica.referencia ?? '' }
+                            : null,
                         },
                         editandoId: q.id,
                       })
@@ -262,6 +288,18 @@ function FormQuestao({ temas, form, aoFechar, aoSalvar }) {
       formato,
       alternativas: alternativasVazias(formato),
       passos: passosVazios(formato),
+      rubrica: formato === FORMATO_ABERTA ? rubricaVazia() : null,
+      tempo_limite_seg: formato === FORMATO_ABERTA ? 180 : d.tempo_limite_seg,
+    }));
+  }
+
+  function mudarCriterio(indice, campo, valor) {
+    setDados((d) => ({
+      ...d,
+      rubrica: {
+        ...d.rubrica,
+        criterios: d.rubrica.criterios.map((c, i) => (i === indice ? { ...c, [campo]: valor } : c)),
+      },
     }));
   }
 
@@ -314,6 +352,13 @@ function FormQuestao({ temas, form, aoFechar, aoSalvar }) {
       xp_valor: Number(dados.xp_valor),
       codigo_snippet: dados.codigo_snippet?.trim() ? dados.codigo_snippet : null,
       dica: dados.dica?.trim() ? dados.dica.trim() : null,
+      rubrica:
+        dados.formato === FORMATO_ABERTA
+          ? {
+              criterios: dados.rubrica.criterios.map((c) => ({ ...c, peso: Number(c.peso) })),
+              referencia: dados.rubrica.referencia,
+            }
+          : null,
     };
     try {
       if (form.editandoId) await api.put(`/admin/questoes/${form.editandoId}`, payload);
@@ -377,6 +422,7 @@ function FormQuestao({ temas, form, aoFechar, aoSalvar }) {
           <option value="padrao">Múltipla escolha (4 alternativas)</option>
           <option value="batalha_complexidade">Duelo — escolha entre 2 alternativas</option>
           <option value={FORMATO_SEQUENCIA}>Ordenar etapas (passos em sequência)</option>
+          <option value={FORMATO_ABERTA}>Resposta aberta (corrigida por IA com rubrica)</option>
         </select>
         <select
           value={dados.dificuldade}
@@ -458,7 +504,79 @@ function FormQuestao({ temas, form, aoFechar, aoSalvar }) {
         className={inputCls}
       />
 
-      {dados.formato === FORMATO_SEQUENCIA ? (
+      {dados.formato === FORMATO_ABERTA ? (
+        <div className="space-y-2">
+          <p className="text-xs text-slate-500">
+            Rubrica de correção: a IA dá 0–100 em cada critério e a nota final é a média ponderada
+            pelos pesos (calculada no servidor). Você pode revisar e sobrescrever qualquer nota na
+            aba IA.
+          </p>
+          {dados.rubrica.criterios.map((c, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                value={c.criterio}
+                onChange={(e) => mudarCriterio(i, 'criterio', e.target.value)}
+                placeholder={`Critério ${i + 1} (ex.: cita o canal oficial de denúncia)`}
+                aria-label={`Critério ${i + 1}`}
+                className={inputCls}
+                required
+              />
+              <input
+                type="number"
+                min={1}
+                value={c.peso}
+                onChange={(e) => mudarCriterio(i, 'peso', e.target.value)}
+                aria-label={`Peso do critério ${i + 1}`}
+                title="Peso"
+                className={`${inputCls} w-24 shrink-0`}
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  setDados((d) => ({
+                    ...d,
+                    rubrica: {
+                      ...d.rubrica,
+                      criterios: d.rubrica.criterios.filter((_, j) => j !== i),
+                    },
+                  }))
+                }
+                disabled={dados.rubrica.criterios.length <= 1}
+                title="Remover critério"
+                className="shrink-0 px-2 text-slate-400 hover:text-red-300 disabled:opacity-30"
+              >
+                <PixelIcon nome="trash" className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() =>
+              setDados((d) => ({
+                ...d,
+                rubrica: {
+                  ...d.rubrica,
+                  criterios: [...d.rubrica.criterios, { criterio: '', peso: 25 }],
+                },
+              }))
+            }
+            disabled={dados.rubrica.criterios.length >= 8}
+            className="text-xs text-indigo-300 hover:text-indigo-200 disabled:opacity-40"
+          >
+            + Adicionar critério
+          </button>
+          <textarea
+            value={dados.rubrica.referencia}
+            onChange={(e) =>
+              setDados((d) => ({ ...d, rubrica: { ...d.rubrica, referencia: e.target.value } }))
+            }
+            placeholder="Resposta de referência (opcional — orienta a correção, nunca é mostrada ao colaborador)"
+            aria-label="Resposta de referência"
+            rows={2}
+            className={inputCls}
+          />
+        </div>
+      ) : dados.formato === FORMATO_SEQUENCIA ? (
         <div className="space-y-2">
           <p className="text-xs text-slate-500">
             Digite os passos do processo NA ORDEM CERTA — essa ordem vira o gabarito. O jogo

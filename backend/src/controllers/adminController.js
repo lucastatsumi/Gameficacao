@@ -6,6 +6,8 @@ import * as temporadaService from '../services/temporadaService.js';
 import * as temaService from '../services/temaService.js';
 import * as empresaService from '../services/empresaService.js';
 import * as avaliacaoService from '../services/avaliacaoService.js';
+import * as iaService from '../services/iaService.js';
+import * as respostaAbertaService from '../services/respostaAbertaService.js';
 
 // ---------- Turmas ----------
 
@@ -258,6 +260,86 @@ export async function definirTemasAtivos(req, res, next) {
 export async function matrizDaEquipe(req, res, next) {
   try {
     res.json(await avaliacaoService.matrizDaEquipe(req.usuario, req.params.turmaId));
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ---------- IA: geração, auditoria e revisão (Horizonte 2) ----------
+
+export async function gerarQuestoesIa(req, res, next) {
+  try {
+    res.status(201).json(await iaService.gerarQuestoes(req.usuario, req.body));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function gerarDeDocumentoIa(req, res, next) {
+  try {
+    res.status(201).json(await iaService.gerarDeDocumento(req.usuario, req.body));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function auditarTemaIa(req, res, next) {
+  try {
+    res.json(await iaService.auditarTema(req.usuario, req.params.temaId));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listarRascunhosIa(req, res, next) {
+  try {
+    const temas = await temaService.temasDoGestor(req.usuario);
+    const editaveis = temas.filter((t) => t.editavel).map((t) => t.id);
+    res.json(await iaService.listarRascunhos(req.usuario, editaveis));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function aprovarRascunho(req, res, next) {
+  try {
+    await questaoService.exigirQuestaoEditavel(req.usuario, req.params.id);
+    res.json(await questaoService.aprovarRascunho(req.params.id));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function descartarRascunho(req, res, next) {
+  try {
+    await questaoService.exigirQuestaoEditavel(req.usuario, req.params.id);
+    res.json(await questaoService.descartarRascunho(req.params.id));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function custosIa(req, res, next) {
+  try {
+    res.json(await iaService.custosRecentes(req.usuario));
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ---------- Respostas abertas: revisão do gestor (Horizonte 3) ----------
+
+export async function listarAvaliacoesAbertas(req, res, next) {
+  try {
+    res.json(await respostaAbertaService.listarAvaliacoes(req.usuario, { status: req.query.status ?? null }));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function revisarAvaliacaoAberta(req, res, next) {
+  try {
+    res.json(await respostaAbertaService.revisarAvaliacao(req.usuario, req.params.respostaId, req.body));
   } catch (err) {
     next(err);
   }

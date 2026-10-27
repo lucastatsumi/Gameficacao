@@ -33,6 +33,20 @@ adminRoutes.get('/empresa/membros', adminController.membros);
 adminRoutes.put('/empresa/membros/:userId/papel', adminController.definirPapel);
 adminRoutes.put('/empresa/temas', adminController.definirTemasAtivos);
 
+// IA: geração (manual ou a partir de documento), auditoria e revisão.
+// Nada gerado entra em produção sem aprovação aqui.
+adminRoutes.post('/ia/gerar', adminController.gerarQuestoesIa);
+adminRoutes.post('/ia/documento', adminController.gerarDeDocumentoIa);
+adminRoutes.post('/ia/auditar/:temaId', adminController.auditarTemaIa);
+adminRoutes.get('/ia/rascunhos', adminController.listarRascunhosIa);
+adminRoutes.post('/ia/rascunhos/:id/aprovar', adminController.aprovarRascunho);
+adminRoutes.post('/ia/rascunhos/:id/descartar', adminController.descartarRascunho);
+adminRoutes.get('/ia/custos', adminController.custosIa);
+
+// Respostas abertas corrigidas por IA: o gestor revisa e sobrescreve
+adminRoutes.get('/avaliacoes-abertas', adminController.listarAvaliacoesAbertas);
+adminRoutes.put('/avaliacoes-abertas/:respostaId', adminController.revisarAvaliacaoAberta);
+
 // Relatórios
 adminRoutes.get('/relatorio/questoes', adminController.relatorioQuestoes);
 adminRoutes.get('/relatorio/fases', adminController.relatorioFases);

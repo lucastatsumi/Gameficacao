@@ -55,7 +55,9 @@ export default function Quiz() {
   // minigame "reordenar algoritmo": ids dos passos na ordem que o aluno
   // clicou, até completar a sequência
   const [ordemEscolhida, setOrdemEscolhida] = useState([]);
-  const [feedbackSeq, setFeedbackSeq] = useState(null); // resposta de /quiz/responder-sequencia
+  const [feedbackSeq, setFeedbackSeq] = useState(null); // resposta de /quiz/responder-sequencia (ou -aberta)
+  // questão aberta (corrigida por IA com rubrica): o texto digitado
+  const [textoAberto, setTextoAberto] = useState('');
 
   // "boss fight" (quiz.quiz.vidas definido): contador de erros ACUMULADO
   // na tentativa inteira (não reseta por questão) — estoura o limite e o
@@ -156,6 +158,38 @@ export default function Quiz() {
     [enviando, feedbackSeq, quiz, questao, sonsPermitidos],
   );
 
+  // ---------- enviar resposta aberta (corrigida no servidor pela IA) ----------
+  // Usa o mesmo slot de feedback do formato de sequência: as duas são
+  // respostas "sem alternativa" e compartilham timer/avanço.
+  const responderAberta = useCallback(
+    async (texto) => {
+      if (enviando || feedbackSeq) return;
+      setEnviando(true);
+      try {
+        const fb = await api.post('/quiz/responder-aberta', {
+          tentativa_id: quiz.tentativa_id,
+          questao_id: questao.id,
+          texto: texto ?? '',
+        });
+        setFeedbackSeq({ ...fb, aberta: true });
+        if (fb.correta) {
+          som(tocarAcerto);
+          setComboAtual((n) => n + 1);
+        } else {
+          som(tocarErro);
+          setErrosCount((n) => n + 1);
+          setComboAtual(0);
+        }
+      } catch (err) {
+        setErro(err.message);
+      } finally {
+        setEnviando(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [enviando, feedbackSeq, quiz, questao, sonsPermitidos],
+  );
+
   // ---------- pedir dica (quiz custom; corta o XP da questão) ----------
   async function pedirDica() {
     som(tocarClique);
@@ -224,11 +258,22 @@ export default function Quiz() {
         clearInterval(intervalo);
         // tempo esgotado: envia vazio/sem alternativa (o formato decide o formato do payload)
         if (questao.formato === 'reordenar_algoritmo') responderSeq(ordemEscolhida);
+        else if (questao.formato === 'resposta_aberta') responderAberta(textoAberto);
         else responder(null);
       }
     }, 250);
     return () => clearInterval(intervalo);
-  }, [questao, feedback, feedbackSeq, resultado, responder, responderSeq, ordemEscolhida]);
+  }, [
+    questao,
+    feedback,
+    feedbackSeq,
+    resultado,
+    responder,
+    responderSeq,
+    responderAberta,
+    ordemEscolhida,
+    textoAberto,
+  ]);
 
   const vidasMax = quiz?.quiz?.vidas ?? null;
   const gameOver = vidasMax != null && errosCount >= vidasMax;
@@ -253,6 +298,7 @@ export default function Quiz() {
     setFeedback(null);
     setFeedbackSeq(null);
     setOrdemEscolhida([]);
+    setTextoAberto('');
     setSelecionada(null);
     setDica(null);
     setAlternativaEscondida(null);
@@ -376,6 +422,12 @@ export default function Quiz() {
               BATALHA
             </span>
           )}
+          {questao.formato === 'resposta_aberta' && (
+            <span className="flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 text-amber-300">
+              <PixelIcon nome="pencil" className="h-3.5 w-3.5" />
+              RESPOSTA ABERTA
+            </span>
+          )}
           {questao.formato === 'reordenar_algoritmo' && (
             <span className="flex items-center gap-1 bg-sky-500/10 px-2 py-0.5 text-sky-300">
               <PixelIcon nome="reload" className="h-3.5 w-3.5" />
@@ -438,9 +490,12 @@ export default function Quiz() {
         !ehDesafioDiario &&
         (estoquePoderes.pular_questao > 0 ||
           (questao.formato !== 'reordenar_algoritmo' &&
-            (estoquePoderes.eliminar_alternativa > 0 || estoquePoderes.tempo_extra > 0))) && (
+            (estoquePoderes.tempo_extra > 0 ||
+              (questao.formato !== 'resposta_aberta' &&
+                estoquePoderes.eliminar_alternativa > 0)))) && (
           <div className="mt-3 flex flex-wrap gap-2">
             {questao.formato !== 'reordenar_algoritmo' &&
+              questao.formato !== 'resposta_aberta' &&
               estoquePoderes.eliminar_alternativa > 0 && (
                 <button
                   onClick={() => usarPoder('eliminar_alternativa')}
@@ -503,6 +558,38 @@ export default function Quiz() {
               ))}
           </div>
         </div>
+      ) : questao.formato === 'resposta_aberta' ? (
+        <form
+          className="mt-4 space-y-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            responderAberta(textoAberto);
+          }}
+        >
+          <textarea
+            value={textoAberto}
+            onChange={(e) => setTextoAberto(e.target.value)}
+            disabled={respondida || enviando}
+            maxLength={3000}
+            rows={6}
+            aria-label="Sua resposta"
+            placeholder="Escreva sua resposta com suas palavras..."
+            className="w-full border-2 border-slate-700 bg-slate-900 p-3 text-sm text-slate-100 outline-none focus:border-indigo-500 disabled:opacity-60"
+          />
+          {!respondida && (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-slate-500">
+                {textoAberto.length}/3000 · corrigida por IA segundo a rubrica do gestor
+              </span>
+              <button
+                disabled={enviando || !textoAberto.trim()}
+                className="btn-pixel bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+              >
+                {enviando ? 'CORRIGINDO...' : 'ENVIAR RESPOSTA'}
+              </button>
+            </div>
+          )}
+        </form>
       ) : questao.formato === 'reordenar_algoritmo' ? (
         <div className="mt-4 space-y-4">
           <div>
@@ -658,7 +745,7 @@ export default function Quiz() {
         </div>
       )}
 
-      {/* feedback + próxima (formato reordenar_algoritmo) */}
+      {/* feedback + próxima (formatos reordenar_algoritmo e resposta_aberta) */}
       {feedbackSeq && (
         <div className="mt-6 space-y-4">
           <div
@@ -683,11 +770,27 @@ export default function Quiz() {
                 />
                 {feedbackSeq.tempo_esgotado
                   ? 'Tempo esgotado!'
-                  : feedbackSeq.correta
-                    ? 'Ordem correta!'
-                    : 'Ordem incorreta'}
+                  : feedbackSeq.aberta
+                    ? feedbackSeq.pendente
+                      ? 'Resposta enviada — a correção ficou com o gestor'
+                      : `Nota ${feedbackSeq.nota}/100`
+                    : feedbackSeq.correta
+                      ? 'Ordem correta!'
+                      : 'Ordem incorreta'}
               </p>
-              {!feedbackSeq.correta && (
+              {feedbackSeq.aberta && feedbackSeq.feedback?.length > 0 && (
+                <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
+                  {feedbackSeq.feedback.map((f) => (
+                    <li key={f.criterio}>
+                      <span className="font-medium text-slate-200">
+                        {f.criterio} ({f.nota}/100):
+                      </span>{' '}
+                      {f.comentario}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!feedbackSeq.aberta && !feedbackSeq.correta && (
                 <ol className="mt-2 list-decimal space-y-1 pl-4 text-sm text-slate-300">
                   {feedbackSeq.ordem_correta.map((id) => (
                     <li key={id}>{questao.passos.find((p) => p.id === id)?.texto}</li>
