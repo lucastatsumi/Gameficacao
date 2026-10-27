@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase.js';
+import { dominioDoEmail } from '../lib/sso.js';
 import { api } from '../services/api.js';
 
 const AuthContext = createContext(null);
@@ -40,6 +41,18 @@ export function AuthProvider({ children }) {
     if (error) throw new Error(traduzirErroAuth(error.message));
   }
 
+  // SSO corporativo: redireciona ao provedor (SAML) registrado para o domínio.
+  async function loginSso(email) {
+    const domain = dominioDoEmail(email);
+    if (!domain) throw new Error('Informe seu e-mail corporativo');
+    const { data, error } = await supabase.auth.signInWithSSO({
+      domain,
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) throw new Error(traduzirErroAuth(error.message));
+    window.location.assign(data.url);
+  }
+
   async function cadastrar(nome, email, senha) {
     const { error } = await supabase.auth.signUp({
       email,
@@ -60,6 +73,7 @@ export function AuthProvider({ children }) {
         perfil,
         carregando,
         login,
+        loginSso,
         cadastrar,
         sair,
         recarregarPerfil: carregarPerfil,
@@ -79,6 +93,8 @@ export function useAuth() {
 function traduzirErroAuth(mensagem) {
   const mapa = {
     'Invalid login credentials': 'E-mail ou senha incorretos',
+    'No SSO provider assigned for this domain':
+      'Sua empresa ainda não configurou o login corporativo (SSO)',
     'User already registered': 'Este e-mail já está cadastrado',
     'Password should be at least 6 characters.': 'A senha deve ter pelo menos 6 caracteres',
     'Email not confirmed': 'Confirme seu e-mail antes de entrar',

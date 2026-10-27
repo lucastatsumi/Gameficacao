@@ -15,7 +15,7 @@ const inputCls =
   'w-full border-2 border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none focus:border-indigo-500';
 
 export default function Login() {
-  const { sessao, login, cadastrar } = useAuth();
+  const { sessao, login, loginSso, cadastrar } = useAuth();
   const { t } = useI18n();
   const [modo, setModo] = useState('login'); // 'login' | 'cadastro'
   const [nome, setNome] = useState('');
@@ -201,6 +201,26 @@ export default function Login() {
                 <PixelIcon nome={modo === 'login' ? 'play' : 'star'} className="h-4 w-4" />
                 {enviando ? t('login.aguarde') : modo === 'login' ? t('login.pressStart') : t('login.newGame')}
               </button>
+
+              {modo === 'login' && (
+                <button
+                  type="button"
+                  disabled={enviando || !email}
+                  onClick={async () => {
+                    setErro(null);
+                    setEnviando(true);
+                    try {
+                      await loginSso(email);
+                    } catch (err) {
+                      setErro(err.message);
+                      setEnviando(false);
+                    }
+                  }}
+                  className="w-full border-2 border-slate-700 py-2 text-xs text-slate-300 hover:border-indigo-500 disabled:opacity-40"
+                >
+                  Entrar com SSO da empresa (usa o e-mail acima)
+                </button>
+              )}
             </form>
           </div>
 

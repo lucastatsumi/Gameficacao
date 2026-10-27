@@ -628,8 +628,13 @@ Itens que exigem decisão comercial, infra externa ou material que este
 ambiente não tem como criar/validar sozinho:
 
 - **Billing/planos** (Stripe etc.) — decisão comercial + conta externa.
-- **SSO corporativo** (SAML/OIDC com Okta/Azure AD) — exige tenant de
-  identidade real para validar.
+- **SSO corporativo** (SAML/OIDC com Okta/Azure AD) — **lado do app ✅**:
+  botão "Entrar com SSO da empresa" no login (`signInWithSSO` do Supabase
+  Auth, por domínio do e-mail; `lib/sso.js`). **Falta a configuração**, que é
+  externa: registrar o provedor SAML do cliente no Supabase
+  (`supabase sso add --type saml --domains empresa.com --metadata-url ...`) e,
+  pelo que sei, SAML SSO exige plano Pro ou superior do Supabase — confira.
+  Nunca foi exercitado contra um IdP real.
 - **Integração com HRIS** (importar organograma/colaboradores) — depende
   de qual sistema o cliente usa.
 - ~~**Notificações externas**~~ — **e-mail ✅** via Resend (migração 47,
