@@ -1,3 +1,4 @@
+import * as evolucaoService from '../services/evolucaoService.js';
 import * as turmaService from '../services/turmaService.js';
 import * as questaoService from '../services/questaoService.js';
 import * as relatorioService from '../services/relatorioService.js';
@@ -150,6 +151,20 @@ export async function listarTemporadas(req, res, next) {
 export async function definirTrilhaTemporada(req, res, next) {
   try {
     res.json(await temporadaService.definirTrilha(req.params.temporadaId, req.body?.degraus));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function evolucaoDaTurma(req, res, next) {
+  try {
+    res.json(
+      await evolucaoService.evolucaoDaTurma(
+        req.usuario.id,
+        req.params.turmaId,
+        req.query.semanas ?? 8
+      )
+    );
   } catch (err) {
     next(err);
   }

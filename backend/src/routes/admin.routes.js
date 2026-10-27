@@ -14,6 +14,7 @@ adminRoutes.use(exigirProfessor);
 adminRoutes.post('/turmas', adminController.criarTurma);
 adminRoutes.get('/turmas', adminController.listarTurmas);
 adminRoutes.get('/turmas/:turmaId/alunos', adminController.alunosDaTurma);
+adminRoutes.get('/turmas/:turmaId/evolucao', adminController.evolucaoDaTurma);
 adminRoutes.get('/turmas/:turmaId/relatorio.csv', adminController.exportarCsvTurma);
 
 // Temas e trilhas por equipe

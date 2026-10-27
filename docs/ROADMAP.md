@@ -575,6 +575,11 @@ precisava da turma que já existe).
 
 ## Horizonte 5 — Plataforma
 
+> **Dashboard de evolução ✅** (`evolucaoService.js`, aba "Evolução"): série
+> semanal de score médio, XP e colaboradores ativos por equipe, derivada de
+> `tentativas` (append-only) — sem tabela de snapshot, pois o histórico já
+> é imutável. Auditoria por IA ✅ (migração 41, aba "IA").
+
 - **Multi-tenancy real** — hoje o isolamento é por turma dentro de um
   banco único com um "professor" global; empresas exigem isolamento forte:
   `empresa_id` nas entidades-raiz, views de ranking/relatório filtradas
