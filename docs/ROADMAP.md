@@ -75,7 +75,11 @@ O objetivo é generalizar o domínio sem reescrever o que funciona.
 > chave neste ambiente). Auditoria por IA ✅ (migração 41). Geração a partir
 > de documento ✅ na versão **texto colado** (até 12 mil caracteres; cada
 > questão precisa citar um trecho literal presente no texto, senão é
-> descartada). Upload de arquivo (PDF/DOCX) segue pendente: exige storage.
+> descartada). Upload de PDF/DOCX/TXT ✅ (`documentoService.js`): o servidor extrai o texto
+> em memória e descarta o arquivo (sem storage), limite de 3 MB; o texto
+> extraído cai na caixa de material para revisão do gestor. Testado com DOCX
+> montado em memória e PDF real do repositório; PDF escaneado (sem texto)
+> responde 422 — OCR fica fora.
 
 O agente `question-researcher` (`.claude/agents/`) já é o protótipo
 conceitual: gerar questões com fontes confiáveis, alternativas plausíveis

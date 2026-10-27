@@ -53,6 +53,37 @@ export default function AbaIA() {
     }
   }
 
+  // Lê PDF/DOCX/TXT no navegador (base64) e pede ao servidor o texto — o arquivo
+  // não é armazenado; o texto extraído cai na caixa "material" para revisão.
+  async function carregarArquivo(e) {
+    const arquivo = e.target.files?.[0];
+    e.target.value = '';
+    if (!arquivo) return;
+    setErro(null);
+    setInfo(null);
+    if (arquivo.size > 3 * 1024 * 1024) {
+      setErro('O arquivo deve ter no máximo 3 MB.');
+      return;
+    }
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const leitor = new FileReader();
+        leitor.onload = () => resolve(String(leitor.result).split(',')[1] ?? '');
+        leitor.onerror = () => reject(new Error('Não foi possível ler o arquivo.'));
+        leitor.readAsDataURL(arquivo);
+      });
+      const r = await api.post('/admin/ia/extrair-texto', { conteudo_base64: base64 });
+      setForm((f) => ({ ...f, material: r.texto }));
+      setInfo(
+        `Texto extraído de ${arquivo.name} (${r.caracteres} caracteres` +
+          (r.truncado ? ', cortado no limite de 12 mil — revise' : '') +
+          '). Confira antes de gerar.'
+      );
+    } catch (err) {
+      setErro(err.message);
+    }
+  }
+
   async function auditar() {
     setErro(null);
     setInfo(null);
@@ -133,6 +164,15 @@ export default function AbaIA() {
           value={form.quantidade}
           onChange={(e) => setForm({ ...form, quantidade: e.target.value })}
         />
+        <label className="text-sm sm:col-span-2">
+          Ou envie um documento (PDF, DOCX ou TXT, até 3 MB):
+          <input
+            type="file"
+            accept=".pdf,.docx,.txt,application/pdf"
+            onChange={carregarArquivo}
+            className="mt-1 block text-sm"
+          />
+        </label>
         <textarea
           className={`${inputCls} sm:col-span-2`}
           rows={5}

@@ -7,6 +7,9 @@ import { errorHandler } from './middlewares/errorHandler.js';
 export const app = express();
 
 app.use(cors({ origin: env.frontendUrl }));
+// Upload de documento (base64 de até 3 MB ≈ 4 MB de JSON): limite maior SÓ nesta
+// rota; precisa vir antes do parser global, que usa o padrão de 100 kb.
+app.use('/api/admin/ia/extrair-texto', express.json({ limit: '5mb' }));
 app.use(express.json());
 
 // Health check (usado pelo Railway para saber se a API está de pé)

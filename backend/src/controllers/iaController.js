@@ -1,4 +1,5 @@
 import * as iaService from '../services/iaService.js';
+import * as documentoService from '../services/documentoService.js';
 import * as abertaService from '../services/abertaService.js';
 import * as auditoriaService from '../services/auditoriaService.js';
 
@@ -74,6 +75,14 @@ export async function revisarResposta(req, res, next) {
   try {
     await abertaService.revisarNota(req.usuario.id, req.params.id, req.body?.nota);
     res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function extrairTexto(req, res, next) {
+  try {
+    res.json(await documentoService.extrairTexto(req.body?.conteudo_base64));
   } catch (err) {
     next(err);
   }

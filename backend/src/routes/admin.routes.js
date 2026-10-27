@@ -40,6 +40,7 @@ adminRoutes.post('/ia/gerar', iaController.gerar);
 adminRoutes.get('/ia/rascunhos', iaController.listar);
 adminRoutes.post('/ia/rascunhos/:id/aprovar', iaController.aprovar);
 adminRoutes.delete('/ia/rascunhos/:id', iaController.descartar);
+adminRoutes.post('/ia/extrair-texto', iaController.extrairTexto);
 adminRoutes.post('/ia/auditar', iaController.auditar);
 adminRoutes.get('/ia/sugestoes', iaController.sugestoes);
 adminRoutes.patch('/ia/sugestoes/:id', iaController.resolverSugestao);
