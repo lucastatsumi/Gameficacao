@@ -1,10 +1,11 @@
 import * as quizCustomService from '../services/quizCustomService.js';
+import { idsTemasVisiveis } from '../services/temaService.js';
 
 // Quizzes criados pelos usuários: qualquer autenticado lista, cria e joga.
 
 export async function listar(req, res, next) {
   try {
-    res.json(await quizCustomService.listarQuizzes(req.usuario.id));
+    res.json(await quizCustomService.listarQuizzes(req.usuario.id, req.usuario.empresa_id));
   } catch (err) {
     next(err);
   }
@@ -12,7 +13,7 @@ export async function listar(req, res, next) {
 
 export async function banco(req, res, next) {
   try {
-    res.json(await quizCustomService.bancoDeQuestoes());
+    res.json(await quizCustomService.bancoDeQuestoes(await idsTemasVisiveis(req.usuario)));
   } catch (err) {
     next(err);
   }
@@ -20,7 +21,9 @@ export async function banco(req, res, next) {
 
 export async function criar(req, res, next) {
   try {
-    res.status(201).json(await quizCustomService.criarQuiz(req.usuario.id, req.body));
+    res
+      .status(201)
+      .json(await quizCustomService.criarQuiz(req.usuario.id, req.body, req.usuario.empresa_id));
   } catch (err) {
     next(err);
   }

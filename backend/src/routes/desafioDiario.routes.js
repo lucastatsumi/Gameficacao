@@ -6,7 +6,7 @@ export const desafioDiarioRoutes = Router();
 // Status do dia: se já jogou + top 10 do ranking do dia
 desafioDiarioRoutes.get('/', async (req, res, next) => {
   try {
-    res.json(await desafioDiarioService.statusDoDia(req.usuario.id));
+    res.json(await desafioDiarioService.statusDoDia(req.usuario.id, req.usuario.empresa_id));
   } catch (err) {
     next(err);
   }
@@ -16,7 +16,11 @@ desafioDiarioRoutes.get('/', async (req, res, next) => {
 // a resposta/finalização seguem pelos endpoints normais de /quiz)
 desafioDiarioRoutes.post('/iniciar', async (req, res, next) => {
   try {
-    res.status(201).json(await desafioDiarioService.iniciarDesafioDiario(req.usuario.id));
+    res
+      .status(201)
+      .json(
+        await desafioDiarioService.iniciarDesafioDiario(req.usuario.id, req.usuario.empresa_id),
+      );
   } catch (err) {
     next(err);
   }

@@ -1,4 +1,5 @@
 import { db } from '../config/supabase.js';
+import { doTenant } from '../utils/empresa.js';
 import { HttpError } from '../utils/httpError.js';
 import { classeDaFase } from '../utils/classe.js';
 
@@ -13,10 +14,8 @@ function comClasseFormatada(linha) {
   return { ...resto, classe: classeDaFase(classe_fase) };
 }
 
-export async function rankingGlobal(userId, limite = 50) {
-  const { data, error } = await db
-    .from('ranking_global')
-    .select('*')
+export async function rankingGlobal(userId, limite = 50, empresaId = null) {
+  const { data, error } = await doTenant(db.from('ranking_global').select('*'), empresaId)
     .order('posicao')
     .limit(limite);
   if (error) throw error;
@@ -47,10 +46,8 @@ export async function rankingPorTurma(usuario, turmaId, limite = 50) {
   return { ranking: data.map(comClasseFormatada), minha_posicao: comClasseFormatada(minha) };
 }
 
-export async function rankingPorFase(userId, faseId, limite = 50) {
-  const { data, error } = await db
-    .from('ranking_fase')
-    .select('*')
+export async function rankingPorFase(userId, faseId, limite = 50, empresaId = null) {
+  const { data, error } = await doTenant(db.from('ranking_fase').select('*'), empresaId)
     .eq('fase_id', faseId)
     .order('posicao')
     .limit(limite);

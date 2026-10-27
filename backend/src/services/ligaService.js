@@ -1,4 +1,5 @@
 import { db } from '../config/supabase.js';
+import { doTenant } from '../utils/empresa.js';
 import { semanaAnteriorA, semanaIso } from '../utils/semana.js';
 import { concederFichas } from './fichaService.js';
 
@@ -16,7 +17,7 @@ export const DIVISOES = ['bronze', 'prata', 'ouro', 'diamante'];
 const FATIA_PROMOCAO = 0.2;
 const FICHAS_POR_FAIXA = { subiu: 25, manteve: 15, desceu: 5 };
 
-export async function ligaAtual(userId, agora = new Date()) {
+export async function ligaAtual(userId, agora = new Date(), empresaId = null) {
   const semana = semanaIso(agora);
   await garantirFechamentoSemana(agora);
 
@@ -26,7 +27,7 @@ export async function ligaAtual(userId, agora = new Date()) {
     semana,
     divisao: linha.divisao,
     xp_semana: linha.xp_semana,
-    ranking: await classificacaoDaDivisao(semana, linha.divisao),
+    ranking: await classificacaoDaDivisao(semana, linha.divisao, empresaId),
   };
 }
 
@@ -49,10 +50,11 @@ export async function concederXpSemana(userId, xpGanho, agora = new Date()) {
   if (error) throw error;
 }
 
-async function classificacaoDaDivisao(semana, divisao) {
-  const { data, error } = await db
-    .from('ranking_liga')
-    .select('id, nome, xp_semana, posicao')
+async function classificacaoDaDivisao(semana, divisao, empresaId) {
+  const { data, error } = await doTenant(
+    db.from('ranking_liga').select('id, nome, xp_semana, posicao'),
+    empresaId,
+  )
     .eq('semana', semana)
     .eq('divisao', divisao)
     .order('posicao');
@@ -79,7 +81,7 @@ async function matricularNaLiga(userId, semana, divisao = 'bronze') {
     .from('ligas_semana')
     .upsert(
       { user_id: userId, semana, divisao, xp_semana: 0 },
-      { onConflict: 'user_id,semana', ignoreDuplicates: true }
+      { onConflict: 'user_id,semana', ignoreDuplicates: true },
     );
   if (error) throw error;
   return (await buscarLinha(userId, semana)) ?? { user_id: userId, semana, divisao, xp_semana: 0 };
@@ -101,17 +103,24 @@ async function garantirFechamentoSemana(agora) {
 
   const { data: linhasAnteriores, error } = await db
     .from('ligas_semana')
-    .select('user_id, divisao, xp_semana')
+    .select('user_id, divisao, xp_semana, profiles ( empresa_id )')
     .eq('semana', semanaAnterior);
   if (error) throw error;
   if (!linhasAnteriores?.length) return;
 
-  const porDivisao = new Map(DIVISOES.map((d) => [d, []]));
-  for (const linha of linhasAnteriores) porDivisao.get(linha.divisao)?.push(linha);
+  // Promoção/rebaixamento é calculado dentro de cada (divisão, empresa):
+  // ninguém sobe ou desce comparado com gente de outra empresa.
+  const grupos = new Map();
+  for (const linha of linhasAnteriores) {
+    if (!DIVISOES.includes(linha.divisao)) continue;
+    const chave = `${linha.divisao}|${linha.profiles?.empresa_id ?? ''}`;
+    if (!grupos.has(chave)) grupos.set(chave, { divisao: linha.divisao, jogadores: [] });
+    grupos.get(chave).jogadores.push(linha);
+  }
 
   const novasLinhas = [];
-  for (const divisao of DIVISOES) {
-    const jogadores = [...(porDivisao.get(divisao) ?? [])].sort((a, b) => b.xp_semana - a.xp_semana);
+  for (const { divisao, jogadores: doGrupo } of grupos.values()) {
+    const jogadores = [...doGrupo].sort((a, b) => b.xp_semana - a.xp_semana);
     const total = jogadores.length;
     const qtdFaixa = Math.max(1, Math.ceil(total * FATIA_PROMOCAO));
 
@@ -122,8 +131,16 @@ async function garantirFechamentoSemana(agora) {
       if (total > 1 && i < qtdFaixa) faixa = 'subiu';
       else if (total > 1 && i >= total - qtdFaixa) faixa = 'desceu';
 
-      const novaDivisao = proximaDivisao(divisao, faixa === 'subiu' ? 1 : faixa === 'desceu' ? -1 : 0);
-      novasLinhas.push({ user_id: jogador.user_id, semana: semanaAtual, divisao: novaDivisao, xp_semana: 0 });
+      const novaDivisao = proximaDivisao(
+        divisao,
+        faixa === 'subiu' ? 1 : faixa === 'desceu' ? -1 : 0,
+      );
+      novasLinhas.push({
+        user_id: jogador.user_id,
+        semana: semanaAtual,
+        divisao: novaDivisao,
+        xp_semana: 0,
+      });
       await concederFichas(jogador.user_id, FICHAS_POR_FAIXA[faixa], 'liga_semana', semanaAnterior);
     }
   }

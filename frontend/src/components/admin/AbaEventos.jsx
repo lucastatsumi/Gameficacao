@@ -65,7 +65,7 @@ export default function AbaEventos() {
   return (
     <div className="space-y-6">
       <p className="text-sm text-slate-400">
-        Eventos multiplicam o XP ganho pelos alunos numa fase (ou em todas) durante um período —
+        Eventos multiplicam o XP ganho pelos colaboradores num módulo (ou em todas) durante um período —
         ótimo para incentivar revisão antes de uma prova.
       </p>
 

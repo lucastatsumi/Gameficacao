@@ -32,7 +32,7 @@ export default function AbaRelatorio() {
         <h3 className="text-sm font-semibold text-slate-200">Desempenho por fase</h3>
         <p className="mt-1 text-xs text-slate-500">
           Taxa de aprovação de todas as tentativas finalizadas em cada fase — mostra em que ponto
-          da trilha a turma mais trava.
+          da trilha a empresa mais trava.
         </p>
         {!porFase ? (
           <Spinner />
@@ -79,7 +79,7 @@ export default function AbaRelatorio() {
           ))}
         </select>
         <p className="text-xs text-slate-500">
-          Ordenado da menor taxa de acerto — os conceitos em que a turma mais tem dificuldade.
+          Ordenado da menor taxa de acerto — os temas em que o time mais tem dificuldade.
         </p>
       </div>
 

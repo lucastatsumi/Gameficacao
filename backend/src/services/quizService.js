@@ -8,6 +8,7 @@ import { eventoAtivoParaFase } from './eventoService.js';
 import { selecionarAdaptativo } from '../utils/dificuldadeAdaptativa.js';
 import { aplicarCombo } from '../utils/combo.js';
 import { idsDoDesafio } from './desafioDiarioService.js';
+import { mesmoTenant } from '../utils/empresa.js';
 
 const TENTATIVAS_PARA_DIFICULDADE = 5; // janela recente usada para medir desempenho na fase
 
@@ -58,7 +59,7 @@ export async function iniciarQuiz(userId, faseId) {
     .from('questoes')
     .select(
       // NUNCA inclui `ordem_correta` (gabarito do formato reordenar_algoritmo)
-      'id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, formato, passos, alternativas ( id, letra, texto )'
+      'id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, formato, passos, alternativas ( id, letra, texto )',
     )
     .eq('fase_id', faseId)
     .eq('ativa', true);
@@ -76,15 +77,14 @@ export async function iniciarQuiz(userId, faseId) {
 
   const taxaAcertoPct = taxaAcertoRecente(tentativasRecentes);
 
-  const sorteadas = selecionarAdaptativo(questoes, taxaAcertoPct, QUESTOES_POR_QUIZ)
-    .map((q) => ({
-      ...q,
-      tem_dica: false, // dicas são exclusivas dos quizzes customizados
-      alternativas: [...q.alternativas].sort((a, b) => a.letra.localeCompare(b.letra)),
-      // embaralha os passos a cada tentativa — senão a ordem cadastrada já
-      // seria uma dica
-      passos: q.passos ? embaralhar(q.passos) : null,
-    }));
+  const sorteadas = selecionarAdaptativo(questoes, taxaAcertoPct, QUESTOES_POR_QUIZ).map((q) => ({
+    ...q,
+    tem_dica: false, // dicas são exclusivas dos quizzes customizados
+    alternativas: [...q.alternativas].sort((a, b) => a.letra.localeCompare(b.letra)),
+    // embaralha os passos a cada tentativa — senão a ordem cadastrada já
+    // seria uma dica
+    passos: q.passos ? embaralhar(q.passos) : null,
+  }));
 
   const { data: tentativa, error: erroTentativa } = await db
     .from('tentativas')
@@ -110,6 +110,10 @@ export async function iniciarQuizCustom(usuario, quizId) {
   const quiz = await buscarQuizCustom(quizId);
   // Quizzes são abertos a todos; só o criador pode jogar um quiz desativado
   // (para testá-lo antes de reativar)
+  // Quiz de outra empresa: 404 (não confirma que existe)
+  if (!mesmoTenant(quiz.empresa_id, usuario.empresa_id)) {
+    throw new HttpError(404, 'Quiz não encontrado');
+  }
   if (!quiz.ativo && quiz.criador_id !== usuario.id) {
     throw new HttpError(403, 'Este quiz foi desativado pelo criador');
   }
@@ -120,7 +124,7 @@ export async function iniciarQuizCustom(usuario, quizId) {
     .from('quiz_custom_questoes')
     .select(
       // NUNCA inclui `ordem_correta` (gabarito do formato reordenar_algoritmo)
-      'ordem, questoes ( id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, formato, passos, dica, ativa, alternativas ( id, letra, texto ) )'
+      'ordem, questoes ( id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, formato, passos, dica, ativa, alternativas ( id, letra, texto ) )',
     )
     .eq('quiz_id', quizId)
     .order('ordem');
@@ -203,7 +207,7 @@ export async function obterDica(userId, dados) {
 // comparando timestamps do próprio banco. Funciona para fases e
 // para quizzes customizados.
 // ---------------------------------------------------------------
-export async function responderQuestao(userId, dados) {
+export async function responderQuestao(userId, dados, empresaId = null) {
   const { tentativa_id, questao_id, alternativa_id = null, tempo_resposta_ms } = dados ?? {};
   if (!tentativa_id || !questao_id) {
     throw new HttpError(400, 'tentativa_id e questao_id são obrigatórios');
@@ -230,7 +234,7 @@ export async function responderQuestao(userId, dados) {
   } else if (tentativa.desafio_dia) {
     // O conjunto do dia é derivado da seed da data — recalcular é barato e
     // impede responder questões fora do desafio (quebraria o ranking justo)
-    const idsDoDia = await idsDoDesafio(tentativa.desafio_dia);
+    const idsDoDia = await idsDoDesafio(tentativa.desafio_dia, empresaId);
     if (!idsDoDia.includes(questao_id)) {
       throw new HttpError(400, 'Questão não pertence ao desafio de hoje');
     }
@@ -415,7 +419,9 @@ export async function finalizarQuiz(usuario, tentativaId) {
   // Evento temporário (ex.: "semana das árvores"): multiplica o XP bruto
   // desta tentativa. Só se aplica ao modo campanha — quiz custom não tem
   // fase associada para casar com o evento.
-  const evento = ehCustom ? null : await eventoAtivoParaFase(tentativa.fase_id);
+  const evento = ehCustom
+    ? null
+    : await eventoAtivoParaFase(tentativa.fase_id, usuario.empresa_id ?? null);
   const multiplicadorEvento = evento?.multiplicador_xp ?? 1;
 
   // Recompensa crescente de streak: só faz sentido se o aluno de fato
@@ -489,8 +495,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
 
   // "Sem usar dica": só faz sentido avaliar se o quiz foi respondido por
   // completo (senão questões puladas/pendentes mascarariam o resultado).
-  const semDica =
-    respostas.length === totalEfetivo && respostas.every((r) => !r.usou_dica);
+  const semDica = respostas.length === totalEfetivo && respostas.every((r) => !r.usou_dica);
 
   const badgesNovas = await verificarBadges(usuario.id, {
     xpTotal,

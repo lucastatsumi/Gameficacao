@@ -4,26 +4,41 @@ import { gerarCodigoAcesso } from '../utils/random.js';
 
 // ---------- Aluno ----------
 
-export async function entrarNaTurma(userId, codigoAcesso) {
-  if (!codigoAcesso?.trim()) throw new HttpError(400, 'Informe o código da turma');
+export async function entrarNaTurma(userId, codigoAcesso, empresaId = null) {
+  if (!codigoAcesso?.trim()) throw new HttpError(400, 'Informe o código da equipe');
 
   const { data: turma, error } = await db
     .from('turmas')
-    .select('id, nome')
+    .select('id, nome, empresa_id')
     .eq('codigo_acesso', codigoAcesso.trim().toUpperCase())
     .maybeSingle();
   if (error) throw error;
-  if (!turma) throw new HttpError(404, 'Turma não encontrada — confira o código');
+  if (!turma) throw new HttpError(404, 'Equipe não encontrada — confira o código');
+
+  const { empresa_id: empresaDaTurma = null, ...dadosTurma } = turma;
+  if (empresaId && empresaDaTurma !== empresaId) {
+    throw new HttpError(403, 'Esta equipe pertence a outra empresa');
+  }
 
   const { error: erroMatricula } = await db
     .from('matriculas')
     .insert({ user_id: userId, turma_id: turma.id });
   if (erroMatricula?.code === '23505') {
-    throw new HttpError(409, 'Você já está matriculado nesta turma');
+    throw new HttpError(409, 'Você já faz parte desta equipe');
   }
   if (erroMatricula) throw erroMatricula;
 
-  return turma;
+  // Código de equipe também serve de convite para a empresa: quem ainda
+  // não tem empresa passa a pertencer à da equipe.
+  if (empresaDaTurma && !empresaId) {
+    const { error: erroPerfil } = await db
+      .from('profiles')
+      .update({ empresa_id: empresaDaTurma, papel: 'colaborador' })
+      .eq('id', userId);
+    if (erroPerfil) throw erroPerfil;
+  }
+
+  return dadosTurma;
 }
 
 export async function minhasTurmas(userId) {
@@ -38,14 +53,19 @@ export async function minhasTurmas(userId) {
 
 // ---------- Professor ----------
 
-export async function criarTurma(professorId, nome) {
-  if (!nome?.trim()) throw new HttpError(400, 'Informe o nome da turma');
+export async function criarTurma(professorId, nome, empresaId = null) {
+  if (!nome?.trim()) throw new HttpError(400, 'Informe o nome da equipe');
 
   // Código é único: em caso de colisão (raro), sorteia outro
   for (let i = 0; i < 5; i++) {
     const { data, error } = await db
       .from('turmas')
-      .insert({ nome: nome.trim(), professor_id: professorId, codigo_acesso: gerarCodigoAcesso() })
+      .insert({
+        nome: nome.trim(),
+        professor_id: professorId,
+        empresa_id: empresaId,
+        codigo_acesso: gerarCodigoAcesso(),
+      })
       .select()
       .maybeSingle();
     if (!error) return data;

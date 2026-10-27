@@ -25,6 +25,8 @@ export async function obterPerfil(usuario) {
     nome: usuario.nome,
     email: usuario.email,
     role: usuario.role,
+    empresa_id: usuario.empresa_id ?? null,
+    papel: usuario.papel ?? 'colaborador',
     nivel: usuario.nivel,
     xp_total: usuario.xp_total,
     // Dados para a barra de progresso do nível

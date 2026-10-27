@@ -37,19 +37,32 @@ function questaoVazia(formato = 'padrao') {
     formato,
     alternativas: alternativasVazias(formato),
     passos: passosVazios(formato),
+    competencia_ids: [],
   };
 }
 
 export default function AbaQuestoes() {
+  const [temas, setTemas] = useState([]);
   const [fases, setFases] = useState([]);
   const [filtroFase, setFiltroFase] = useState('');
   const [questoes, setQuestoes] = useState(null);
   const [form, setForm] = useState(null); // null | {dados, editandoId}
   const [erro, setErro] = useState(null);
 
+  // Temas visíveis para o gestor (com módulos e competências). Só os
+  // `editavel` (do próprio tenant) aceitam criar/editar questões — os do
+  // catálogo aparecem como leitura.
   useEffect(() => {
-    api.get('/fases').then(setFases).catch(() => {});
+    api
+      .get('/admin/temas')
+      .then((lista) => {
+        setTemas(lista);
+        setFases(lista.flatMap((t) => t.modulos.map((m) => ({ ...m, tema_nome: t.nome }))));
+      })
+      .catch(() => {});
   }, []);
+
+  const temasEditaveis = new Set(temas.filter((t) => t.editavel).map((t) => t.id));
 
   const carregar = useCallback(() => {
     setQuestoes(null);
@@ -62,7 +75,9 @@ export default function AbaQuestoes() {
   useEffect(carregar, [carregar]);
 
   async function desativar(questao) {
-    if (!window.confirm('Desativar esta questão? Ela sai dos quizzes, mas o histórico é preservado.'))
+    if (
+      !window.confirm('Desativar esta questão? Ela sai dos quizzes, mas o histórico é preservado.')
+    )
       return;
     try {
       await api.delete(`/admin/questoes/${questao.id}`);
@@ -78,14 +93,18 @@ export default function AbaQuestoes() {
         <select
           value={filtroFase}
           onChange={(e) => setFiltroFase(e.target.value)}
-          aria-label="Filtrar questões por fase"
+          aria-label="Filtrar questões por módulo"
           className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
         >
-          <option value="">Todas as fases</option>
-          {fases.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.nome}
-            </option>
+          <option value="">Todos os módulos</option>
+          {temas.map((t) => (
+            <optgroup key={t.id} label={t.nome}>
+              {t.modulos.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nome}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <button
@@ -101,7 +120,7 @@ export default function AbaQuestoes() {
 
       {form && (
         <FormQuestao
-          fases={fases}
+          temas={temas.filter((t) => t.editavel)}
           form={form}
           aoFechar={() => setForm(null)}
           aoSalvar={() => {
@@ -149,10 +168,17 @@ export default function AbaQuestoes() {
                         desativada
                       </span>
                     )}
+                    {!temasEditaveis.has(q.tema_id) && (
+                      <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-sky-300">
+                        catálogo · somente leitura
+                      </span>
+                    )}
                   </div>
                   <p className="mt-2 line-clamp-2 text-sm text-slate-200">{q.enunciado}</p>
                 </div>
-                <div className="flex shrink-0 gap-2">
+                <div
+                  className={`flex shrink-0 gap-2 ${temasEditaveis.has(q.tema_id) ? '' : 'hidden'}`}
+                >
                   <button
                     onClick={() =>
                       setForm({
@@ -178,10 +204,11 @@ export default function AbaQuestoes() {
                                   .sort(
                                     (a, b) =>
                                       (q.ordem_correta ?? []).indexOf(a.id) -
-                                      (q.ordem_correta ?? []).indexOf(b.id)
+                                      (q.ordem_correta ?? []).indexOf(b.id),
                                   )
                                   .map((p) => ({ texto: p.texto }))
                               : passosVazios(q.formato),
+                          competencia_ids: q.competencia_ids ?? [],
                         },
                         editandoId: q.id,
                       })
@@ -210,8 +237,18 @@ export default function AbaQuestoes() {
   );
 }
 
-function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
+function FormQuestao({ temas, form, aoFechar, aoSalvar }) {
   const [dados, setDados] = useState(form.dados);
+  const temaDaFase = temas.find((t) => t.modulos.some((m) => m.id === Number(dados.fase_id)));
+
+  function alternarCompetencia(id) {
+    setDados((d) => ({
+      ...d,
+      competencia_ids: d.competencia_ids.includes(id)
+        ? d.competencia_ids.filter((c) => c !== id)
+        : [...d.competencia_ids, id],
+    }));
+  }
   const [erro, setErro] = useState(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -236,7 +273,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
           ? { ...a, correta: a.letra === letra }
           : a.letra === letra
             ? { ...a, [campo]: valor }
-            : a
+            : a,
       ),
     }));
   }
@@ -290,7 +327,10 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
   }
 
   return (
-    <form onSubmit={salvar} className="card-pixel space-y-4 border-2 border-indigo-500/40 bg-slate-900/80 p-5">
+    <form
+      onSubmit={salvar}
+      className="card-pixel space-y-4 border-2 border-indigo-500/40 bg-slate-900/80 p-5"
+    >
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">{form.editandoId ? 'Editar questão' : 'Nova questão'}</h3>
         <button
@@ -306,16 +346,24 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
       <div className="grid gap-3 sm:grid-cols-4">
         <select
           value={dados.fase_id}
-          onChange={(e) => mudar('fase_id', e.target.value)}
-          aria-label="Fase da questão"
+          onChange={(e) =>
+            // Competências são do tema: trocar de módulo para outro tema
+            // limpa as tags escolhidas
+            setDados((d) => ({ ...d, fase_id: e.target.value, competencia_ids: [] }))
+          }
+          aria-label="Módulo da questão"
           className={inputCls}
           required
         >
-          <option value="">Fase...</option>
-          {fases.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.nome}
-            </option>
+          <option value="">Módulo...</option>
+          {temas.map((t) => (
+            <optgroup key={t.id} label={t.nome}>
+              {t.modulos.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nome}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <select
@@ -377,10 +425,35 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
         rows={3}
         className={inputCls}
       />
+      {temaDaFase?.competencias?.length > 0 && (
+        <fieldset className="flex flex-wrap gap-2">
+          <legend className="mb-1 text-xs text-slate-500">
+            Competências avaliadas (alimentam a matriz de competências e as cartas)
+          </legend>
+          {temaDaFase.competencias.map((c) => (
+            <label
+              key={c.id}
+              className={`flex cursor-pointer items-center gap-1.5 border-2 px-2 py-1 text-xs ${
+                dados.competencia_ids.includes(c.id)
+                  ? 'border-indigo-500 bg-indigo-500/10 text-indigo-200'
+                  : 'border-slate-700 text-slate-400'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={dados.competencia_ids.includes(c.id)}
+                onChange={() => alternarCompetencia(c.id)}
+                className="sr-only"
+              />
+              {c.nome}
+            </label>
+          ))}
+        </fieldset>
+      )}
       <input
         value={dados.dica}
         onChange={(e) => mudar('dica', e.target.value)}
-        placeholder="Dica (opcional — usada nos quizzes da turma; quem pedir ganha metade do XP)"
+        placeholder="Dica (opcional — usada nos quizzes da equipe; quem pedir ganha metade do XP)"
         aria-label="Dica"
         className={inputCls}
       />
@@ -388,8 +461,8 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
       {dados.formato === FORMATO_SEQUENCIA ? (
         <div className="space-y-2">
           <p className="text-xs text-slate-500">
-            Digite os passos do processo NA ORDEM CERTA — essa ordem vira o gabarito. O
-            jogo embaralha a exibição a cada tentativa.
+            Digite os passos do processo NA ORDEM CERTA — essa ordem vira o gabarito. O jogo
+            embaralha a exibição a cada tentativa.
           </p>
           {dados.passos.map((passo, i) => (
             <div key={i} className="flex items-center gap-2">

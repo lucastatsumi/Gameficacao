@@ -302,7 +302,7 @@ export default function Quiz() {
           </h1>
           <p className="mt-1 text-sm text-slate-400">
             Questão {indice + 1} de {quiz.questoes.length}
-            {quiz.quiz && <span className="ml-2 text-indigo-300">· Quiz da turma</span>}
+            {quiz.quiz && <span className="ml-2 text-indigo-300">· Quiz da equipe</span>}
           </p>
         </div>
         <div className="flex items-center gap-2">

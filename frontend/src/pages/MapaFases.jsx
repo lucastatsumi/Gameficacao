@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api.js';
 import { useI18n } from '../contexts/I18nContext.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import Alerta from '../components/ui/Alerta.jsx';
 import PixelIcon from '../components/ui/PixelIcon.jsx';
@@ -45,7 +46,7 @@ function NoFase({ fase, indice }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-pixel text-[10px] text-slate-500">
-              {t('mapa.fase')} {fase.ordem}
+              {t('mapa.fase')} {indice + 1}
             </span>
             <h3 className="font-semibold text-slate-100">{fase.nome}</h3>
             {concluida && (
@@ -264,8 +265,60 @@ function CartaoDesafioDiario({ status }) {
   );
 }
 
+// Tema escolhido fica lembrado por usuário/navegador (conveniência; o
+// servidor continua decidindo o que é visível).
+const CHAVE_TEMA = 'teamquest.temaSelecionado';
+function temaLembrado() {
+  try {
+    return Number(localStorage.getItem(CHAVE_TEMA)) || null;
+  } catch {
+    return null;
+  }
+}
+function lembrarTema(id) {
+  try {
+    localStorage.setItem(CHAVE_TEMA, String(id));
+  } catch {
+    // armazenamento indisponível: só não lembra
+  }
+}
+
+// Seletor de trilha: um "cartucho" por tema visível, com o progresso.
+function SeletorTemas({ temas, selecionado, aoSelecionar }) {
+  if (temas.length < 2) return null;
+  return (
+    <div role="tablist" aria-label="Temas" className="mt-4 flex flex-wrap gap-2">
+      {temas.map((tema) => {
+        const ativo = tema.id === selecionado;
+        return (
+          <button
+            key={tema.id}
+            role="tab"
+            aria-selected={ativo}
+            onClick={() => aoSelecionar(tema.id)}
+            className={`btn-pixel flex items-center gap-2 px-3 py-2 text-left text-xs transition-colors ${
+              ativo ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            <PixelIcon nome={tema.icone ?? 'map-pin'} className="h-4 w-4 shrink-0" />
+            <span>
+              <span className="block font-semibold">{tema.nome}</span>
+              <span className={ativo ? 'text-indigo-200' : 'text-slate-500'}>
+                {tema.modulos_concluidos}/{tema.total_modulos} módulos
+              </span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function MapaFases() {
   const { t } = useI18n();
+  const { perfil } = useAuth();
+  const [temas, setTemas] = useState(null);
+  const [temaId, setTemaId] = useState(null);
   const [fases, setFases] = useState(null);
   const [pendente, setPendente] = useState(null);
   const [missoes, setMissoes] = useState(null);
@@ -275,8 +328,12 @@ export default function MapaFases() {
 
   useEffect(() => {
     api
-      .get('/fases')
-      .then(setFases)
+      .get('/temas')
+      .then((lista) => {
+        setTemas(lista);
+        const lembrado = temaLembrado();
+        setTemaId(lista.some((t) => t.id === lembrado) ? lembrado : (lista[0]?.id ?? null));
+      })
       .catch((err) => setErro(err.message));
     api
       .get('/perfil/pendente')
@@ -296,8 +353,41 @@ export default function MapaFases() {
       .catch(() => {}); // idem para o card do desafio diário
   }, []);
 
+  useEffect(() => {
+    if (temaId == null) return;
+    setFases(null);
+    api
+      .get(`/fases?tema_id=${temaId}`)
+      .then(setFases)
+      .catch((err) => setErro(err.message));
+  }, [temaId]);
+
+  function selecionarTema(id) {
+    lembrarTema(id);
+    setTemaId(id);
+  }
+
   if (erro) return <Alerta>{erro}</Alerta>;
-  if (!fases) return <Spinner texto={t('mapa.carregando')} />;
+  if (temas && !temas.length) {
+    return (
+      <div className="card-pixel border-2 border-indigo-500/40 bg-indigo-500/5 p-6 text-center">
+        <PixelIcon nome="briefcase" className="mx-auto h-10 w-10 text-indigo-300" />
+        <h1 className="mt-3 font-pixel text-sm text-slate-100">Nenhuma trilha disponível ainda</h1>
+        <p className="mt-2 text-sm text-slate-400">
+          Sua empresa ainda não ativou temas para você. Fale com seu gestor — ou, se você está
+          configurando o TeamQuest, crie o espaço da empresa.
+        </p>
+        <Link
+          to="/empresa"
+          className="btn-pixel mt-4 inline-block bg-indigo-600 px-4 py-2 text-sm font-semibold text-white"
+        >
+          Ir para Empresa
+        </Link>
+      </div>
+    );
+  }
+  if (!fases || !temas) return <Spinner texto={t('mapa.carregando')} />;
+  const temaAtual = temas.find((tema) => tema.id === temaId);
 
   return (
     <div className="relative">
@@ -327,14 +417,32 @@ export default function MapaFases() {
       </div>
       <p className="mt-2 text-sm text-slate-400">{t('mapa.subtitulo')}</p>
 
+      {!perfil?.empresa_id && perfil?.role !== 'professor' && (
+        <Link
+          to="/empresa"
+          className="mt-3 inline-flex items-center gap-2 text-xs text-indigo-300 hover:text-indigo-200"
+        >
+          <PixelIcon nome="briefcase" className="h-3.5 w-3.5" />
+          Recebeu um código de convite da sua empresa? Entre por aqui.
+        </Link>
+      )}
+
+      <SeletorTemas temas={temas} selecionado={temaId} aoSelecionar={selecionarTema} />
+      {temaAtual?.descricao && <p className="mt-2 text-xs text-slate-500">{temaAtual.descricao}</p>}
+
       {pendente && (
         <Link
-          to={pendente.quiz_custom_id ? `/quiz/custom/${pendente.quiz_custom_id}` : `/quiz/${pendente.fase_id}`}
+          to={
+            pendente.quiz_custom_id
+              ? `/quiz/custom/${pendente.quiz_custom_id}`
+              : `/quiz/${pendente.fase_id}`
+          }
           className="card-pixel mt-4 flex items-center gap-3 border-2 border-amber-500/40 bg-amber-500/10 p-3 text-amber-200 transition-colors hover:border-amber-400"
         >
           <PixelIcon nome="clock" className="h-5 w-5 shrink-0" />
           <span className="text-sm">
-            {t('mapa.pendentePrefixo')} <strong>{pendente.titulo}</strong> {t('mapa.pendenteSufixo')}
+            {t('mapa.pendentePrefixo')} <strong>{pendente.titulo}</strong>{' '}
+            {t('mapa.pendenteSufixo')}
           </span>
         </Link>
       )}

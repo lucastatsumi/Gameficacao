@@ -4,6 +4,7 @@ import AbaTurmas from '../components/admin/AbaTurmas.jsx';
 import AbaQuestoes from '../components/admin/AbaQuestoes.jsx';
 import AbaRelatorio from '../components/admin/AbaRelatorio.jsx';
 import AbaEventos from '../components/admin/AbaEventos.jsx';
+import AbaTemas from '../components/admin/AbaTemas.jsx';
 
 export default function Admin() {
   const [aba, setAba] = useState('turmas');
@@ -15,9 +16,10 @@ export default function Admin() {
         <h1 className="font-pixel text-lg text-slate-100">Painel do Gestor</h1>
       </div>
 
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         {[
-          ['turmas', 'users', 'Turmas'],
+          ['turmas', 'users', 'Equipes'],
+          ['temas', 'book-open', 'Temas'],
           ['questoes', 'pencil', 'Questões'],
           ['relatorio', 'chart-bar-big', 'Relatório'],
           ['eventos', 'fire', 'Eventos'],
@@ -39,6 +41,7 @@ export default function Admin() {
 
       <div className="mt-6">
         {aba === 'turmas' && <AbaTurmas />}
+        {aba === 'temas' && <AbaTemas />}
         {aba === 'questoes' && <AbaQuestoes />}
         {aba === 'relatorio' && <AbaRelatorio />}
         {aba === 'eventos' && <AbaEventos />}

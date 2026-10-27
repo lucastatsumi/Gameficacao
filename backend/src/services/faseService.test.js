@@ -43,6 +43,7 @@ describe('montarMapaFases', () => {
       nome: 'Fase 1',
       descricao: 'Descrição 1',
       ordem: 1,
+      tema_id: null,
       desbloqueada: true,
       progresso: null,
     });

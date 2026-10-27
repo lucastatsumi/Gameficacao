@@ -148,3 +148,24 @@ describe('alunosDaTurma', () => {
     expect(alunos).toEqual([{ user_id: 'u1', xp_total: 100 }]);
   });
 });
+
+describe('entrarNaTurma — multi-tenancy', () => {
+  it('não entra em equipe de outra empresa', async () => {
+    configurarDb({ turmas: [ok({ id: 't1', nome: 'A', empresa_id: 'e2' })] });
+    await expect(entrarNaTurma('u1', 'ABC123', 'e1')).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('quem não tem empresa passa a pertencer à empresa da equipe', async () => {
+    const mock = configurarDb({
+      turmas: [ok({ id: 't1', nome: 'A', empresa_id: 'e2' })],
+      matriculas: [ok(null)],
+      profiles: [ok(null)],
+    });
+    const turma = await entrarNaTurma('u1', 'ABC123');
+    expect(turma).toEqual({ id: 't1', nome: 'A' });
+    expect(mock.chainsPara('profiles')[0].update).toHaveBeenCalledWith({
+      empresa_id: 'e2',
+      papel: 'colaborador',
+    });
+  });
+});

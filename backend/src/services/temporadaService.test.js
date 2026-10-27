@@ -27,13 +27,13 @@ const AGORA = new Date('2026-02-15T12:00:00Z');
 describe('criarTemporada — validação', () => {
   it('rejeita nome vazio', async () => {
     await expect(
-      criarTemporada({ nome: '  ', inicio: '2026-01-01', fim: '2026-03-01' })
+      criarTemporada({ nome: '  ', inicio: '2026-01-01', fim: '2026-03-01' }),
     ).rejects.toMatchObject({ status: 400 });
   });
 
   it('rejeita fim antes ou igual ao início', async () => {
     await expect(
-      criarTemporada({ nome: 'Q1', inicio: '2026-03-01', fim: '2026-01-01' })
+      criarTemporada({ nome: 'Q1', inicio: '2026-03-01', fim: '2026-01-01' }),
     ).rejects.toMatchObject({ status: 400 });
   });
 
@@ -43,7 +43,7 @@ describe('criarTemporada — validação', () => {
 
     const insertChain = mock.chainsPara('temporadas')[0];
     expect(insertChain.insert).toHaveBeenCalledWith(
-      expect.objectContaining({ nome: 'Q1', tema: null })
+      expect.objectContaining({ nome: 'Q1', tema: null }),
     );
   });
 });
@@ -79,28 +79,36 @@ describe('definirTrilha — validação', () => {
 
   it('rejeita degrau de fichas sem fichas > 0', async () => {
     await expect(
-      definirTrilha(1, [{ pontos_necessarios: 100, tipo: 'fichas', fichas: 0 }])
+      definirTrilha(1, [{ pontos_necessarios: 100, tipo: 'fichas', fichas: 0 }]),
     ).rejects.toMatchObject({ status: 400 });
   });
 
   it('rejeita degrau cosmético sem item_catalogo_id', async () => {
     await expect(
-      definirTrilha(1, [{ pontos_necessarios: 100, tipo: 'cosmetico' }])
+      definirTrilha(1, [{ pontos_necessarios: 100, tipo: 'cosmetico' }]),
     ).rejects.toMatchObject({ status: 400 });
   });
 
   it('rejeita tipo desconhecido', async () => {
-    await expect(
-      definirTrilha(1, [{ pontos_necessarios: 100, tipo: 'xp' }])
-    ).rejects.toMatchObject({ status: 400 });
+    await expect(definirTrilha(1, [{ pontos_necessarios: 100, tipo: 'xp' }])).rejects.toMatchObject(
+      { status: 400 },
+    );
   });
 
   it('substitui a trilha existente (delete + insert)', async () => {
     const mock = configurarDb({
+      temporadas: [ok({ id: 1, empresa_id: null })],
       temporada_recompensas: [
         ok(null), // delete
         ok([
-          { id: 1, temporada_id: 1, posicao: 1, pontos_necessarios: 100, tipo: 'fichas', fichas: 20 },
+          {
+            id: 1,
+            temporada_id: 1,
+            posicao: 1,
+            pontos_necessarios: 100,
+            tipo: 'fichas',
+            fichas: 20,
+          },
           {
             id: 2,
             temporada_id: 1,
@@ -198,7 +206,7 @@ describe('concederPontosTemporada', () => {
     const upsert = mock.chainsPara('temporada_pontos')[1].upsert;
     expect(upsert).toHaveBeenCalledWith(
       { temporada_id: 1, user_id: 'novo', pontos: 0 },
-      { onConflict: 'temporada_id,user_id', ignoreDuplicates: true }
+      { onConflict: 'temporada_id,user_id', ignoreDuplicates: true },
     );
     const update = mock.chainsPara('temporada_pontos')[2].update;
     expect(update).toHaveBeenCalledWith({ pontos: 15 });
@@ -209,7 +217,16 @@ describe('concederPontosTemporada', () => {
       temporadas: [ok({ id: 1, nome: 'Q1', inicio: '2026-01-01', fim: '2026-03-01' })],
       temporada_pontos: [ok({ temporada_id: 1, user_id: 'u1', pontos: 90 }), ok(null)],
       temporada_recompensas: [
-        ok([{ id: 5, temporada_id: 1, posicao: 1, pontos_necessarios: 100, tipo: 'fichas', fichas: 20 }]),
+        ok([
+          {
+            id: 5,
+            temporada_id: 1,
+            posicao: 1,
+            pontos_necessarios: 100,
+            tipo: 'fichas',
+            fichas: 20,
+          },
+        ]),
       ],
       temporada_resgates: [ok([]), ok(null)], // já resgatados (nenhum), insert do resgate
       transacoes_fichas: [ok(null)],
@@ -265,7 +282,16 @@ describe('concederPontosTemporada', () => {
       temporadas: [ok({ id: 1, nome: 'Q1', inicio: '2026-01-01', fim: '2026-03-01' })],
       temporada_pontos: [ok({ temporada_id: 1, user_id: 'u1', pontos: 190 }), ok(null)],
       temporada_recompensas: [
-        ok([{ id: 5, temporada_id: 1, posicao: 1, pontos_necessarios: 100, tipo: 'fichas', fichas: 20 }]),
+        ok([
+          {
+            id: 5,
+            temporada_id: 1,
+            posicao: 1,
+            pontos_necessarios: 100,
+            tipo: 'fichas',
+            fichas: 20,
+          },
+        ]),
       ],
       temporada_resgates: [ok([{ recompensa_id: 5 }])], // já resgatado
     });
@@ -281,7 +307,16 @@ describe('concederPontosTemporada', () => {
       temporadas: [ok({ id: 1, nome: 'Q1', inicio: '2026-01-01', fim: '2026-03-01' })],
       temporada_pontos: [ok({ temporada_id: 1, user_id: 'u1', pontos: 90 }), ok(null)],
       temporada_recompensas: [
-        ok([{ id: 5, temporada_id: 1, posicao: 1, pontos_necessarios: 100, tipo: 'fichas', fichas: 20 }]),
+        ok([
+          {
+            id: 5,
+            temporada_id: 1,
+            posicao: 1,
+            pontos_necessarios: 100,
+            tipo: 'fichas',
+            fichas: 20,
+          },
+        ]),
       ],
       temporada_resgates: [ok([]), fail({ code: '23505', message: 'duplicate key' })],
     });

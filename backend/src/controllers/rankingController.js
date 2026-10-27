@@ -7,7 +7,9 @@ function limiteDe(req) {
 
 export async function global(req, res, next) {
   try {
-    res.json(await rankingService.rankingGlobal(req.usuario.id, limiteDe(req)));
+    res.json(
+      await rankingService.rankingGlobal(req.usuario.id, limiteDe(req), req.usuario.empresa_id),
+    );
   } catch (err) {
     next(err);
   }
@@ -24,7 +26,12 @@ export async function porTurma(req, res, next) {
 export async function porFase(req, res, next) {
   try {
     res.json(
-      await rankingService.rankingPorFase(req.usuario.id, Number(req.params.faseId), limiteDe(req)),
+      await rankingService.rankingPorFase(
+        req.usuario.id,
+        Number(req.params.faseId),
+        limiteDe(req),
+        req.usuario.empresa_id,
+      ),
     );
   } catch (err) {
     next(err);

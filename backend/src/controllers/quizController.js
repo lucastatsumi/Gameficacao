@@ -1,4 +1,5 @@
 import * as quizService from '../services/quizService.js';
+import { exigirFaseVisivel } from '../services/faseService.js';
 import * as poderService from '../services/poderService.js';
 import * as fichaService from '../services/fichaService.js';
 import * as missaoService from '../services/missaoService.js';
@@ -8,6 +9,7 @@ import * as raidService from '../services/raidService.js';
 
 export async function iniciar(req, res, next) {
   try {
+    if (req.body?.fase_id) await exigirFaseVisivel(req.usuario, req.body.fase_id);
     const quiz = await quizService.iniciarQuiz(req.usuario.id, req.body?.fase_id);
     res.status(201).json(quiz);
   } catch (err) {
@@ -34,7 +36,11 @@ export async function dica(req, res, next) {
 
 export async function responder(req, res, next) {
   try {
-    const feedback = await quizService.responderQuestao(req.usuario.id, req.body);
+    const feedback = await quizService.responderQuestao(
+      req.usuario.id,
+      req.body,
+      req.usuario.empresa_id,
+    );
     res.json(feedback);
   } catch (err) {
     next(err);
@@ -83,7 +89,7 @@ export async function finalizar(req, res, next) {
     resultado.fichas_ganhas = await fichaService.recompensarQuiz(
       req.usuario.id,
       resultado,
-      req.body?.tentativa_id
+      req.body?.tentativa_id,
     );
 
     // Missões do dia: aplica o resultado já corrigido ao progresso e paga
@@ -91,11 +97,11 @@ export async function finalizar(req, res, next) {
     resultado.missoes_concluidas = await missaoService.registrarQuizNasMissoes(
       req.usuario.id,
       resultado,
-      req.body?.tentativa_id
+      req.body?.tentativa_id,
     );
     resultado.fichas_ganhas += resultado.missoes_concluidas.reduce(
       (soma, m) => soma + m.recompensa_fichas,
-      0
+      0,
     );
 
     // Missão da semana (roadmap 4.3): mesma ideia, mas acumulando acertos
@@ -103,11 +109,11 @@ export async function finalizar(req, res, next) {
     // exclusivo, resolvido dentro do próprio missaoService.
     resultado.missoes_semanais_concluidas = await missaoService.registrarQuizNasMissoesSemanais(
       req.usuario.id,
-      resultado
+      resultado,
     );
     resultado.fichas_ganhas += resultado.missoes_semanais_concluidas.reduce(
       (soma, m) => soma + m.recompensa_fichas,
-      0
+      0,
     );
 
     // Liga semanal (roadmap 4.5): soma o XP desta tentativa ao acumulador
@@ -120,7 +126,9 @@ export async function finalizar(req, res, next) {
     // da trilha que o jogador acabou de cruzar.
     resultado.temporada_recompensas = await temporadaService.concederPontosTemporada(
       req.usuario.id,
-      resultado.xp_ganho
+      resultado.xp_ganho,
+      new Date(),
+      req.usuario.empresa_id,
     );
 
     // Raid boss de equipe (roadmap 4.7): self-sufficient — consulta a

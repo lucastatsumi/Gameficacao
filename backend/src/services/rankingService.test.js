@@ -101,3 +101,17 @@ describe('rankingPorFase', () => {
     expect(minha_posicao).toEqual({ fase_id: 1, id: 'user-1', nome: 'Ana', xp_fase: 80, posicao: 1 });
   });
 });
+
+describe('rankingGlobal — multi-tenancy', () => {
+  it('sem empresa filtra o espaço legado (empresa_id is null)', async () => {
+    const mock = configurarDb({ ranking_global: [ok([]), ok(null)] });
+    await rankingGlobal('user-1');
+    expect(mock.chainsPara('ranking_global')[0].is).toHaveBeenCalledWith('empresa_id', null);
+  });
+
+  it('com empresa filtra pela empresa do usuário', async () => {
+    const mock = configurarDb({ ranking_global: [ok([]), ok(null)] });
+    await rankingGlobal('user-1', 50, 'e1');
+    expect(mock.chainsPara('ranking_global')[0].eq).toHaveBeenCalledWith('empresa_id', 'e1');
+  });
+});

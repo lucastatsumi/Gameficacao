@@ -19,6 +19,19 @@ adminRoutes.post('/questoes', adminController.criarQuestao);
 adminRoutes.put('/questoes/:id', adminController.atualizarQuestao);
 adminRoutes.delete('/questoes/:id', adminController.desativarQuestao);
 
+// Temas, módulos e competências
+adminRoutes.get('/temas', adminController.listarTemas);
+adminRoutes.post('/temas', adminController.criarTema);
+adminRoutes.post('/temas/:temaId/modulos', adminController.criarModulo);
+adminRoutes.post('/temas/:temaId/competencias', adminController.criarCompetencia);
+adminRoutes.get('/turmas/:turmaId/temas', adminController.temasDaTurma);
+adminRoutes.put('/turmas/:turmaId/temas', adminController.definirTemasDaTurma);
+
+// Empresa (dono): membros, papéis e temas do catálogo ativos
+adminRoutes.get('/empresa/membros', adminController.membros);
+adminRoutes.put('/empresa/membros/:userId/papel', adminController.definirPapel);
+adminRoutes.put('/empresa/temas', adminController.definirTemasAtivos);
+
 // Relatórios
 adminRoutes.get('/relatorio/questoes', adminController.relatorioQuestoes);
 adminRoutes.get('/relatorio/fases', adminController.relatorioFases);
