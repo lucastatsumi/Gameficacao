@@ -557,6 +557,13 @@ precisava da turma que já existe).
 
 ### Campanhas e torneios (empacotamento para o gestor)
 
+> **Torneio ✅ implementado** (migração 40, `torneioService.js`, aba
+> "Torneios"): janela + equipes; placar = XP médio por membro (não soma);
+> encerrar paga fichas ao pódio (30/15/10 por membro) com transição
+> condicional anti-pagamento-duplo. Diferença do texto abaixo: agrega o XP
+> da janela, não os desafios assíncronos (que não registram vitória).
+> Cosmético de pódio e **campanha temática mensal** seguem pendentes.
+
 - **Campanha temática mensal** — evento temporário de 30 dias com badge
   exclusiva e ranking próprio ("Outubro da Segurança") — composição de
   eventos + badges já existentes, novidade é o empacotamento na UI do

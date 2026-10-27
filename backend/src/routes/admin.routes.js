@@ -3,6 +3,7 @@ import { exigirProfessor } from '../middlewares/auth.js';
 import * as adminController from '../controllers/adminController.js';
 import * as trilhaController from '../controllers/trilhaController.js';
 import * as iaController from '../controllers/iaController.js';
+import * as torneioController from '../controllers/torneioController.js';
 
 export const adminRoutes = Router();
 
@@ -20,6 +21,12 @@ adminRoutes.get('/temas', trilhaController.listarTemas);
 adminRoutes.post('/temas', trilhaController.criarTema);
 adminRoutes.get('/turmas/:turmaId/temas', trilhaController.temasDaTurma);
 adminRoutes.put('/turmas/:turmaId/temas', trilhaController.definirTemasDaTurma);
+
+// Torneios entre equipes
+adminRoutes.post('/torneios', torneioController.criar);
+adminRoutes.get('/torneios', torneioController.listar);
+adminRoutes.get('/torneios/:id/placar', torneioController.placar);
+adminRoutes.post('/torneios/:id/encerrar', torneioController.encerrar);
 
 // Questões geradas por IA (sempre rascunho até aprovação humana)
 adminRoutes.post('/ia/gerar', iaController.gerar);

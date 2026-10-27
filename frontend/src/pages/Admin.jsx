@@ -6,6 +6,7 @@ import AbaRelatorio from '../components/admin/AbaRelatorio.jsx';
 import AbaEventos from '../components/admin/AbaEventos.jsx';
 import AbaTrilhas from '../components/admin/AbaTrilhas.jsx';
 import AbaIA from '../components/admin/AbaIA.jsx';
+import AbaTorneios from '../components/admin/AbaTorneios.jsx';
 
 export default function Admin() {
   const [aba, setAba] = useState('turmas');
@@ -25,6 +26,7 @@ export default function Admin() {
           ['eventos', 'fire', 'Eventos'],
           ['trilhas', 'flag', 'Trilhas'],
           ['ia', 'pencil', 'IA'],
+          ['torneios', 'trophy', 'Torneios'],
         ].map(([valor, icone, rotulo]) => (
           <button
             key={valor}
@@ -48,6 +50,7 @@ export default function Admin() {
         {aba === 'eventos' && <AbaEventos />}
         {aba === 'trilhas' && <AbaTrilhas />}
         {aba === 'ia' && <AbaIA />}
+        {aba === 'torneios' && <AbaTorneios />}
       </div>
     </div>
   );
