@@ -10,7 +10,14 @@ import BotaoBatalha from '../components/quiz/BotaoBatalha.jsx';
 import TelaResultado from '../components/quiz/TelaResultado.jsx';
 import pixelFeliz from '../assets/img/pixel-feliz.svg';
 import pixelTriste from '../assets/img/pixel-triste.svg';
-import { somLigado, alternarSom, tocarClique, tocarAcerto, tocarErro, tocarTick } from '../lib/sons.js';
+import {
+  somLigado,
+  alternarSom,
+  tocarClique,
+  tocarAcerto,
+  tocarErro,
+  tocarTick,
+} from '../lib/sons.js';
 
 export default function Quiz() {
   // /quiz/:faseId (campanha), /quiz/custom/:quizId (quiz da turma) ou
@@ -116,7 +123,7 @@ export default function Quiz() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [enviando, feedback, quiz, questao, sonsPermitidos]
+    [enviando, feedback, quiz, questao, sonsPermitidos],
   );
 
   // ---------- enviar sequência (minigame reordenar algoritmo) ----------
@@ -146,7 +153,7 @@ export default function Quiz() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [enviando, feedbackSeq, quiz, questao, sonsPermitidos]
+    [enviando, feedbackSeq, quiz, questao, sonsPermitidos],
   );
 
   // ---------- pedir dica (quiz custom; corta o XP da questão) ----------
@@ -166,7 +173,11 @@ export default function Quiz() {
   // ---------- usar poder (eliminar alternativa / tempo extra / pular) ----------
   async function usarPoder(poder) {
     if (enviando || feedback || feedbackSeq) return;
-    if (poder === 'eliminar_alternativa' && (alternativaEscondida || estoquePoderes.eliminar_alternativa <= 0)) return;
+    if (
+      poder === 'eliminar_alternativa' &&
+      (alternativaEscondida || estoquePoderes.eliminar_alternativa <= 0)
+    )
+      return;
     if (poder === 'tempo_extra' && (tempoExtraUsado || estoquePoderes.tempo_extra <= 0)) return;
     if (poder === 'pular_questao' && estoquePoderes.pular_questao <= 0) return;
 
@@ -305,7 +316,10 @@ export default function Quiz() {
             </span>
           )}
           {vidasMax != null && (
-            <div className="flex items-center gap-1" title={`${Math.max(0, vidasMax - errosCount)} de ${vidasMax} vidas`}>
+            <div
+              className="flex items-center gap-1"
+              title={`${Math.max(0, vidasMax - errosCount)} de ${vidasMax} vidas`}
+            >
               {Array.from({ length: vidasMax }, (_, i) => (
                 <PixelIcon
                   key={i}
@@ -375,9 +389,9 @@ export default function Quiz() {
         </div>
         <p className="mt-2 whitespace-pre-wrap text-slate-100">{questao.enunciado}</p>
         {questao.codigo_snippet && (
-          <pre className="mt-4 overflow-x-auto border-2 border-slate-800 bg-slate-950 p-4 text-sm text-emerald-300">
-            <code>{questao.codigo_snippet}</code>
-          </pre>
+          <blockquote className="mt-4 border-2 border-slate-800 border-l-4 border-l-indigo-500/60 bg-slate-950/60 p-4 text-sm whitespace-pre-wrap italic text-slate-300">
+            {questao.codigo_snippet}
+          </blockquote>
         )}
 
         {/* "+XP" flutuando quando acerta (metade se usou dica) */}
@@ -386,7 +400,8 @@ export default function Quiz() {
             key={`xp-${indice}`}
             className="anim-subir pointer-events-none absolute -top-2 right-4 font-pixel text-sm text-amber-300"
           >
-            +{feedback?.usou_dica ? Math.max(1, Math.floor(questao.xp_valor / 2)) : questao.xp_valor}{' '}
+            +
+            {feedback?.usou_dica ? Math.max(1, Math.floor(questao.xp_valor / 2)) : questao.xp_valor}{' '}
             XP
           </span>
         )}
@@ -424,42 +439,43 @@ export default function Quiz() {
         (estoquePoderes.pular_questao > 0 ||
           (questao.formato !== 'reordenar_algoritmo' &&
             (estoquePoderes.eliminar_alternativa > 0 || estoquePoderes.tempo_extra > 0))) && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {questao.formato !== 'reordenar_algoritmo' && estoquePoderes.eliminar_alternativa > 0 && (
-            <button
-              onClick={() => usarPoder('eliminar_alternativa')}
-              disabled={Boolean(alternativaEscondida) || enviando}
-              title="Elimina uma alternativa errada"
-              className="btn-pixel flex items-center gap-2 border-2 border-violet-500/40 bg-slate-900 px-3 py-2 font-pixel text-[10px] text-violet-300 hover:bg-violet-500/10 disabled:opacity-40"
-            >
-              <PixelIcon nome="trash" className="h-4 w-4" />
-              50/50 ({estoquePoderes.eliminar_alternativa})
-            </button>
-          )}
-          {questao.formato !== 'reordenar_algoritmo' && estoquePoderes.tempo_extra > 0 && (
-            <button
-              onClick={() => usarPoder('tempo_extra')}
-              disabled={tempoExtraUsado || enviando}
-              title="Adiciona 15 segundos ao tempo desta questão"
-              className="btn-pixel flex items-center gap-2 border-2 border-sky-500/40 bg-slate-900 px-3 py-2 font-pixel text-[10px] text-sky-300 hover:bg-sky-500/10 disabled:opacity-40"
-            >
-              <PixelIcon nome="clock" className="h-4 w-4" />
-              +15s ({estoquePoderes.tempo_extra})
-            </button>
-          )}
-          {estoquePoderes.pular_questao > 0 && (
-            <button
-              onClick={() => usarPoder('pular_questao')}
-              disabled={enviando}
-              title="Pula esta questão sem contar contra sua aprovação"
-              className="btn-pixel flex items-center gap-2 border-2 border-emerald-500/40 bg-slate-900 px-3 py-2 font-pixel text-[10px] text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-40"
-            >
-              <PixelIcon nome="arrow-right" className="h-4 w-4" />
-              PULAR ({estoquePoderes.pular_questao})
-            </button>
-          )}
-        </div>
-      )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {questao.formato !== 'reordenar_algoritmo' &&
+              estoquePoderes.eliminar_alternativa > 0 && (
+                <button
+                  onClick={() => usarPoder('eliminar_alternativa')}
+                  disabled={Boolean(alternativaEscondida) || enviando}
+                  title="Elimina uma alternativa errada"
+                  className="btn-pixel flex items-center gap-2 border-2 border-violet-500/40 bg-slate-900 px-3 py-2 font-pixel text-[10px] text-violet-300 hover:bg-violet-500/10 disabled:opacity-40"
+                >
+                  <PixelIcon nome="trash" className="h-4 w-4" />
+                  50/50 ({estoquePoderes.eliminar_alternativa})
+                </button>
+              )}
+            {questao.formato !== 'reordenar_algoritmo' && estoquePoderes.tempo_extra > 0 && (
+              <button
+                onClick={() => usarPoder('tempo_extra')}
+                disabled={tempoExtraUsado || enviando}
+                title="Adiciona 15 segundos ao tempo desta questão"
+                className="btn-pixel flex items-center gap-2 border-2 border-sky-500/40 bg-slate-900 px-3 py-2 font-pixel text-[10px] text-sky-300 hover:bg-sky-500/10 disabled:opacity-40"
+              >
+                <PixelIcon nome="clock" className="h-4 w-4" />
+                +15s ({estoquePoderes.tempo_extra})
+              </button>
+            )}
+            {estoquePoderes.pular_questao > 0 && (
+              <button
+                onClick={() => usarPoder('pular_questao')}
+                disabled={enviando}
+                title="Pula esta questão sem contar contra sua aprovação"
+                className="btn-pixel flex items-center gap-2 border-2 border-emerald-500/40 bg-slate-900 px-3 py-2 font-pixel text-[10px] text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-40"
+              >
+                <PixelIcon nome="arrow-right" className="h-4 w-4" />
+                PULAR ({estoquePoderes.pular_questao})
+              </button>
+            )}
+          </div>
+        )}
 
       {/* alternativas — layout normal ou "VS" da Batalha de Complexidade */}
       {questao.formato === 'batalha_complexidade' ? (
@@ -616,7 +632,7 @@ export default function Quiz() {
               </p>
               {(() => {
                 const explicacao = feedback.explicacoes.find(
-                  (e) => e.id === (feedback.alternativa_correta?.id ?? null)
+                  (e) => e.id === (feedback.alternativa_correta?.id ?? null),
                 );
                 return explicacao ? (
                   <p className="mt-2 text-sm text-slate-300">{explicacao.explicacao}</p>
@@ -631,7 +647,13 @@ export default function Quiz() {
             className="btn-pixel flex w-full items-center justify-center gap-2 bg-indigo-600 py-3 font-pixel text-[11px] text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
           >
             <PixelIcon nome={ultima || gameOver ? 'flag' : 'arrow-right'} className="h-4 w-4" />
-            {enviando ? 'AGUARDE...' : gameOver ? 'FIM DE JOGO — VER RESULTADO' : ultima ? 'VER RESULTADO' : 'PRÓXIMA'}
+            {enviando
+              ? 'AGUARDE...'
+              : gameOver
+                ? 'FIM DE JOGO — VER RESULTADO'
+                : ultima
+                  ? 'VER RESULTADO'
+                  : 'PRÓXIMA'}
           </button>
         </div>
       )}
@@ -654,7 +676,9 @@ export default function Quiz() {
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-2 font-semibold">
                 <PixelIcon
-                  nome={feedbackSeq.tempo_esgotado ? 'clock' : feedbackSeq.correta ? 'check' : 'close'}
+                  nome={
+                    feedbackSeq.tempo_esgotado ? 'clock' : feedbackSeq.correta ? 'check' : 'close'
+                  }
                   className={`h-5 w-5 shrink-0 ${feedbackSeq.correta ? 'text-emerald-300' : 'text-red-300'}`}
                 />
                 {feedbackSeq.tempo_esgotado
@@ -679,7 +703,13 @@ export default function Quiz() {
             className="btn-pixel flex w-full items-center justify-center gap-2 bg-indigo-600 py-3 font-pixel text-[11px] text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
           >
             <PixelIcon nome={ultima || gameOver ? 'flag' : 'arrow-right'} className="h-4 w-4" />
-            {enviando ? 'AGUARDE...' : gameOver ? 'FIM DE JOGO — VER RESULTADO' : ultima ? 'VER RESULTADO' : 'PRÓXIMA'}
+            {enviando
+              ? 'AGUARDE...'
+              : gameOver
+                ? 'FIM DE JOGO — VER RESULTADO'
+                : ultima
+                  ? 'VER RESULTADO'
+                  : 'PRÓXIMA'}
           </button>
         </div>
       )}

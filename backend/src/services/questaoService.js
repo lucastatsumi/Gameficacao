@@ -151,7 +151,7 @@ function validarCamposComuns(dados) {
     fase_id,
     enunciado,
     codigo_snippet = null,
-    linguagem = 'javascript',
+    linguagem = 'texto',
     dificuldade = 'media',
     tempo_limite_seg = 60,
     xp_valor = 10,

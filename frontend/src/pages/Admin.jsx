@@ -12,7 +12,7 @@ export default function Admin() {
     <div>
       <div className="flex items-center gap-3">
         <PixelIcon nome="briefcase" className="h-7 w-7 text-indigo-400" />
-        <h1 className="font-pixel text-lg text-slate-100">Painel do Professor</h1>
+        <h1 className="font-pixel text-lg text-slate-100">Painel do Gestor</h1>
       </div>
 
       <div className="mt-4 flex gap-2">

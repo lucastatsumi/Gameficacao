@@ -29,7 +29,7 @@ function questaoVazia(formato = 'padrao') {
     fase_id: '',
     enunciado: '',
     codigo_snippet: '',
-    linguagem: 'javascript',
+    linguagem: 'texto',
     dificuldade: 'media',
     tempo_limite_seg: formato === 'batalha_complexidade' ? 15 : 60,
     xp_valor: formato === 'batalha_complexidade' ? 20 : 10,
@@ -372,10 +372,10 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
       <textarea
         value={dados.codigo_snippet}
         onChange={(e) => mudar('codigo_snippet', e.target.value)}
-        placeholder="Trecho de código (opcional)"
-        aria-label="Trecho de código"
-        rows={4}
-        className={`${inputCls} font-mono`}
+        placeholder="Texto de apoio (opcional — ex.: trecho da política ou do manual citado no cenário)"
+        aria-label="Texto de apoio"
+        rows={3}
+        className={inputCls}
       />
       <input
         value={dados.dica}
@@ -388,7 +388,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
       {dados.formato === FORMATO_SEQUENCIA ? (
         <div className="space-y-2">
           <p className="text-xs text-slate-500">
-            Digite os passos do algoritmo NA ORDEM CERTA — essa ordem vira o gabarito. O
+            Digite os passos do processo NA ORDEM CERTA — essa ordem vira o gabarito. O
             jogo embaralha a exibição a cada tentativa.
           </p>
           {dados.passos.map((passo, i) => (
