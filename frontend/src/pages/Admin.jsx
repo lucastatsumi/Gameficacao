@@ -4,6 +4,7 @@ import AbaTurmas from '../components/admin/AbaTurmas.jsx';
 import AbaQuestoes from '../components/admin/AbaQuestoes.jsx';
 import AbaRelatorio from '../components/admin/AbaRelatorio.jsx';
 import AbaEventos from '../components/admin/AbaEventos.jsx';
+import AbaTrilhas from '../components/admin/AbaTrilhas.jsx';
 
 export default function Admin() {
   const [aba, setAba] = useState('turmas');
@@ -21,6 +22,7 @@ export default function Admin() {
           ['questoes', 'pencil', 'Questões'],
           ['relatorio', 'chart-bar-big', 'Relatório'],
           ['eventos', 'fire', 'Eventos'],
+          ['trilhas', 'flag', 'Trilhas'],
         ].map(([valor, icone, rotulo]) => (
           <button
             key={valor}
@@ -42,6 +44,7 @@ export default function Admin() {
         {aba === 'questoes' && <AbaQuestoes />}
         {aba === 'relatorio' && <AbaRelatorio />}
         {aba === 'eventos' && <AbaEventos />}
+        {aba === 'trilhas' && <AbaTrilhas />}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { db } from '../config/supabase.js';
+import { filtrarFasesPorTemas, temasPermitidos } from './trilhaService.js';
 
 // Lógica pura: combina as fases com o progresso do aluno e decide quais estão
 // desbloqueadas. Uma fase abre quando não tem requisito ou quando o requisito
@@ -19,12 +20,13 @@ export function montarMapaFases(fases, progressos) {
 
 // Mapa de fases: cada fase vem com o progresso do aluno e se está desbloqueada
 export async function listarFasesComProgresso(userId) {
-  const [fasesRes, progressoRes] = await Promise.all([
+  const [fasesRes, progressoRes, permitidos] = await Promise.all([
     db.from('fases').select('*').order('ordem'),
     db.from('progresso_fase').select('*').eq('user_id', userId),
+    temasPermitidos(userId),
   ]);
   if (fasesRes.error) throw fasesRes.error;
   if (progressoRes.error) throw progressoRes.error;
 
-  return montarMapaFases(fasesRes.data, progressoRes.data);
+  return montarMapaFases(filtrarFasesPorTemas(fasesRes.data, permitidos), progressoRes.data);
 }

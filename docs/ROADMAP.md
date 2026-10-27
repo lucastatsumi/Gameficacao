@@ -99,6 +99,11 @@ via Claude API.
 > `fases.tema_id` e `questoes.competencias` (fundação do Horizonte 1).
 > Pendentes: questão aberta com IA (exige chave de API).
 
+> **Horizonte 1 — entregue**: temas (migração 35), trilhas por equipe
+> (migração 38, `trilhaService.js`, aba "Trilhas" do painel do gestor, filtro
+> no mapa de fases e trava em `iniciarQuiz`) e onboarding de tema próprio.
+> Pendentes: `empresa_id`/RLS (Horizonte 5), upload de material.
+
 O pedido central do pivô: sair do certo/errado binário.
 
 - **Pontuação ponderada (server-side)** — nota da tentativa composta por:

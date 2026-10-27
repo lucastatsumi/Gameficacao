@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { exigirProfessor } from '../middlewares/auth.js';
 import * as adminController from '../controllers/adminController.js';
+import * as trilhaController from '../controllers/trilhaController.js';
 
 export const adminRoutes = Router();
 
@@ -12,6 +13,12 @@ adminRoutes.post('/turmas', adminController.criarTurma);
 adminRoutes.get('/turmas', adminController.listarTurmas);
 adminRoutes.get('/turmas/:turmaId/alunos', adminController.alunosDaTurma);
 adminRoutes.get('/turmas/:turmaId/relatorio.csv', adminController.exportarCsvTurma);
+
+// Temas e trilhas por equipe
+adminRoutes.get('/temas', trilhaController.listarTemas);
+adminRoutes.post('/temas', trilhaController.criarTema);
+adminRoutes.get('/turmas/:turmaId/temas', trilhaController.temasDaTurma);
+adminRoutes.put('/turmas/:turmaId/temas', trilhaController.definirTemasDaTurma);
 
 // Questões
 adminRoutes.get('/questoes', adminController.listarQuestoes);

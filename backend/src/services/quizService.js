@@ -9,6 +9,7 @@ import { selecionarAdaptativo } from '../utils/dificuldadeAdaptativa.js';
 import { aplicarCombo } from '../utils/combo.js';
 import { calcularScore } from '../utils/score.js';
 import { cicloAtual } from './prestigioService.js';
+import { temasPermitidos } from './trilhaService.js';
 import { idsDoDesafio } from './desafioDiarioService.js';
 
 const TENTATIVAS_PARA_DIFICULDADE = 5; // janela recente usada para medir desempenho na fase
@@ -41,6 +42,14 @@ export async function iniciarQuiz(userId, faseId) {
     .maybeSingle();
   if (erroFase) throw erroFase;
   if (!fase) throw new HttpError(404, 'Fase não encontrada');
+
+  // Trilhas por equipe: o tema da fase precisa estar liberado para o usuário.
+  if (fase.tema_id != null) {
+    const permitidos = await temasPermitidos(userId);
+    if (permitidos && !permitidos.has(fase.tema_id)) {
+      throw new HttpError(403, 'Este tema não está liberado para a sua equipe');
+    }
+  }
 
   if (fase.fase_requisito_id != null) {
     const { data: requisito } = await db
