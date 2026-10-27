@@ -7,6 +7,7 @@ import { verificarBadges } from './badgeService.js';
 import { eventoAtivoParaFase } from './eventoService.js';
 import { selecionarAdaptativo } from '../utils/dificuldadeAdaptativa.js';
 import { aplicarCombo } from '../utils/combo.js';
+import { calcularScore } from '../utils/score.js';
 import { idsDoDesafio } from './desafioDiarioService.js';
 
 const TENTATIVAS_PARA_DIFICULDADE = 5; // janela recente usada para medir desempenho na fase
@@ -402,7 +403,9 @@ export async function finalizarQuiz(usuario, tentativaId) {
   // em que o aluno respondeu.
   const { data: respostas, error: erroRespostas } = await db
     .from('respostas')
-    .select('correta, usou_dica, tempo_resposta_ms, respondida_em, questoes ( xp_valor )')
+    .select(
+      'correta, usou_dica, tempo_resposta_ms, respondida_em, questoes ( xp_valor, dificuldade, tempo_limite_seg )'
+    )
     .eq('tentativa_id', tentativaId)
     .order('respondida_em', { ascending: true });
   if (erroRespostas) throw erroRespostas;
@@ -438,6 +441,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
   const totalEfetivo = Math.max(0, tentativa.total_questoes - puladasData.length);
 
   const aprovada = acertos >= Math.ceil(totalEfetivo * PCT_APROVACAO);
+  const score = calcularScore(respostas, totalEfetivo);
 
   // Anti-farming: repetir só rende o XP que EXCEDER o melhor desempenho
   // anterior na mesma origem (fase ou quiz custom). O desafio diário fica
@@ -454,6 +458,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
       acertos,
       xp_ganho: xpGanho,
       aprovada,
+      score,
     })
     .eq('id', tentativaId);
   if (erroTentativa) throw erroTentativa;
@@ -518,6 +523,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
     total_questoes: tentativa.total_questoes,
     questoes_puladas: puladasData.length,
     aprovada,
+    score,
     sem_dica: semDica,
     xp_bruto: xpBruto,
     bonus_streak: bonusStreak,

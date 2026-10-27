@@ -48,8 +48,9 @@ export default function TelaResultado({ resultado, sons = true }) {
         </p>
       )}
 
-      <div className="mt-8 grid grid-cols-3 gap-3">
+      <div className={`mt-8 grid gap-3 ${resultado.score != null ? 'grid-cols-4' : 'grid-cols-3'}`}>
         <CartaoStat rotulo="XP ganho" valor={`+${resultado.xp_ganho}`} destaque />
+        {resultado.score != null && <CartaoStat rotulo="Score" valor={`${resultado.score}/100`} />}
         <CartaoStat rotulo="XP total" valor={resultado.xp_total} />
         <CartaoStat rotulo="Nível" valor={resultado.nivel} />
       </div>
