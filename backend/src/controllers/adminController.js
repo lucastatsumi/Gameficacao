@@ -5,6 +5,7 @@ import * as eventoService from '../services/eventoService.js';
 import * as temporadaService from '../services/temporadaService.js';
 import * as temaService from '../services/temaService.js';
 import * as empresaService from '../services/empresaService.js';
+import * as avaliacaoService from '../services/avaliacaoService.js';
 
 // ---------- Turmas ----------
 
@@ -247,6 +248,16 @@ export async function definirPapel(req, res, next) {
 export async function definirTemasAtivos(req, res, next) {
   try {
     res.json(await empresaService.definirTemasAtivos(req.usuario, req.body?.tema_ids));
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ---------- Matriz de competências da equipe (Horizonte 3) ----------
+
+export async function matrizDaEquipe(req, res, next) {
+  try {
+    res.json(await avaliacaoService.matrizDaEquipe(req.usuario, req.params.turmaId));
   } catch (err) {
     next(err);
   }

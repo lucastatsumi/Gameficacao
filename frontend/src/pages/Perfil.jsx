@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../services/api.js';
+import PainelAvaliacao from '../components/avaliacao/PainelAvaliacao.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import Alerta from '../components/ui/Alerta.jsx';
@@ -168,6 +169,8 @@ export default function Perfil() {
             </div>
           )}
       </div>
+
+      <PainelAvaliacao />
 
       {/* estante de badges */}
       <section>

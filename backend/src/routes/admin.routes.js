@@ -12,6 +12,7 @@ adminRoutes.post('/turmas', adminController.criarTurma);
 adminRoutes.get('/turmas', adminController.listarTurmas);
 adminRoutes.get('/turmas/:turmaId/alunos', adminController.alunosDaTurma);
 adminRoutes.get('/turmas/:turmaId/relatorio.csv', adminController.exportarCsvTurma);
+adminRoutes.get('/turmas/:turmaId/competencias', adminController.matrizDaEquipe);
 
 // Questões
 adminRoutes.get('/questoes', adminController.listarQuestoes);

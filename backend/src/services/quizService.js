@@ -7,6 +7,7 @@ import { verificarBadges } from './badgeService.js';
 import { eventoAtivoParaFase } from './eventoService.js';
 import { selecionarAdaptativo } from '../utils/dificuldadeAdaptativa.js';
 import { aplicarCombo } from '../utils/combo.js';
+import { calcularScore } from '../utils/pontuacao.js';
 import { idsDoDesafio } from './desafioDiarioService.js';
 import { mesmoTenant } from '../utils/empresa.js';
 
@@ -406,7 +407,9 @@ export async function finalizarQuiz(usuario, tentativaId) {
   // em que o aluno respondeu.
   const { data: respostas, error: erroRespostas } = await db
     .from('respostas')
-    .select('correta, usou_dica, tempo_resposta_ms, respondida_em, questoes ( xp_valor )')
+    .select(
+      'correta, usou_dica, tempo_resposta_ms, respondida_em, questoes ( xp_valor, dificuldade, tempo_limite_seg )'
+    )
     .eq('tentativa_id', tentativaId)
     .order('respondida_em', { ascending: true });
   if (erroRespostas) throw erroRespostas;
@@ -445,6 +448,10 @@ export async function finalizarQuiz(usuario, tentativaId) {
 
   const aprovada = acertos >= Math.ceil(totalEfetivo * PCT_APROVACAO);
 
+  // Score 0–100 (Horizonte 3): métrica de AVALIAÇÃO, separada do XP —
+  // nenhuma mecânica lúdica (evento, streak, poderes) entra nele.
+  const score = calcularScore(respostas, totalEfetivo - respostas.length);
+
   // Anti-farming: repetir só rende o XP que EXCEDER o melhor desempenho
   // anterior na mesma origem (fase ou quiz custom). O desafio diário fica
   // fora — só existe 1 tentativa por dia e as questões mudam a cada dia.
@@ -460,6 +467,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
       acertos,
       xp_ganho: xpGanho,
       aprovada,
+      score,
     })
     .eq('id', tentativaId);
   if (erroTentativa) throw erroTentativa;
@@ -523,6 +531,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
     total_questoes: tentativa.total_questoes,
     questoes_puladas: puladasData.length,
     aprovada,
+    score,
     sem_dica: semDica,
     xp_bruto: xpBruto,
     bonus_streak: bonusStreak,

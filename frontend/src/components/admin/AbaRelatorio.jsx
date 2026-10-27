@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../services/api.js';
 import Spinner from '../ui/Spinner.jsx';
 import Alerta from '../ui/Alerta.jsx';
+import MatrizEquipe from './MatrizEquipe.jsx';
 
 export default function AbaRelatorio() {
   const [fases, setFases] = useState([]);
@@ -28,6 +29,8 @@ export default function AbaRelatorio() {
 
   return (
     <div className="space-y-6">
+      <MatrizEquipe />
+
       <section>
         <h3 className="text-sm font-semibold text-slate-200">Desempenho por fase</h3>
         <p className="mt-1 text-xs text-slate-500">

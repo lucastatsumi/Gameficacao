@@ -46,7 +46,7 @@ export default function Layout() {
       >
         Pular para o conteúdo
       </a>
-      <header className="sticky top-0 z-10 border-b-2 border-indigo-950 bg-slate-950/90 backdrop-blur">
+      <header className="sticky top-0 z-10 print:hidden border-b-2 border-indigo-950 bg-slate-950/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3">
           <NavLink to="/" className="flex items-center gap-2">
             <img src={pixelGamepad} alt="" aria-hidden className="w-9" />
