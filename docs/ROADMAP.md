@@ -65,6 +65,16 @@ O objetivo é generalizar o domínio sem reescrever o que funciona.
 
 ## Horizonte 2 — Montagem de quiz com IA
 
+> **Status**: ✅ geração assistida implementada — migração 39
+> (`rascunhos_questoes`), `iaService.js` (chamada à API da Claude só no
+> backend via `ANTHROPIC_API_KEY`, payload revalidado por `validarPayload`,
+> custo em tokens devolvido ao gestor), aba "IA" do painel (aprovar/
+> descartar). Rascunhos ficam em tabela própria em vez de status em
+> `questoes`, o que garante que nada gerado chega ao quiz sem aprovação.
+> Testado com a API mockada; **não foi exercitado contra a API real** (sem
+> chave neste ambiente). Pendentes: auditoria por IA do banco existente e
+> geração a partir de documento da empresa (exige storage).
+
 O agente `question-researcher` (`.claude/agents/`) já é o protótipo
 conceitual: gerar questões com fontes confiáveis, alternativas plausíveis
 e explicações pedagógicas. A evolução é levar isso para DENTRO do produto
