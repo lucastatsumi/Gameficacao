@@ -144,3 +144,22 @@ Para habilitar push (seja pela CLI, seja pelo MCP), uma destas opções:
 credential.helper` + login, ou `gh auth login` com o `gh` CLI instalado).
 2. Atualizar o token usado pelo MCP do GitHub em `.claude.json` para um que
    tenha esse escopo.
+
+## Migrations pendentes da branch `feat/plataforma-corporativa`
+
+Ainda não aplicadas no Supabase de produção. A cadeia completa 01→40 foi
+validada do zero em PGlite (Postgres em WASM, com stubs do Supabase).
+Aplicar em ordem:
+
+- `34_limpeza_conteudo_corporativo` — desativa resquícios de conteúdo
+  técnico (no-op onde já está limpo) e reforça duelo/passo a passo. A
+  `31` local foi corrigida (desempate por `id`); não reaplicar em produção.
+- `35_temas_competencias`, `36_empresas_multitenancy` — H1 + H5.
+- `37_avaliacao` — score 0–100 e `desempenho_competencias`.
+- `38_ia_questoes_abertas` — rascunhos de IA, rubricas, custos.
+- `39_badges_novos_tipos` (antes, em transação própria) e
+  `40_cartas_prestigio_campanhas_torneios`.
+
+Nova variável no backend: `ANTHROPIC_API_KEY` (opcional; sem ela a IA fica
+desligada e as respostas abertas ficam pendentes para o gestor).
+`vercel.json` passou a pedir `maxDuration: 300` para as gerações por IA.
