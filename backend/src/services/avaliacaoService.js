@@ -15,25 +15,25 @@ async function fasesComTema() {
   return data.filter((f) => f.tema_id != null);
 }
 
+// Cobertura vem de tentativas APROVADAS (histórico), não de progresso_fase:
+// o prestígio reinicia o progresso de jogo, mas a avaliação não reseta.
 async function dadosDoUsuario(userId) {
-  const [progresso, tentativas] = await Promise.all([
-    db.from('progresso_fase').select('fase_id, concluida').eq('user_id', userId),
-    db
-      .from('tentativas')
-      .select('fase_id, score')
-      .eq('user_id', userId)
-      .not('finalizada_em', 'is', null)
-      .not('score', 'is', null),
-  ]);
-  if (progresso.error) throw progresso.error;
-  if (tentativas.error) throw tentativas.error;
+  const { data, error } = await db
+    .from('tentativas')
+    .select('fase_id, score, aprovada')
+    .eq('user_id', userId)
+    .not('finalizada_em', 'is', null);
+  if (error) throw error;
 
-  const concluidas = new Set(progresso.data.filter((p) => p.concluida).map((p) => p.fase_id));
+  const concluidas = new Set();
   // melhor score por fase (refazer para melhorar é legítimo)
   const melhorPorFase = new Map();
-  for (const t of tentativas.data) {
+  for (const t of data) {
     if (t.fase_id == null) continue;
-    melhorPorFase.set(t.fase_id, Math.max(melhorPorFase.get(t.fase_id) ?? 0, t.score));
+    if (t.aprovada) concluidas.add(t.fase_id);
+    if (t.score != null) {
+      melhorPorFase.set(t.fase_id, Math.max(melhorPorFase.get(t.fase_id) ?? 0, t.score));
+    }
   }
   return { concluidas, melhorPorFase };
 }

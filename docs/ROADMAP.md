@@ -438,7 +438,15 @@ sem expor ninguém individualmente.*
   não — só o agregado (decisão deliberada de privacidade).
 - Backend: cálculo derivado de `respostas` por semana, sem tabela nova.
 
-### 4.11 Prestígio (Nova Jornada+)
+### 4.11 Prestígio (Nova Jornada+) ✅ implementado
+
+> **Como saiu**: migração 36 (`prestigios`, PK em (user, tema, ciclo) como
+> trava de duplo clique), `prestigioService.js` (5 testes), rotas
+> `GET /avaliacao/prestigio` e `POST /avaliacao/prestigio/:temaId`. Reinicia
+> só `progresso_fase`; a proficiência passou a ler tentativas aprovadas
+> para não resetar. Em ciclos > 0 o sorteio exclui questões fáceis. O
+> modificador "timer −25%" ficou de fora: o tempo é validado no servidor a
+> partir da questão, exigiria alterar essa validação.
 
 *Objetivo: rejogabilidade para quem terminou tudo — o "e agora?" do
 veterano.*
@@ -496,9 +504,9 @@ generosidade, não competição.*
 | Kudos (4.12) | Reconhecimento social | Baixo | fichas (4.1) | ✅ |
 | Raid boss (4.7) | Objetivo coletivo | Alto | equipes (H1) | ✅ |
 | Cartas (4.9) | Colecionismo educativo | Alto | competências (H1/H3) | — |
-| Mascote de equipe (4.10) | Nudge social agregado | Baixo | equipes (H1) | — |
+| Mascote de equipe (4.10) | Nudge social agregado | Baixo | equipes (H1) | ✅ |
 | Temporadas + passe (4.6) | Arco de longo prazo | Alto | fichas, cosméticos | ✅ |
-| Prestígio (4.11) | Rejogabilidade | Médio | trilhas por tema (H1) | — |
+| Prestígio (4.11) | Rejogabilidade | Médio | trilhas por tema (H1) | ✅ |
 
 **Sequência recomendada dentro do horizonte**: ~~4.4 (combo) → 4.1+4.2
 (economia+loja) → 4.3 (missões) → 4.8 (desafio diário)~~ ✅ **o núcleo do

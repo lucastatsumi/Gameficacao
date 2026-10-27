@@ -16,13 +16,19 @@ export default function Avaliacao() {
   const [proficiencia, setProficiencia] = useState(null);
   const [competencias, setCompetencias] = useState([]);
   const [certificado, setCertificado] = useState(null);
+  const [prestigios, setPrestigios] = useState([]);
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
-    Promise.all([api.get('/avaliacao/proficiencia'), api.get('/avaliacao/competencias')])
-      .then(([p, c]) => {
+    Promise.all([
+      api.get('/avaliacao/proficiencia'),
+      api.get('/avaliacao/competencias'),
+      api.get('/avaliacao/prestigio'),
+    ])
+      .then(([p, c, pr]) => {
         setProficiencia(p);
         setCompetencias(c);
+        setPrestigios(pr);
       })
       .catch((err) => setErro(err.message));
   }, []);
@@ -38,6 +44,16 @@ export default function Avaliacao() {
     }
   }
 
+  async function prestigiar(temaId) {
+    setErro(null);
+    try {
+      await api.post(`/avaliacao/prestigio/${temaId}`);
+      setPrestigios(await api.get('/avaliacao/prestigio'));
+    } catch (err) {
+      setErro(err.message);
+    }
+  }
+
   if (!proficiencia && !erro) return <Spinner texto="Carregando sua avaliação..." />;
 
   return (
@@ -46,22 +62,34 @@ export default function Avaliacao() {
       {erro && <Alerta>{erro}</Alerta>}
 
       <section className="mt-4 grid gap-3 print:hidden">
-        {proficiencia?.map((p) => (
+        {proficiencia?.map((p) => {
+          const prest = prestigios.find((x) => x.tema_id === p.tema_id);
+          return (
           <div key={p.tema_id} className="card-pixel flex items-center justify-between p-4">
             <div>
-              <p className="font-semibold">{p.tema}</p>
+              <p className="font-semibold">
+                {p.tema} {prest?.ciclo > 0 && <span title="Prestígio">{'★'.repeat(prest.ciclo)}</span>}
+              </p>
               <p className="text-sm opacity-80">
                 {p.modulos_concluidos}/{p.modulos_total} módulos · score médio {p.score_medio ?? '—'}
               </p>
               <p className="text-sm text-amber-300">{ROTULO_PROFICIENCIA[p.proficiencia]}</p>
             </div>
-            {p.modulos_concluidos === p.modulos_total && (
-              <button className="btn-pixel" onClick={() => emitirCertificado(p.tema_id)}>
-                Certificado
-              </button>
-            )}
+            <div className="flex gap-2">
+              {p.modulos_concluidos === p.modulos_total && (
+                <button className="btn-pixel" onClick={() => emitirCertificado(p.tema_id)}>
+                  Certificado
+                </button>
+              )}
+              {prest?.pode_prestigiar && (
+                <button className="btn-pixel" onClick={() => prestigiar(p.tema_id)}>
+                  Prestigiar
+                </button>
+              )}
+            </div>
           </div>
-        ))}
+          );
+        })}
       </section>
 
       <section className="mt-6 print:hidden">

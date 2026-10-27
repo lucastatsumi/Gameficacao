@@ -8,6 +8,7 @@ import { eventoAtivoParaFase } from './eventoService.js';
 import { selecionarAdaptativo } from '../utils/dificuldadeAdaptativa.js';
 import { aplicarCombo } from '../utils/combo.js';
 import { calcularScore } from '../utils/score.js';
+import { cicloAtual } from './prestigioService.js';
 import { idsDoDesafio } from './desafioDiarioService.js';
 
 const TENTATIVAS_PARA_DIFICULDADE = 5; // janela recente usada para medir desempenho na fase
@@ -66,6 +67,14 @@ export async function iniciarQuiz(userId, faseId) {
   if (erroQuestoes) throw erroQuestoes;
   if (!questoes?.length) throw new HttpError(404, 'Esta fase ainda não possui questões');
 
+  // Prestígio (4.11): em ciclos > 0 do tema, só questões média/difícil —
+  // se a fase não tiver nenhuma, mantém o pool original em vez de travar.
+  let pool = questoes;
+  if (fase.tema_id != null && (await cicloAtual(userId, fase.tema_id)) > 0) {
+    const dificeis = questoes.filter((q) => q.dificuldade !== 'facil');
+    if (dificeis.length) pool = dificeis;
+  }
+
   const { data: tentativasRecentes } = await db
     .from('tentativas')
     .select('acertos, total_questoes')
@@ -77,7 +86,7 @@ export async function iniciarQuiz(userId, faseId) {
 
   const taxaAcertoPct = taxaAcertoRecente(tentativasRecentes);
 
-  const sorteadas = selecionarAdaptativo(questoes, taxaAcertoPct, QUESTOES_POR_QUIZ)
+  const sorteadas = selecionarAdaptativo(pool, taxaAcertoPct, QUESTOES_POR_QUIZ)
     .map((q) => ({
       ...q,
       tem_dica: false, // dicas são exclusivas dos quizzes customizados

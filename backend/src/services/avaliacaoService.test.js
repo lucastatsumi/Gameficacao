@@ -23,7 +23,7 @@ const FASES = [
 
 describe('proficienciaDoUsuario', () => {
   it('usuário sem progresso é iniciante com score nulo', async () => {
-    configurarDb({ fases: [ok(FASES)], progresso_fase: [ok([])], tentativas: [ok([])] });
+    configurarDb({ fases: [ok(FASES)], tentativas: [ok([])] });
     const [p] = await proficienciaDoUsuario('u1');
     expect(p).toMatchObject({ tema: 'Compliance', modulos_concluidos: 0, score_medio: null, proficiencia: 'iniciante' });
   });
@@ -31,17 +31,11 @@ describe('proficienciaDoUsuario', () => {
   it('trilha completa com bom score vira proficiente, usando o melhor score por fase', async () => {
     configurarDb({
       fases: [ok(FASES)],
-      progresso_fase: [
-        ok([
-          { fase_id: 1, concluida: true },
-          { fase_id: 2, concluida: true },
-        ]),
-      ],
       tentativas: [
         ok([
-          { fase_id: 1, score: 60 },
-          { fase_id: 1, score: 80 },
-          { fase_id: 2, score: 80 },
+          { fase_id: 1, score: 60, aprovada: false },
+          { fase_id: 1, score: 80, aprovada: true },
+          { fase_id: 2, score: 80, aprovada: true },
         ]),
       ],
     });
@@ -69,22 +63,25 @@ describe('certificadoDoTema', () => {
   it('bloqueia quando há módulos pendentes (403)', async () => {
     configurarDb({
       fases: [ok(FASES)],
-      progresso_fase: [ok([{ fase_id: 1, concluida: true }])],
-      tentativas: [ok([])],
+      tentativas: [ok([{ fase_id: 1, score: 80, aprovada: true }])],
     });
     await expect(certificadoDoTema({ id: 'u1', nome: 'Ana' }, 1)).rejects.toMatchObject({ status: 403 });
   });
 
   it('tema inexistente é 404', async () => {
-    configurarDb({ fases: [ok(FASES)], progresso_fase: [ok([])], tentativas: [ok([])] });
+    configurarDb({ fases: [ok(FASES)], tentativas: [ok([])] });
     await expect(certificadoDoTema({ id: 'u1', nome: 'Ana' }, 99)).rejects.toMatchObject({ status: 404 });
   });
 
   it('emite com nome, tema e score quando completo', async () => {
     configurarDb({
       fases: [ok(FASES)],
-      progresso_fase: [ok(FASES.map((f) => ({ fase_id: f.id, concluida: true })))],
-      tentativas: [ok([{ fase_id: 1, score: 95 }, { fase_id: 2, score: 91 }])],
+      tentativas: [
+        ok([
+          { fase_id: 1, score: 95, aprovada: true },
+          { fase_id: 2, score: 91, aprovada: true },
+        ]),
+      ],
     });
     const c = await certificadoDoTema({ id: 'u1', nome: 'Ana' }, '1');
     expect(c).toMatchObject({ nome: 'Ana', tema: 'Compliance', score_medio: 93, proficiencia: 'referencia' });
