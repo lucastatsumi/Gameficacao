@@ -2,6 +2,7 @@ import * as evolucaoService from '../services/evolucaoService.js';
 import * as turmaService from '../services/turmaService.js';
 import * as questaoService from '../services/questaoService.js';
 import * as relatorioService from '../services/relatorioService.js';
+import * as importacaoService from '../services/importacaoService.js';
 import * as eventoService from '../services/eventoService.js';
 import * as temporadaService from '../services/temporadaService.js';
 
@@ -165,6 +166,14 @@ export async function evolucaoDaTurma(req, res, next) {
         req.query.semanas ?? 8
       )
     );
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function importarColaboradores(req, res, next) {
+  try {
+    res.json(await importacaoService.importarColaboradores(req.usuario, req.body?.csv));
   } catch (err) {
     next(err);
   }

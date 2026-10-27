@@ -635,8 +635,13 @@ ambiente não tem como criar/validar sozinho:
   (`supabase sso add --type saml --domains empresa.com --metadata-url ...`) e,
   pelo que sei, SAML SSO exige plano Pro ou superior do Supabase — confira.
   Nunca foi exercitado contra um IdP real.
-- **Integração com HRIS** (importar organograma/colaboradores) — depende
-  de qual sistema o cliente usa.
+- **Integração com HRIS** — **importação por CSV ✅** (`importacaoService.js`,
+  aba "Importar"): nome, email, equipe; convida por e-mail via Supabase Auth
+  (admin API), associa à empresa/equipe do gestor, até 200 linhas, relatório
+  de erros por linha. A integração direta com um HRIS específico segue de fora
+  (depende do sistema do cliente). A parte do Supabase Auth
+  (`inviteUserByEmail`) só foi testada com mock e exige o SMTP/e-mail do
+  projeto Supabase funcionando.
 - ~~**Notificações externas**~~ — **e-mail ✅** via Resend (migração 47,
   `lembreteService.js`, cron diário `/api/cron/lembretes` protegido por
   `CRON_SECRET`; ≥3 dias sem jogar, 1 lembrete/7 dias, opt-out no perfil).

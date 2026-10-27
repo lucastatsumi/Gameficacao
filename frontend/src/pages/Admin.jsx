@@ -9,6 +9,7 @@ import AbaIA from '../components/admin/AbaIA.jsx';
 import AbaTorneios from '../components/admin/AbaTorneios.jsx';
 import AbaEvolucao from '../components/admin/AbaEvolucao.jsx';
 import AbaCampanhas from '../components/admin/AbaCampanhas.jsx';
+import AbaImportar from '../components/admin/AbaImportar.jsx';
 
 export default function Admin() {
   const [aba, setAba] = useState('turmas');
@@ -31,6 +32,7 @@ export default function Admin() {
           ['torneios', 'trophy', 'Torneios'],
           ['evolucao', 'chart-bar-big', 'Evolução'],
           ['campanhas', 'star', 'Campanhas'],
+          ['importar', 'users', 'Importar'],
         ].map(([valor, icone, rotulo]) => (
           <button
             key={valor}
@@ -57,6 +59,7 @@ export default function Admin() {
         {aba === 'torneios' && <AbaTorneios />}
         {aba === 'evolucao' && <AbaEvolucao />}
         {aba === 'campanhas' && <AbaCampanhas />}
+        {aba === 'importar' && <AbaImportar />}
       </div>
     </div>
   );

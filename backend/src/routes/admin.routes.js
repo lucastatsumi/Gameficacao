@@ -18,6 +18,9 @@ adminRoutes.get('/turmas/:turmaId/alunos', adminController.alunosDaTurma);
 adminRoutes.get('/turmas/:turmaId/evolucao', adminController.evolucaoDaTurma);
 adminRoutes.get('/turmas/:turmaId/relatorio.csv', adminController.exportarCsvTurma);
 
+// Importação de colaboradores (CSV)
+adminRoutes.post('/importar-colaboradores', adminController.importarColaboradores);
+
 // Temas e trilhas por equipe
 adminRoutes.get('/temas', trilhaController.listarTemas);
 adminRoutes.post('/temas', trilhaController.criarTema);
