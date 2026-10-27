@@ -8,11 +8,21 @@ import PixelIcon from '../components/ui/PixelIcon.jsx';
 import AvatarPixel from '../components/ui/AvatarPixel.jsx';
 
 export default function Perfil() {
-  const { perfil } = useAuth();
+  const { perfil, recarregarPerfil } = useAuth();
   const [badges, setBadges] = useState(null);
   const [historico, setHistorico] = useState(null);
   const [revisao, setRevisao] = useState(null);
   const [erro, setErro] = useState(null);
+
+  async function alternarLembretes(ativo) {
+    setErro(null);
+    try {
+      await api.patch('/perfil/lembretes', { ativo });
+      await recarregarPerfil();
+    } catch (err) {
+      setErro(err.message);
+    }
+  }
 
   useEffect(() => {
     Promise.all([api.get('/perfil/badges'), api.get('/perfil/historico'), api.get('/perfil/revisao')])
@@ -31,6 +41,15 @@ export default function Perfil() {
 
   return (
     <div className="space-y-8">
+      <label className="flex items-center gap-2 text-sm text-slate-300">
+        <input
+          type="checkbox"
+          checked={perfil.lembretes_email !== false}
+          onChange={(e) => alternarLembretes(e.target.checked)}
+        />
+        Receber lembretes por e-mail quando eu ficar alguns dias sem jogar
+      </label>
+
       {/* cabeçalho do perfil */}
       <div className="card-pixel border-2 border-slate-800 bg-slate-900/60 p-6">
         <div className="flex flex-wrap items-center gap-4">

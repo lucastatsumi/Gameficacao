@@ -9,4 +9,5 @@ perfilRoutes.get('/historico', perfilController.historico);
 perfilRoutes.get('/revisao', perfilController.revisao);
 perfilRoutes.get('/pendente', perfilController.pendente);
 perfilRoutes.get('/missoes', perfilController.missoes);
+perfilRoutes.patch('/lembretes', perfilController.lembretes);
 perfilRoutes.get('/missoes/semana', perfilController.missoesSemana);

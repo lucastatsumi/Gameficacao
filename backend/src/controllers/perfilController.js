@@ -1,5 +1,6 @@
 import * as perfilService from '../services/perfilService.js';
 import * as missaoService from '../services/missaoService.js';
+import * as lembreteService from '../services/lembreteService.js';
 
 export async function perfil(req, res, next) {
   try {
@@ -52,6 +53,14 @@ export async function missoes(req, res, next) {
 export async function missoesSemana(req, res, next) {
   try {
     res.json(await missaoService.missoesDaSemana(req.usuario.id));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function lembretes(req, res, next) {
+  try {
+    res.json(await lembreteService.definirLembretes(req.usuario.id, req.body?.ativo));
   } catch (err) {
     next(err);
   }

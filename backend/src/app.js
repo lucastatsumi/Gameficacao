@@ -3,6 +3,8 @@ import cors from 'cors';
 import { env } from './config/env.js';
 import { rotas } from './routes/index.js';
 import { errorHandler } from './middlewares/errorHandler.js';
+import { cronAutorizado } from './middlewares/cron.js';
+import * as lembreteService from './services/lembreteService.js';
 
 export const app = express();
 
@@ -14,6 +16,16 @@ app.use(express.json());
 
 // Health check (usado pelo Railway para saber se a API está de pé)
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+
+// Disparo dos lembretes por e-mail (Vercel Cron chama com GET). Fica FORA de
+// `rotas` porque não tem usuário logado: a proteção é o segredo do cron.
+app.all('/api/cron/lembretes', cronAutorizado, async (_req, res, next) => {
+  try {
+    res.json(await lembreteService.enviarLembretes());
+  } catch (err) {
+    next(err);
+  }
+});
 
 app.use('/api', rotas);
 

@@ -33,6 +33,7 @@ export async function obterPerfil(usuario) {
     progresso_nivel_pct: progressoNivelPct(usuario.xp_total, usuario.nivel),
     total_badges: totalBadges ?? 0,
     streak_dias: usuario.streak_dias ?? 0,
+    lembretes_email: usuario.lembretes_email !== false,
     poderes,
     fichas,
     cosmeticos, // { paleta: {pele, acento} | null, titulo: string | null }

@@ -632,8 +632,12 @@ ambiente não tem como criar/validar sozinho:
   identidade real para validar.
 - **Integração com HRIS** (importar organograma/colaboradores) — depende
   de qual sistema o cliente usa.
-- **Notificações externas** (e-mail/push de lembrete) — exige provedor de
-  envio configurado; o lembrete in-app já existe.
+- ~~**Notificações externas**~~ — **e-mail ✅** via Resend (migração 47,
+  `lembreteService.js`, cron diário `/api/cron/lembretes` protegido por
+  `CRON_SECRET`; ≥3 dias sem jogar, 1 lembrete/7 dias, opt-out no perfil).
+  Exige `RESEND_API_KEY` + `EMAIL_REMETENTE` com domínio verificado no
+  Resend; **nunca enviou um e-mail real** (testado com a API simulada).
+  Push segue de fora.
 - **Catálogo de temas prontos com conteúdo licenciado** — curadoria
   editorial/jurídica humana.
 
