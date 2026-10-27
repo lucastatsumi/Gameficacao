@@ -24,6 +24,12 @@ function passosVazios(formato) {
   return formato === FORMATO_SEQUENCIA ? [{ texto: '' }, { texto: '' }] : [];
 }
 
+const FORMATO_ABERTO = 'resposta_aberta';
+
+function rubricaVazia(formato) {
+  return formato === FORMATO_ABERTO ? [{ criterio: '', peso: 1 }] : [];
+}
+
 function questaoVazia(formato = 'padrao') {
   return {
     fase_id: '',
@@ -37,6 +43,7 @@ function questaoVazia(formato = 'padrao') {
     formato,
     alternativas: alternativasVazias(formato),
     passos: passosVazios(formato),
+    rubrica: rubricaVazia(formato),
   };
 }
 
@@ -182,6 +189,7 @@ export default function AbaQuestoes() {
                                   )
                                   .map((p) => ({ texto: p.texto }))
                               : passosVazios(q.formato),
+                          rubrica: q.rubrica ?? rubricaVazia(q.formato),
                         },
                         editandoId: q.id,
                       })
@@ -225,6 +233,15 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
       formato,
       alternativas: alternativasVazias(formato),
       passos: passosVazios(formato),
+      rubrica: rubricaVazia(formato),
+      tempo_limite_seg: formato === FORMATO_ABERTO ? 180 : d.tempo_limite_seg,
+    }));
+  }
+
+  function mudarCriterio(indice, campo, valor) {
+    setDados((d) => ({
+      ...d,
+      rubrica: d.rubrica.map((c, i) => (i === indice ? { ...c, [campo]: valor } : c)),
     }));
   }
 
@@ -329,6 +346,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
           <option value="padrao">Múltipla escolha (4 alternativas)</option>
           <option value="batalha_complexidade">Duelo — escolha entre 2 alternativas</option>
           <option value={FORMATO_SEQUENCIA}>Ordenar etapas (passos em sequência)</option>
+          <option value={FORMATO_ABERTO}>Resposta aberta (corrigida por IA com rubrica)</option>
         </select>
         <select
           value={dados.dificuldade}
@@ -385,7 +403,55 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
         className={inputCls}
       />
 
-      {dados.formato === FORMATO_SEQUENCIA ? (
+      {dados.formato === FORMATO_ABERTO ? (
+        <div className="space-y-2">
+          <p className="text-xs text-slate-500">
+            Defina os critérios de correção e o peso de cada um. A IA dá 0–100 por critério; a
+            nota final é a média ponderada. Você pode revisar e sobrescrever qualquer nota.
+          </p>
+          {dados.rubrica.map((c, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                value={c.criterio}
+                onChange={(e) => mudarCriterio(i, 'criterio', e.target.value)}
+                placeholder={`Critério ${i + 1}`}
+                className={inputCls}
+                required
+              />
+              <input
+                type="number"
+                min="0.1"
+                step="0.1"
+                value={c.peso}
+                onChange={(e) => mudarCriterio(i, 'peso', e.target.value)}
+                aria-label="Peso"
+                className={`${inputCls} w-24`}
+                required
+              />
+              <button
+                type="button"
+                disabled={dados.rubrica.length <= 1}
+                onClick={() =>
+                  setDados((d) => ({ ...d, rubrica: d.rubrica.filter((_, j) => j !== i) }))
+                }
+                className="btn-pixel bg-slate-800 px-2 py-1 text-xs disabled:opacity-30"
+              >
+                <PixelIcon nome="trash" className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() =>
+              setDados((d) => ({ ...d, rubrica: [...d.rubrica, { criterio: '', peso: 1 }] }))
+            }
+            className="btn-pixel flex items-center gap-1 bg-slate-800 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-700"
+          >
+            <PixelIcon nome="plus" className="h-3.5 w-3.5" />
+            Adicionar critério
+          </button>
+        </div>
+      ) : dados.formato === FORMATO_SEQUENCIA ? (
         <div className="space-y-2">
           <p className="text-xs text-slate-500">
             Digite os passos do algoritmo NA ORDEM CERTA — essa ordem vira o gabarito. O

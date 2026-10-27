@@ -8,5 +8,6 @@ quizRoutes.post('/iniciar-custom', quizController.iniciarCustom);
 quizRoutes.post('/dica', quizController.dica);
 quizRoutes.post('/responder', quizController.responder);
 quizRoutes.post('/responder-sequencia', quizController.responderSequencia);
+quizRoutes.post('/responder-aberta', quizController.responderAberta);
 quizRoutes.post('/finalizar', quizController.finalizar);
 quizRoutes.post('/poder', quizController.usarPoder);

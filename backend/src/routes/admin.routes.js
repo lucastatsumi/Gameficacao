@@ -44,6 +44,10 @@ adminRoutes.post('/ia/auditar', iaController.auditar);
 adminRoutes.get('/ia/sugestoes', iaController.sugestoes);
 adminRoutes.patch('/ia/sugestoes/:id', iaController.resolverSugestao);
 
+// Respostas abertas (revisão da nota dada pela IA)
+adminRoutes.get('/respostas-abertas', iaController.respostasAbertas);
+adminRoutes.patch('/respostas-abertas/:id', iaController.revisarResposta);
+
 // Questões
 adminRoutes.get('/questoes', adminController.listarQuestoes);
 adminRoutes.post('/questoes', adminController.criarQuestao);

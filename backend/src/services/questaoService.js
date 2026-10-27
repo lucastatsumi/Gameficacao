@@ -36,6 +36,7 @@ export async function criarQuestao(professorId, dados) {
       formato: questao.formato,
       passos: questao.passos,
       ordem_correta: questao.ordem_correta,
+      rubrica: questao.rubrica,
       criada_por: professorId,
     })
     .select()
@@ -87,6 +88,7 @@ export async function atualizarQuestao(questaoId, dados) {
       dica: questao.dica,
       passos: questao.passos,
       ordem_correta: questao.ordem_correta,
+      rubrica: questao.rubrica,
     })
     .eq('id', questaoId);
   if (error) throw error;
@@ -144,7 +146,9 @@ const LETRAS_POR_FORMATO = {
 
 // 'reordenar_algoritmo' não usa `alternativas` — ver database/14_reordenar_algoritmo.sql.
 const FORMATO_SEQUENCIA = 'reordenar_algoritmo';
-const FORMATOS_VALIDOS = [...Object.keys(LETRAS_POR_FORMATO), FORMATO_SEQUENCIA];
+// 'resposta_aberta' também não usa alternativas: tem rubrica (ver database/43).
+const FORMATO_ABERTO = 'resposta_aberta';
+const FORMATOS_VALIDOS = [...Object.keys(LETRAS_POR_FORMATO), FORMATO_SEQUENCIA, FORMATO_ABERTO];
 
 function validarCamposComuns(dados) {
   const {
@@ -233,14 +237,45 @@ function validarPassos(passos) {
   return { passos: passosComId, ordem_correta: passosComId.map((p) => p.id) };
 }
 
+// Rubrica: [{ criterio, peso }] com critérios distintos e pesos > 0 — a nota
+// da IA é a média ponderada por estes pesos.
+function validarRubrica(rubrica) {
+  if (!Array.isArray(rubrica) || rubrica.length < 1 || rubrica.length > 8) {
+    throw new HttpError(400, 'A rubrica precisa de 1 a 8 critérios');
+  }
+  const nomes = new Set();
+  const limpa = rubrica.map((c) => {
+    const criterio = c?.criterio?.trim();
+    const peso = Number(c?.peso);
+    if (!criterio) throw new HttpError(400, 'Todo critério da rubrica precisa de um nome');
+    if (!Number.isFinite(peso) || peso <= 0) {
+      throw new HttpError(400, `Critério "${criterio}": peso deve ser maior que zero`);
+    }
+    if (nomes.has(criterio)) throw new HttpError(400, `Critério repetido: "${criterio}"`);
+    nomes.add(criterio);
+    return { criterio, peso };
+  });
+  return limpa;
+}
+
 export function validarPayload(dados) {
   const comuns = validarCamposComuns(dados);
 
+  if (comuns.formato === FORMATO_ABERTO) {
+    return {
+      ...comuns,
+      passos: null,
+      ordem_correta: null,
+      alternativas: [],
+      rubrica: validarRubrica(dados?.rubrica),
+    };
+  }
+
   if (comuns.formato === FORMATO_SEQUENCIA) {
     const { passos, ordem_correta } = validarPassos(dados?.passos);
-    return { ...comuns, passos, ordem_correta, alternativas: [] };
+    return { ...comuns, passos, ordem_correta, alternativas: [], rubrica: null };
   }
 
   const alternativas = validarAlternativas(comuns.formato, dados?.alternativas);
-  return { ...comuns, passos: null, ordem_correta: null, alternativas };
+  return { ...comuns, passos: null, ordem_correta: null, rubrica: null, alternativas };
 }

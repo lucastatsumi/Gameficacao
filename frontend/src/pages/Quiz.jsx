@@ -49,6 +49,9 @@ export default function Quiz() {
   // clicou, até completar a sequência
   const [ordemEscolhida, setOrdemEscolhida] = useState([]);
   const [feedbackSeq, setFeedbackSeq] = useState(null); // resposta de /quiz/responder-sequencia
+  // questão aberta (corrigida por IA): texto digitado; o retorno de
+  // /quiz/responder-aberta reaproveita feedbackSeq (mesmo ciclo de tela)
+  const [textoAberto, setTextoAberto] = useState('');
 
   // "boss fight" (quiz.quiz.vidas definido): contador de erros ACUMULADO
   // na tentativa inteira (não reseta por questão) — estoura o limite e o
@@ -149,6 +152,36 @@ export default function Quiz() {
     [enviando, feedbackSeq, quiz, questao, sonsPermitidos]
   );
 
+  // ---------- enviar resposta aberta (corrigida por IA com rubrica) ----------
+  const responderAberta = useCallback(
+    async (texto) => {
+      if (enviando || feedbackSeq) return;
+      setEnviando(true);
+      try {
+        const fb = await api.post('/quiz/responder-aberta', {
+          tentativa_id: quiz.tentativa_id,
+          questao_id: questao.id,
+          texto,
+        });
+        setFeedbackSeq(fb);
+        if (fb.correta) {
+          som(tocarAcerto);
+          setComboAtual((n) => n + 1);
+        } else {
+          som(tocarErro);
+          setErrosCount((n) => n + 1);
+          setComboAtual(0);
+        }
+      } catch (err) {
+        setErro(err.message);
+      } finally {
+        setEnviando(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [enviando, feedbackSeq, quiz, questao, sonsPermitidos]
+  );
+
   // ---------- pedir dica (quiz custom; corta o XP da questão) ----------
   async function pedirDica() {
     som(tocarClique);
@@ -213,11 +246,12 @@ export default function Quiz() {
         clearInterval(intervalo);
         // tempo esgotado: envia vazio/sem alternativa (o formato decide o formato do payload)
         if (questao.formato === 'reordenar_algoritmo') responderSeq(ordemEscolhida);
+        else if (questao.formato === 'resposta_aberta') responderAberta(textoAberto);
         else responder(null);
       }
     }, 250);
     return () => clearInterval(intervalo);
-  }, [questao, feedback, feedbackSeq, resultado, responder, responderSeq, ordemEscolhida]);
+  }, [questao, feedback, feedbackSeq, resultado, responder, responderSeq, responderAberta, ordemEscolhida, textoAberto]);
 
   const vidasMax = quiz?.quiz?.vidas ?? null;
   const gameOver = vidasMax != null && errosCount >= vidasMax;
@@ -242,6 +276,7 @@ export default function Quiz() {
     setFeedback(null);
     setFeedbackSeq(null);
     setOrdemEscolhida([]);
+    setTextoAberto('');
     setSelecionada(null);
     setDica(null);
     setAlternativaEscondida(null);
@@ -423,6 +458,7 @@ export default function Quiz() {
         !ehDesafioDiario &&
         (estoquePoderes.pular_questao > 0 ||
           (questao.formato !== 'reordenar_algoritmo' &&
+            questao.formato !== 'resposta_aberta' &&
             (estoquePoderes.eliminar_alternativa > 0 || estoquePoderes.tempo_extra > 0))) && (
         <div className="mt-3 flex flex-wrap gap-2">
           {questao.formato !== 'reordenar_algoritmo' && estoquePoderes.eliminar_alternativa > 0 && (
@@ -486,6 +522,29 @@ export default function Quiz() {
                 />
               ))}
           </div>
+        </div>
+      ) : questao.formato === 'resposta_aberta' ? (
+        <div className="mt-4 space-y-3">
+          <textarea
+            value={textoAberto}
+            onChange={(e) => setTextoAberto(e.target.value)}
+            disabled={respondida || enviando}
+            maxLength={2000}
+            rows={7}
+            aria-label="Sua resposta"
+            placeholder="Escreva sua resposta com suas palavras..."
+            className="w-full border-2 border-slate-700 bg-slate-900 p-3 text-sm text-slate-100"
+          />
+          {!respondida && (
+            <button
+              onClick={() => responderAberta(textoAberto)}
+              disabled={enviando || !textoAberto.trim()}
+              className="btn-pixel flex w-full items-center justify-center gap-2 bg-sky-600 py-3 font-pixel text-[11px] text-white hover:bg-sky-500 disabled:opacity-50"
+            >
+              <PixelIcon nome="check" className="h-4 w-4" />
+              {enviando ? 'A IA ESTÁ CORRIGINDO...' : 'ENVIAR RESPOSTA'}
+            </button>
+          )}
         </div>
       ) : questao.formato === 'reordenar_algoritmo' ? (
         <div className="mt-4 space-y-4">
@@ -659,11 +718,29 @@ export default function Quiz() {
                 />
                 {feedbackSeq.tempo_esgotado
                   ? 'Tempo esgotado!'
-                  : feedbackSeq.correta
-                    ? 'Ordem correta!'
-                    : 'Ordem incorreta'}
+                  : feedbackSeq.nota != null
+                    ? `Nota: ${feedbackSeq.nota}/100`
+                    : feedbackSeq.correta
+                      ? 'Ordem correta!'
+                      : 'Ordem incorreta'}
               </p>
-              {!feedbackSeq.correta && (
+              {feedbackSeq.nota != null && (
+                <div className="mt-2 space-y-1 text-sm text-slate-300">
+                  {feedbackSeq.criterios.map((c) => (
+                    <p key={c.criterio}>
+                      <strong>
+                        {c.criterio} ({c.pontos}/100):
+                      </strong>{' '}
+                      {c.feedback}
+                    </p>
+                  ))}
+                  {feedbackSeq.feedback_geral && <p className="mt-2">{feedbackSeq.feedback_geral}</p>}
+                  <p className="text-xs text-slate-500">
+                    Avaliação automática por IA — o gestor pode revisar a nota.
+                  </p>
+                </div>
+              )}
+              {!feedbackSeq.correta && feedbackSeq.ordem_correta && (
                 <ol className="mt-2 list-decimal space-y-1 pl-4 text-sm text-slate-300">
                   {feedbackSeq.ordem_correta.map((id) => (
                     <li key={id}>{questao.passos.find((p) => p.id === id)?.texto}</li>

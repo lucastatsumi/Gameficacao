@@ -107,7 +107,12 @@ via Claude API.
 > competências e certificado por `window.print()` (`avaliacaoService.js`,
 > rotas `/avaliacao/*`, página `Avaliacao.jsx`). Migração 35 cria `temas`,
 > `fases.tema_id` e `questoes.competencias` (fundação do Horizonte 1).
-> Pendentes: questão aberta com IA (exige chave de API).
+> **Questão aberta ✅** (migração 43, `abertaService.js`, formato
+> `resposta_aberta`): rubrica com pesos; a IA dá 0–100 por critério e a nota
+> final é a média ponderada calculada no servidor; avaliação persistida uma
+> única vez (nunca recalculada); gestor sobrescreve a nota (a da IA fica
+> preservada em `nota_ia`). Limitação: sobrescrever não recalcula XP/score de
+> uma tentativa já finalizada. Testada com a API mockada.
 
 > **Horizonte 1 — entregue**: temas (migração 35), trilhas por equipe
 > (migração 38, `trilhaService.js`, aba "Trilhas" do painel do gestor, filtro

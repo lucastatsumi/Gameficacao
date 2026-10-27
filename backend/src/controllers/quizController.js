@@ -1,3 +1,4 @@
+import * as abertaService from '../services/abertaService.js';
 import * as cartaService from '../services/cartaService.js';
 import * as campanhaService from '../services/campanhaService.js';
 import * as quizService from '../services/quizService.js';
@@ -47,6 +48,14 @@ export async function responderSequencia(req, res, next) {
   try {
     const feedback = await quizService.responderSequencia(req.usuario.id, req.body);
     res.json(feedback);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function responderAberta(req, res, next) {
+  try {
+    res.json(await abertaService.responderAberta(req.usuario.id, req.body));
   } catch (err) {
     next(err);
   }

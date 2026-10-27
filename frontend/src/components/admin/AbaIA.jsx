@@ -13,11 +13,14 @@ export default function AbaIA() {
   const [info, setInfo] = useState(null);
   const [sugestoes, setSugestoes] = useState([]);
   const [faseAuditoria, setFaseAuditoria] = useState('');
+  const [abertas, setAbertas] = useState([]);
+  const [notas, setNotas] = useState({});
   const [erro, setErro] = useState(null);
 
   const carregar = useCallback(() => {
     api.get('/admin/ia/rascunhos').then(setRascunhos).catch((err) => setErro(err.message));
     api.get('/admin/ia/sugestoes').then(setSugestoes).catch(() => {});
+    api.get('/admin/respostas-abertas').then(setAbertas).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -55,6 +58,16 @@ export default function AbaIA() {
     try {
       const r = await api.post('/admin/ia/auditar', { fase_id: Number(faseAuditoria) });
       setInfo(`${r.auditadas} questão(ões) auditada(s), ${r.sugestoes.length} sugestão(ões).`);
+      carregar();
+    } catch (err) {
+      setErro(err.message);
+    }
+  }
+
+  async function revisarNota(id) {
+    setErro(null);
+    try {
+      await api.patch(`/admin/respostas-abertas/${id}`, { nota: Number(notas[id]) });
       carregar();
     } catch (err) {
       setErro(err.message);
@@ -156,6 +169,46 @@ export default function AbaIA() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="space-y-3">
+        <h2 className="font-semibold">Respostas abertas corrigidas pela IA</h2>
+        {abertas.map((r) => (
+          <div key={r.id} className="card-pixel p-3 text-sm">
+            <p className="opacity-70">
+              {r.tentativas?.profiles?.nome} — {r.questoes?.enunciado}
+            </p>
+            <p className="mt-1 whitespace-pre-wrap">{r.texto_resposta}</p>
+            <p className="mt-1">
+              Nota atual: <strong>{r.nota}</strong> (IA: {r.nota_ia})
+              {r.revisada_em && ' · revisada pelo gestor'}
+            </p>
+            {r.feedback_ia?.criterios?.map((c) => (
+              <p key={c.criterio} className="text-xs opacity-80">
+                {c.criterio} ({c.pontos}): {c.feedback}
+              </p>
+            ))}
+            <div className="mt-2 flex gap-2">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                className={`${inputCls} w-24`}
+                aria-label="Nova nota"
+                value={notas[r.id] ?? ''}
+                onChange={(e) => setNotas({ ...notas, [r.id]: e.target.value })}
+              />
+              <button
+                className="btn-pixel px-3"
+                disabled={notas[r.id] === undefined || notas[r.id] === ''}
+                onClick={() => revisarNota(r.id)}
+              >
+                Sobrescrever nota
+              </button>
+            </div>
+          </div>
+        ))}
+        {!abertas.length && <p className="text-sm opacity-70">Nenhuma resposta aberta ainda.</p>}
       </div>
 
       <div className="space-y-3">

@@ -271,3 +271,27 @@ describe('desativarQuestao', () => {
     await expect(desativarQuestao('q1')).resolves.toBeUndefined();
   });
 });
+
+describe('validarPayload — resposta_aberta', () => {
+  const base = { fase_id: 1, enunciado: 'Descreva o procedimento', formato: 'resposta_aberta' };
+
+  it('aceita rubrica válida e não exige alternativas', async () => {
+    const { validarPayload } = await import('./questaoService.js');
+    const q = validarPayload({ ...base, rubrica: [{ criterio: ' Clareza ', peso: '2' }] });
+    expect(q.rubrica).toEqual([{ criterio: 'Clareza', peso: 2 }]);
+    expect(q.alternativas).toEqual([]);
+  });
+
+  it('rejeita rubrica ausente, peso inválido e critério repetido (400)', async () => {
+    const { validarPayload } = await import('./questaoService.js');
+    const chama = (rubrica) => () => validarPayload({ ...base, rubrica });
+    expect(chama(undefined)).toThrowError(expect.objectContaining({ status: 400 }));
+    expect(chama([{ criterio: 'A', peso: 0 }])).toThrowError(expect.objectContaining({ status: 400 }));
+    expect(
+      chama([
+        { criterio: 'A', peso: 1 },
+        { criterio: 'A', peso: 1 },
+      ])
+    ).toThrowError(expect.objectContaining({ status: 400 }));
+  });
+});

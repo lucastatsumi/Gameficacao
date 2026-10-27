@@ -1,4 +1,5 @@
 import * as iaService from '../services/iaService.js';
+import * as abertaService from '../services/abertaService.js';
 import * as auditoriaService from '../services/auditoriaService.js';
 
 export async function gerar(req, res, next) {
@@ -55,6 +56,23 @@ export async function sugestoes(_req, res, next) {
 export async function resolverSugestao(req, res, next) {
   try {
     await auditoriaService.resolverSugestao(req.params.id, req.body?.status);
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function respostasAbertas(req, res, next) {
+  try {
+    res.json(await abertaService.listarRespostasAbertas(req.query.fase_id));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function revisarResposta(req, res, next) {
+  try {
+    await abertaService.revisarNota(req.usuario.id, req.params.id, req.body?.nota);
     res.status(204).end();
   } catch (err) {
     next(err);
