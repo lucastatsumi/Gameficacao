@@ -592,9 +592,15 @@ precisava da turma que já existe).
 > turma (404 entre empresas), temas e criação de turma. A migração 46 fecha
 > as lacunas: eventos (globais + da empresa), campanhas, ligas (classificação
 > por empresa) e kudos (destinatário precisa ser da mesma empresa; 404 caso
-> contrário); raids já eram escopados por turma. **Lacuna restante**: falta
-> teste end-to-end contra um Postgres real (o isolamento é validado só com
-> o banco simulado).
+> contrário); raids já eram escopados por turma.
+>
+> **Validação de banco**: a cadeia de migrações 01→46 foi aplicada do zero em
+> um Postgres em memória (PGlite, com stubs do schema `auth` e de
+> `rls_auto_enable` do Supabase) sem erros; o ranking global reinicia a
+> posição por empresa, o convite é único e `papel` rejeita valores
+> inválidos. **Ainda não feito**: aplicar no Supabase real e exercitar as
+> consultas PostgREST (joins embutidos como `profiles!inner`) — o PGlite
+> não as executa.
 
 > **Dashboard de evolução ✅** (`evolucaoService.js`, aba "Evolução"): série
 > semanal de score médio, XP e colaboradores ativos por equipe, derivada de
