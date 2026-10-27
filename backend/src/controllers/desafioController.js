@@ -16,3 +16,11 @@ export async function obter(req, res, next) {
     next(err);
   }
 }
+
+export async function registrarResultado(req, res, next) {
+  try {
+    res.status(201).json(await desafioService.registrarResultado(req.usuario, req.params.id, req.body?.tentativa_id));
+  } catch (err) {
+    next(err);
+  }
+}

@@ -4,7 +4,7 @@ import { makeDb, ok } from '../test/dbMock.js';
 vi.mock('../config/supabase.js', () => ({ db: { from: vi.fn() } }));
 
 const { db } = await import('../config/supabase.js');
-const { verificarBadges } = await import('./badgeService.js');
+const { verificarBadges, condicaoAtendida } = await import('./badgeService.js');
 
 function configurarDb(filas) {
   const mock = makeDb(filas);
@@ -226,5 +226,17 @@ describe('verificarBadges', () => {
       totalQuestoes: 10,
     });
     expect(conquistou).toHaveLength(1);
+  });
+});
+
+describe('condicaoAtendida — álbum, campanha e prestígio', () => {
+  const badge = (tipo_condicao, parametro) => ({ tipo_condicao, parametro });
+
+  it('só concede com o campo correspondente no contexto', () => {
+    expect(condicaoAtendida(badge('album_completo', { tema_id: 2 }), { albunsCompletos: [2] })).toBe(true);
+    expect(condicaoAtendida(badge('album_completo', { tema_id: 2 }), { aprovada: true })).toBe(false);
+    expect(condicaoAtendida(badge('campanha', { campanha_id: 3 }), { campanhasCumpridas: [3] })).toBe(true);
+    expect(condicaoAtendida(badge('prestigio', { ciclos: 3 }), { ciclosPrestigio: 2 })).toBe(false);
+    expect(condicaoAtendida(badge('prestigio', { ciclos: 3 }), { ciclosPrestigio: 3 })).toBe(true);
   });
 });

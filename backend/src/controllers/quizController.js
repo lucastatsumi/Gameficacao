@@ -7,11 +7,18 @@ import * as ligaService from '../services/ligaService.js';
 import * as temporadaService from '../services/temporadaService.js';
 import * as raidService from '../services/raidService.js';
 import * as respostaAbertaService from '../services/respostaAbertaService.js';
+import * as prestigioService from '../services/prestigioService.js';
+import * as cartaService from '../services/cartaService.js';
+import * as campanhaService from '../services/campanhaService.js';
 
 export async function iniciar(req, res, next) {
   try {
     if (req.body?.fase_id) await exigirFaseVisivel(req.usuario, req.body.fase_id);
-    const quiz = await quizService.iniciarQuiz(req.usuario.id, req.body?.fase_id);
+    // Prestígio (Nova Jornada+): sem fáceis e timer reduzido no tema
+    const modificadores = req.body?.fase_id
+      ? await prestigioService.modificadoresDaFase(req.usuario.id, req.body.fase_id)
+      : {};
+    const quiz = await quizService.iniciarQuiz(req.usuario.id, req.body?.fase_id, modificadores);
     res.status(201).json(quiz);
   } catch (err) {
     next(err);
@@ -138,6 +145,18 @@ export async function finalizar(req, res, next) {
     // questão, não do XP. No-op se o jogador não está em turma com raid
     // ativo.
     resultado.raid = await raidService.aplicarDano(req.usuario.id, req.body?.tentativa_id);
+
+    // Cartas colecionáveis (4.9): competência dominada revela a carta;
+    // álbum completo rende badge. Campanha temática: meta do período
+    // cumprida rende a badge exclusiva.
+    const cartas = await cartaService.revelarCartas(req.usuario);
+    resultado.cartas_novas = cartas.cartas_novas;
+    const badgesCampanha = await campanhaService.registrarNaCampanha(req.usuario);
+    resultado.badges_novas = [
+      ...(resultado.badges_novas ?? []),
+      ...cartas.badges_novas,
+      ...badgesCampanha,
+    ];
 
     res.json(resultado);
   } catch (err) {

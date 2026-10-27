@@ -47,3 +47,54 @@ export async function obterDesafio(desafioId) {
     criado_em: data.criado_em,
   };
 }
+
+// Resultado do desafio (base do torneio entre equipes): quem aceitou o
+// convite registra a tentativa que jogou. O servidor confere tudo — a
+// tentativa é do próprio usuário, já finalizada, do mesmo módulo e
+// começada DEPOIS do convite — e decide a vitória (bater os acertos do
+// criador). Um resultado por pessoa por desafio.
+export async function registrarResultado(usuario, desafioId, tentativaId) {
+  if (!tentativaId) throw new HttpError(400, 'tentativa_id é obrigatório');
+
+  const { data: desafio, error } = await db
+    .from('desafios')
+    .select('id, criador_id, fase_id, acertos_alvo, criado_em, profiles ( empresa_id )')
+    .eq('id', desafioId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!desafio || (desafio.profiles?.empresa_id ?? null) !== (usuario.empresa_id ?? null)) {
+    throw new HttpError(404, 'Desafio não encontrado');
+  }
+  if (desafio.criador_id === usuario.id) {
+    throw new HttpError(400, 'Você não pode responder ao próprio desafio');
+  }
+
+  const { data: tentativa, error: erroTentativa } = await db
+    .from('tentativas')
+    .select('id, fase_id, acertos, iniciada_em, finalizada_em')
+    .eq('id', tentativaId)
+    .eq('user_id', usuario.id)
+    .maybeSingle();
+  if (erroTentativa) throw erroTentativa;
+  if (
+    !tentativa ||
+    !tentativa.finalizada_em ||
+    tentativa.fase_id !== desafio.fase_id ||
+    new Date(tentativa.iniciada_em) < new Date(desafio.criado_em)
+  ) {
+    throw new HttpError(400, 'Esta tentativa não vale para o desafio');
+  }
+
+  const venceu = tentativa.acertos > desafio.acertos_alvo;
+  const { error: erroInsert } = await db.from('desafio_resultados').insert({
+    desafio_id: desafio.id,
+    user_id: usuario.id,
+    tentativa_id: tentativa.id,
+    acertos: tentativa.acertos,
+    venceu,
+  });
+  if (erroInsert?.code === '23505') throw new HttpError(409, 'Você já registrou este desafio');
+  if (erroInsert) throw erroInsert;
+
+  return { venceu, acertos: tentativa.acertos, acertos_alvo: desafio.acertos_alvo };
+}

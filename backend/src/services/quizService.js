@@ -31,7 +31,10 @@ function taxaAcertoRecente(tentativas) {
 // POST /quiz/iniciar — valida desbloqueio, sorteia questões e abre
 // a tentativa. As alternativas vão SEM os campos correta/explicacao.
 // ---------------------------------------------------------------
-export async function iniciarQuiz(userId, faseId) {
+// opcoes (prestígio, ver prestigioService.modificadoresDaFase):
+//   { ciclo, fatorTempo, semFaceis } — Nova Jornada+ reinicia a trilha
+//   sem questões fáceis e com o timer reduzido.
+export async function iniciarQuiz(userId, faseId, opcoes = {}) {
   if (!faseId) throw new HttpError(400, 'fase_id é obrigatório');
 
   const { data: fase, error: erroFase } = await db
@@ -78,8 +81,14 @@ export async function iniciarQuiz(userId, faseId) {
 
   const taxaAcertoPct = taxaAcertoRecente(tentativasRecentes);
 
-  const sorteadas = selecionarAdaptativo(questoes, taxaAcertoPct, QUESTOES_POR_QUIZ).map((q) => ({
+  const fatorTempo = opcoes.fatorTempo ?? 1;
+  const semFaceis = questoes.filter((q) => q.dificuldade !== 'facil');
+  // Sem questões média/difícil no módulo, não trava o prestígio: usa todas
+  const banco = opcoes.semFaceis && semFaceis.length ? semFaceis : questoes;
+
+  const sorteadas = selecionarAdaptativo(banco, taxaAcertoPct, QUESTOES_POR_QUIZ).map((q) => ({
     ...q,
+    tempo_limite_seg: Math.max(10, Math.ceil(q.tempo_limite_seg * fatorTempo)),
     tem_dica: false, // dicas são exclusivas dos quizzes customizados
     alternativas: [...q.alternativas].sort((a, b) => a.letra.localeCompare(b.letra)),
     // embaralha os passos a cada tentativa — senão a ordem cadastrada já
@@ -89,7 +98,12 @@ export async function iniciarQuiz(userId, faseId) {
 
   const { data: tentativa, error: erroTentativa } = await db
     .from('tentativas')
-    .insert({ user_id: userId, fase_id: faseId, total_questoes: sorteadas.length })
+    .insert({
+      user_id: userId,
+      fase_id: faseId,
+      total_questoes: sorteadas.length,
+      ...(opcoes.ciclo ? { ciclo_prestigio: opcoes.ciclo, fator_tempo: fatorTempo } : {}),
+    })
     .select()
     .single();
   if (erroTentativa) throw erroTentativa;
@@ -97,6 +111,7 @@ export async function iniciarQuiz(userId, faseId) {
   return {
     tentativa_id: tentativa.id,
     fase: { id: fase.id, nome: fase.nome },
+    prestigio: opcoes.ciclo ? { ciclo: opcoes.ciclo, fator_tempo: fatorTempo } : null,
     questoes: sorteadas,
   };
 }
@@ -252,6 +267,7 @@ export async function responderQuestao(userId, dados, empresaId = null) {
     .eq('questao_id', questao_id)
     .eq('poder', 'tempo_extra')
     .maybeSingle();
+  tempoLimiteSeg = Math.max(10, Math.ceil(tempoLimiteSeg * Number(tentativa.fator_tempo ?? 1)));
   if (poderTempo?.segundos_extra) tempoLimiteSeg += poderTempo.segundos_extra;
 
   // Timer no servidor: o tempo conta desde a resposta anterior
@@ -345,6 +361,7 @@ export async function responderSequencia(userId, dados) {
   } else if (questao.fase_id !== tentativa.fase_id) {
     throw new HttpError(400, 'Questão não pertence a esta tentativa');
   }
+  tempoLimiteSeg = Math.max(10, Math.ceil(tempoLimiteSeg * Number(tentativa.fator_tempo ?? 1)));
 
   const { data: ultimaResposta } = await db
     .from('respostas')
@@ -608,15 +625,18 @@ async function melhorXpBrutoAnterior(userId, tentativa, tentativaAtualId) {
   let query = db
     .from('respostas')
     .select(
-      'tentativa_id, usou_dica, questoes ( xp_valor ), tentativas!inner ( user_id, fase_id, quiz_custom_id )',
+      'tentativa_id, usou_dica, questoes ( xp_valor ), tentativas!inner ( user_id, fase_id, quiz_custom_id, ciclo_prestigio )',
     )
     .eq('correta', true)
     .eq('tentativas.user_id', userId)
     .neq('tentativa_id', tentativaAtualId);
 
+  // Prestígio: cada ciclo da Nova Jornada só compete com ele mesmo
   query = tentativa.quiz_custom_id
     ? query.eq('tentativas.quiz_custom_id', tentativa.quiz_custom_id)
-    : query.eq('tentativas.fase_id', tentativa.fase_id);
+    : query
+        .eq('tentativas.fase_id', tentativa.fase_id)
+        .eq('tentativas.ciclo_prestigio', tentativa.ciclo_prestigio ?? 0);
 
   const { data, error } = await query;
   if (error) throw error;

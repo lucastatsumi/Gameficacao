@@ -8,6 +8,9 @@ import * as empresaService from '../services/empresaService.js';
 import * as avaliacaoService from '../services/avaliacaoService.js';
 import * as iaService from '../services/iaService.js';
 import * as respostaAbertaService from '../services/respostaAbertaService.js';
+import * as campanhaService from '../services/campanhaService.js';
+import * as torneioService from '../services/torneioService.js';
+import * as evolucaoService from '../services/evolucaoService.js';
 
 // ---------- Turmas ----------
 
@@ -340,6 +343,56 @@ export async function listarAvaliacoesAbertas(req, res, next) {
 export async function revisarAvaliacaoAberta(req, res, next) {
   try {
     res.json(await respostaAbertaService.revisarAvaliacao(req.usuario, req.params.respostaId, req.body));
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ---------- Campanhas, torneios e evolução (H4/H5) ----------
+
+export async function listarCampanhas(req, res, next) {
+  try {
+    res.json(await campanhaService.listarCampanhas(req.usuario));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function criarCampanha(req, res, next) {
+  try {
+    res.status(201).json(await campanhaService.criarCampanha(req.usuario, req.body));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function rankingCampanha(req, res, next) {
+  try {
+    res.json(await campanhaService.rankingDaCampanha(req.usuario, req.params.campanhaId));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listarTorneios(req, res, next) {
+  try {
+    res.json(await torneioService.torneiosDoTenant(req.usuario));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function criarTorneio(req, res, next) {
+  try {
+    res.status(201).json(await torneioService.criarTorneio(req.usuario, req.body));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function evolucaoDaEquipe(req, res, next) {
+  try {
+    res.json(await evolucaoService.evolucaoDaEquipe(req.usuario, req.params.turmaId));
   } catch (err) {
     next(err);
   }

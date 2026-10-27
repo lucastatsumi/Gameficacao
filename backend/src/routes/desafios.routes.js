@@ -5,3 +5,4 @@ export const desafiosRoutes = Router();
 
 desafiosRoutes.post('/', desafioController.criar);
 desafiosRoutes.get('/:id', desafioController.obter);
+desafiosRoutes.post('/:id/resultado', desafioController.registrarResultado);

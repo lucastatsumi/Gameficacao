@@ -47,6 +47,16 @@ adminRoutes.get('/ia/custos', adminController.custosIa);
 adminRoutes.get('/avaliacoes-abertas', adminController.listarAvaliacoesAbertas);
 adminRoutes.put('/avaliacoes-abertas/:respostaId', adminController.revisarAvaliacaoAberta);
 
+// Campanhas temáticas e torneios entre equipes
+adminRoutes.get('/campanhas', adminController.listarCampanhas);
+adminRoutes.post('/campanhas', adminController.criarCampanha);
+adminRoutes.get('/campanhas/:campanhaId/ranking', adminController.rankingCampanha);
+adminRoutes.get('/torneios', adminController.listarTorneios);
+adminRoutes.post('/torneios', adminController.criarTorneio);
+
+// Dashboard com evolução temporal (snapshots diários por equipe)
+adminRoutes.get('/turmas/:turmaId/evolucao', adminController.evolucaoDaEquipe);
+
 // Relatórios
 adminRoutes.get('/relatorio/questoes', adminController.relatorioQuestoes);
 adminRoutes.get('/relatorio/fases', adminController.relatorioFases);

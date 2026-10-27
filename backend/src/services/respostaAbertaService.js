@@ -51,6 +51,7 @@ export async function responderAberta(usuario, dados) {
   } else if (questao.fase_id !== tentativa.fase_id) {
     throw new HttpError(400, 'Questão não pertence a esta tentativa');
   }
+  tempoLimiteSeg = Math.max(10, Math.ceil(tempoLimiteSeg * Number(tentativa.fator_tempo ?? 1)));
 
   const { data: ultimaResposta } = await db
     .from('respostas')
