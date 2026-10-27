@@ -101,3 +101,16 @@ describe('rankingPorFase', () => {
     expect(minha_posicao).toEqual({ fase_id: 1, id: 'user-1', nome: 'Ana', xp_fase: 80, posicao: 1 });
   });
 });
+
+describe('rankingGlobal — isolamento por empresa', () => {
+  it('filtra pela empresa do usuário quando informada', async () => {
+    const mock = configurarDb({ ranking_global: [ok([]), ok(null)] });
+    await rankingGlobal('u1', 50, 'empresa-A');
+    expect(mock.chainsPara('ranking_global')[0].eq).toHaveBeenCalledWith('empresa_id', 'empresa-A');
+  });
+  it('sem empresa (legado) não filtra', async () => {
+    const mock = configurarDb({ ranking_global: [ok([]), ok(null)] });
+    await rankingGlobal('u1', 50);
+    expect(mock.chainsPara('ranking_global')[0].eq).not.toHaveBeenCalled();
+  });
+});

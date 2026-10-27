@@ -4,16 +4,23 @@ import { gerarCodigoAcesso } from '../utils/random.js';
 
 // ---------- Aluno ----------
 
-export async function entrarNaTurma(userId, codigoAcesso) {
+// empresaDoUsuario: undefined = não verificar; null = usuário sem empresa
+// (herda a da turma); uuid = só entra em turmas da própria empresa.
+export async function entrarNaTurma(userId, codigoAcesso, empresaDoUsuario) {
   if (!codigoAcesso?.trim()) throw new HttpError(400, 'Informe o código da turma');
 
   const { data: turma, error } = await db
     .from('turmas')
-    .select('id, nome')
+    .select('id, nome, empresa_id')
     .eq('codigo_acesso', codigoAcesso.trim().toUpperCase())
     .maybeSingle();
   if (error) throw error;
   if (!turma) throw new HttpError(404, 'Turma não encontrada — confira o código');
+
+  if (empresaDoUsuario && turma.empresa_id && turma.empresa_id !== empresaDoUsuario) {
+    // 404 e não 403: não revela que a turma existe em outra empresa
+    throw new HttpError(404, 'Turma não encontrada — confira o código');
+  }
 
   const { error: erroMatricula } = await db
     .from('matriculas')
@@ -23,7 +30,15 @@ export async function entrarNaTurma(userId, codigoAcesso) {
   }
   if (erroMatricula) throw erroMatricula;
 
-  return turma;
+  if (empresaDoUsuario === null && turma.empresa_id) {
+    const { error: erroEmpresa } = await db
+      .from('profiles')
+      .update({ empresa_id: turma.empresa_id })
+      .eq('id', userId);
+    if (erroEmpresa) throw erroEmpresa;
+  }
+
+  return { id: turma.id, nome: turma.nome };
 }
 
 export async function minhasTurmas(userId) {
@@ -38,14 +53,19 @@ export async function minhasTurmas(userId) {
 
 // ---------- Professor ----------
 
-export async function criarTurma(professorId, nome) {
+export async function criarTurma(professorId, nome, empresaId = null) {
   if (!nome?.trim()) throw new HttpError(400, 'Informe o nome da turma');
 
   // Código é único: em caso de colisão (raro), sorteia outro
   for (let i = 0; i < 5; i++) {
     const { data, error } = await db
       .from('turmas')
-      .insert({ nome: nome.trim(), professor_id: professorId, codigo_acesso: gerarCodigoAcesso() })
+      .insert({
+        nome: nome.trim(),
+        professor_id: professorId,
+        codigo_acesso: gerarCodigoAcesso(),
+        ...(empresaId ? { empresa_id: empresaId } : {}),
+      })
       .select()
       .maybeSingle();
     if (!error) return data;

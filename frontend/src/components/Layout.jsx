@@ -78,6 +78,9 @@ export default function Layout() {
                 {t('nav.avaliacao')}
               </LinkNav>
             )}
+            <LinkNav para="/empresa" icone="briefcase">
+              {t('nav.empresa')}
+            </LinkNav>
             <LinkNav para="/perfil" icone="user">
               {t('nav.perfil')}
             </LinkNav>

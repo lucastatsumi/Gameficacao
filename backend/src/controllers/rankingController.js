@@ -7,7 +7,7 @@ function limiteDe(req) {
 
 export async function global(req, res, next) {
   try {
-    res.json(await rankingService.rankingGlobal(req.usuario.id, limiteDe(req)));
+    res.json(await rankingService.rankingGlobal(req.usuario.id, limiteDe(req), req.usuario.empresa_id));
   } catch (err) {
     next(err);
   }

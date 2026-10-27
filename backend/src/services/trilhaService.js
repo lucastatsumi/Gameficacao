@@ -25,22 +25,21 @@ export async function temasPermitidos(userId) {
   return ids.size ? ids : null;
 }
 
-export async function listarTemas() {
-  const { data, error } = await db
-    .from('temas')
-    .select('id, nome, descricao')
-    .eq('ativo', true)
-    .order('nome');
+// Catálogo global (empresa_id nulo) + temas próprios da empresa.
+export async function listarTemas(empresaId = null) {
+  let consulta = db.from('temas').select('id, nome, descricao').eq('ativo', true).order('nome');
+  if (empresaId) consulta = consulta.or(`empresa_id.is.null,empresa_id.eq.${empresaId}`);
+  const { data, error } = await consulta;
   if (error) throw error;
   return data;
 }
 
 // Onboarding: o gestor cria um tema próprio (vazio) para montar sua trilha.
-export async function criarTema(nome, descricao) {
+export async function criarTema(nome, descricao, empresaId = null) {
   if (!nome?.trim()) throw new HttpError(400, 'Informe o nome do tema');
   const { data, error } = await db
     .from('temas')
-    .insert({ nome: nome.trim(), descricao: descricao?.trim() || null })
+    .insert({ nome: nome.trim(), descricao: descricao?.trim() || null, empresa_id: empresaId })
     .select()
     .maybeSingle();
   if (error?.code === '23505') throw new HttpError(409, 'Já existe um tema com esse nome');

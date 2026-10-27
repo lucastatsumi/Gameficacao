@@ -13,12 +13,12 @@ function comClasseFormatada(linha) {
   return { ...resto, classe: classeDaFase(classe_fase) };
 }
 
-export async function rankingGlobal(userId, limite = 50) {
-  const { data, error } = await db
-    .from('ranking_global')
-    .select('*')
-    .order('posicao')
-    .limit(limite);
+// empresaId isola o ranking por empresa (multi-tenancy); null = sem filtro
+// (usuário legado ainda sem empresa).
+export async function rankingGlobal(userId, limite = 50, empresaId = null) {
+  let consulta = db.from('ranking_global').select('*').order('posicao').limit(limite);
+  if (empresaId) consulta = consulta.eq('empresa_id', empresaId);
+  const { data, error } = await consulta;
   if (error) throw error;
 
   return {

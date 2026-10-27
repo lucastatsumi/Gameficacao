@@ -26,6 +26,13 @@ export async function autenticar(req, _res, next) {
   }
 }
 
+export function exigirDono(req, _res, next) {
+  if (req.usuario?.papel !== 'dono') {
+    return next(new HttpError(403, 'Acesso restrito ao dono da empresa'));
+  }
+  next();
+}
+
 export function exigirProfessor(req, _res, next) {
   if (req.usuario?.role !== 'professor') {
     return next(new HttpError(403, 'Acesso restrito a professores'));

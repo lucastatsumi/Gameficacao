@@ -1,8 +1,8 @@
 import * as trilhaService from '../services/trilhaService.js';
 
-export async function listarTemas(_req, res, next) {
+export async function listarTemas(req, res, next) {
   try {
-    res.json(await trilhaService.listarTemas());
+    res.json(await trilhaService.listarTemas(req.usuario.empresa_id));
   } catch (err) {
     next(err);
   }
@@ -10,7 +10,7 @@ export async function listarTemas(_req, res, next) {
 
 export async function criarTema(req, res, next) {
   try {
-    res.status(201).json(await trilhaService.criarTema(req.body?.nome, req.body?.descricao));
+    res.status(201).json(await trilhaService.criarTema(req.body?.nome, req.body?.descricao, req.usuario.empresa_id));
   } catch (err) {
     next(err);
   }

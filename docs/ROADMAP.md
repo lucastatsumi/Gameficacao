@@ -583,6 +583,16 @@ precisava da turma que já existe).
 
 ## Horizonte 5 — Plataforma
 
+> **Multi-tenancy e papéis ✅ (versão aditiva)** — migração 45 (`empresas`,
+> `profiles.empresa_id/papel`, `turmas.empresa_id`, `temas.empresa_id`,
+> `ranking_global` por empresa; tudo existente vira "Empresa Padrão"),
+> `empresaService.js`, rotas `/empresas/*`, página "Empresa". Papéis
+> dono > gestor > colaborador (sincronizados com `role`). Isolamento aplicado
+> **no código** (a service_role ignora RLS): ranking global, entrada em
+> turma (404 entre empresas), temas e criação de turma. **Lacunas
+> conhecidas**: eventos, campanhas, kudos, ligas e raids ainda não filtram
+> por empresa; falta teste end-to-end contra um Postgres real.
+
 > **Dashboard de evolução ✅** (`evolucaoService.js`, aba "Evolução"): série
 > semanal de score médio, XP e colaboradores ativos por equipe, derivada de
 > `tentativas` (append-only) — sem tabela de snapshot, pois o histórico já

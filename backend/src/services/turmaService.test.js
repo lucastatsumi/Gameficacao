@@ -148,3 +148,21 @@ describe('alunosDaTurma', () => {
     expect(alunos).toEqual([{ user_id: 'u1', xp_total: 100 }]);
   });
 });
+
+describe('entrarNaTurma — isolamento por empresa', () => {
+  it('turma de outra empresa responde 404 (não revela que existe)', async () => {
+    configurarDb({ turmas: [ok({ id: 't1', nome: 'X', empresa_id: 'empresa-B' })] });
+    await expect(entrarNaTurma('u1', 'ABC123', 'empresa-A')).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('usuário sem empresa herda a da turma ao entrar', async () => {
+    const mock = configurarDb({
+      turmas: [ok({ id: 't1', nome: 'X', empresa_id: 'empresa-B' })],
+      matriculas: [ok(null)],
+      profiles: [ok(null)],
+    });
+    const turma = await entrarNaTurma('u1', 'ABC123', null);
+    expect(turma).toEqual({ id: 't1', nome: 'X' });
+    expect(mock.chainsPara('profiles')[0].update).toHaveBeenCalledWith({ empresa_id: 'empresa-B' });
+  });
+});

@@ -3,7 +3,11 @@ import { mascoteDaTurma } from '../services/mascoteService.js';
 
 export async function entrar(req, res, next) {
   try {
-    const turma = await turmaService.entrarNaTurma(req.usuario.id, req.body?.codigo_acesso);
+    const turma = await turmaService.entrarNaTurma(
+      req.usuario.id,
+      req.body?.codigo_acesso,
+      req.usuario.empresa_id ?? null
+    );
     res.status(201).json(turma);
   } catch (err) {
     next(err);

@@ -14,6 +14,7 @@ import Loja from './pages/Loja.jsx';
 import Ligas from './pages/Ligas.jsx';
 import Temporada from './pages/Temporada.jsx';
 import Avaliacao from './pages/Avaliacao.jsx';
+import Empresa from './pages/Empresa.jsx';
 
 function RotaProtegida({ children, apenasProfessor = false }) {
   const { sessao, perfil, carregando } = useAuth();
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="/ligas" element={<Ligas />} />
         <Route path="/temporada" element={<Temporada />} />
         <Route path="/avaliacao" element={<Avaliacao />} />
+        <Route path="/empresa" element={<Empresa />} />
         <Route path="/desafio/:desafioId" element={<Desafio />} />
         <Route
           path="/admin"

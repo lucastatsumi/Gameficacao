@@ -9,7 +9,7 @@ import * as temporadaService from '../services/temporadaService.js';
 
 export async function criarTurma(req, res, next) {
   try {
-    const turma = await turmaService.criarTurma(req.usuario.id, req.body?.nome);
+    const turma = await turmaService.criarTurma(req.usuario.id, req.body?.nome, req.usuario.empresa_id);
     res.status(201).json(turma);
   } catch (err) {
     next(err);
