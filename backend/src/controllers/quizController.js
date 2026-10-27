@@ -1,4 +1,5 @@
 import * as cartaService from '../services/cartaService.js';
+import * as campanhaService from '../services/campanhaService.js';
 import * as quizService from '../services/quizService.js';
 import * as poderService from '../services/poderService.js';
 import * as fichaService from '../services/fichaService.js';
@@ -133,6 +134,10 @@ export async function finalizar(req, res, next) {
 
     // Cartas colecionáveis (roadmap 4.9): competências dominadas revelam cartas.
     resultado.cartas_novas = await cartaService.verificarCartas(req.usuario.id);
+
+    // Campanhas temáticas (roadmap H4): badge exclusiva ao bater a meta.
+    const badgesCampanha = await campanhaService.verificarCampanhas(req.usuario.id);
+    resultado.badges_novas = [...(resultado.badges_novas ?? []), ...badgesCampanha];
 
     res.json(resultado);
   } catch (err) {

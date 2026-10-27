@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { exigirProfessor } from '../middlewares/auth.js';
 import * as adminController from '../controllers/adminController.js';
 import * as trilhaController from '../controllers/trilhaController.js';
+import * as campanhaController from '../controllers/campanhaController.js';
 import * as iaController from '../controllers/iaController.js';
 import * as torneioController from '../controllers/torneioController.js';
 
@@ -22,6 +23,11 @@ adminRoutes.get('/temas', trilhaController.listarTemas);
 adminRoutes.post('/temas', trilhaController.criarTema);
 adminRoutes.get('/turmas/:turmaId/temas', trilhaController.temasDaTurma);
 adminRoutes.put('/turmas/:turmaId/temas', trilhaController.definirTemasDaTurma);
+
+// Campanhas temáticas
+adminRoutes.post('/campanhas', campanhaController.criar);
+adminRoutes.get('/campanhas', campanhaController.listar);
+adminRoutes.get('/campanhas/:id/ranking', campanhaController.ranking);
 
 // Torneios entre equipes
 adminRoutes.post('/torneios', torneioController.criar);
