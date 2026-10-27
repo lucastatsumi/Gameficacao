@@ -10,7 +10,12 @@ export async function resumo(req, res, next) {
 
 export async function dar(req, res, next) {
   try {
-    res.status(201).json(await kudosService.darKudos(req.usuario.id, req.body?.para_usuario));
+    res.status(201).json(await kudosService.darKudos(
+        req.usuario.id,
+        req.body?.para_usuario,
+        undefined,
+        req.usuario.empresa_id
+      ));
   } catch (err) {
     next(err);
   }

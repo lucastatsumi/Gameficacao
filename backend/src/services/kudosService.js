@@ -37,12 +37,15 @@ export async function resumoDeKudos(userId, agora = new Date()) {
 //   fichas — evita o "eu te dou, você me dá de volta na hora";
 // - teto semanal de fichas vindas de kudos recebidos, para o kudos
 //   continuar sendo reconhecimento e não uma fonte extra de farming.
-export async function darKudos(deId, paraId, agora = new Date()) {
+// empresaId (opcional): só dá kudos a colegas da mesma empresa.
+export async function darKudos(deId, paraId, agora = new Date(), empresaId = null) {
   if (!paraId) throw new HttpError(400, 'para_usuario é obrigatório');
   if (paraId === deId) throw new HttpError(400, 'Você não pode dar kudos a si mesmo');
 
-  const alvoExiste = await perfilExiste(paraId);
-  if (!alvoExiste) throw new HttpError(404, 'Jogador não encontrado');
+  const alvo = await buscarPerfil(paraId);
+  if (!alvo || (empresaId && alvo.empresa_id !== empresaId)) {
+    throw new HttpError(404, 'Jogador não encontrado'); // não revela usuários de outra empresa
+  }
 
   const semana = semanaIso(agora);
 
@@ -79,10 +82,14 @@ export async function darKudos(deId, paraId, agora = new Date()) {
   };
 }
 
-async function perfilExiste(userId) {
-  const { data, error } = await db.from('profiles').select('id').eq('id', userId).maybeSingle();
+async function buscarPerfil(userId) {
+  const { data, error } = await db
+    .from('profiles')
+    .select('id, empresa_id')
+    .eq('id', userId)
+    .maybeSingle();
   if (error) throw error;
-  return Boolean(data);
+  return data;
 }
 
 async function contar(coluna, userId, semana) {

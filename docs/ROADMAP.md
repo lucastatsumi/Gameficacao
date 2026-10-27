@@ -589,9 +589,12 @@ precisava da turma que já existe).
 > `empresaService.js`, rotas `/empresas/*`, página "Empresa". Papéis
 > dono > gestor > colaborador (sincronizados com `role`). Isolamento aplicado
 > **no código** (a service_role ignora RLS): ranking global, entrada em
-> turma (404 entre empresas), temas e criação de turma. **Lacunas
-> conhecidas**: eventos, campanhas, kudos, ligas e raids ainda não filtram
-> por empresa; falta teste end-to-end contra um Postgres real.
+> turma (404 entre empresas), temas e criação de turma. A migração 46 fecha
+> as lacunas: eventos (globais + da empresa), campanhas, ligas (classificação
+> por empresa) e kudos (destinatário precisa ser da mesma empresa; 404 caso
+> contrário); raids já eram escopados por turma. **Lacuna restante**: falta
+> teste end-to-end contra um Postgres real (o isolamento é validado só com
+> o banco simulado).
 
 > **Dashboard de evolução ✅** (`evolucaoService.js`, aba "Evolução"): série
 > semanal de score médio, XP e colaboradores ativos por equipe, derivada de

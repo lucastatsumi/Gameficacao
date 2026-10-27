@@ -117,3 +117,30 @@ describe('removerEvento', () => {
     expect(deleteChain.eq).toHaveBeenCalledWith('id', 5);
   });
 });
+
+describe('eventos — isolamento por empresa', () => {
+  it('listarEventos mostra os globais e os da própria empresa', async () => {
+    const mock = configurarDb({ eventos: [ok([])] });
+    await listarEventos('empresa-A');
+    expect(mock.chainsPara('eventos')[0].or).toHaveBeenCalledWith(
+      'empresa_id.is.null,empresa_id.eq.empresa-A'
+    );
+  });
+
+  it('removerEvento só apaga evento da própria empresa', async () => {
+    const mock = configurarDb({ eventos: [ok(null)] });
+    await removerEvento(5, 'empresa-A');
+    expect(mock.chainsPara('eventos')[0].eq).toHaveBeenCalledWith('empresa_id', 'empresa-A');
+  });
+
+  it('criarEvento grava a empresa', async () => {
+    const mock = configurarDb({ eventos: [ok({ id: 1 })] });
+    await criarEvento(
+      { nome: 'E', multiplicador_xp: 2, inicio: '2026-01-01', fim: '2026-01-02' },
+      'empresa-A'
+    );
+    expect(mock.chainsPara('eventos')[0].insert.mock.calls[0][0]).toMatchObject({
+      empresa_id: 'empresa-A',
+    });
+  });
+});

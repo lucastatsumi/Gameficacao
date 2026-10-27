@@ -119,3 +119,32 @@ describe('rankingDaCampanha', () => {
     ]);
   });
 });
+
+describe('campanhas — isolamento por empresa', () => {
+  it('ranking de campanha de outra empresa responde 404', async () => {
+    const mock = configurarDb({ campanhas: [ok(null)] });
+    await expect(rankingDaCampanha('c1', 'empresa-A')).rejects.toMatchObject({ status: 404 });
+    expect(mock.chainsPara('campanhas')[0].eq).toHaveBeenCalledWith('empresa_id', 'empresa-A');
+  });
+
+  it('ranking só soma XP de quem é da mesma empresa', async () => {
+    configurarDb({
+      campanhas: [ok({ inicio: 'a', fim: 'b' })],
+      tentativas: [
+        ok([
+          { user_id: 'u1', xp_ganho: 10, profiles: { nome: 'Ana', empresa_id: 'empresa-A' } },
+          { user_id: 'u2', xp_ganho: 99, profiles: { nome: 'Intruso', empresa_id: 'empresa-B' } },
+        ]),
+      ],
+    });
+    expect(await rankingDaCampanha('c1', 'empresa-A')).toEqual([
+      { posicao: 1, nome: 'Ana', xp: 10 },
+    ]);
+  });
+
+  it('verificarCampanhas filtra pela empresa do usuário', async () => {
+    const mock = configurarDb({ campanhas: [ok([])] });
+    await verificarCampanhas('u1', AGORA, 'empresa-A');
+    expect(mock.chainsPara('campanhas')[0].eq).toHaveBeenCalledWith('empresa_id', 'empresa-A');
+  });
+});

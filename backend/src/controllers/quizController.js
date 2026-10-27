@@ -145,7 +145,7 @@ export async function finalizar(req, res, next) {
     resultado.cartas_novas = await cartaService.verificarCartas(req.usuario.id);
 
     // Campanhas temáticas (roadmap H4): badge exclusiva ao bater a meta.
-    const badgesCampanha = await campanhaService.verificarCampanhas(req.usuario.id);
+    const badgesCampanha = await campanhaService.verificarCampanhas(req.usuario.id, undefined, req.usuario.empresa_id);
     resultado.badges_novas = [...(resultado.badges_novas ?? []), ...badgesCampanha];
 
     res.json(resultado);

@@ -6,14 +6,14 @@ import { criarEvento } from './eventoService.js';
 // janela, criados juntos pelo gestor. A badge é concedida a quem concluir
 // `min_quizzes` quizzes APROVADOS dentro da janela.
 
-export async function criarCampanha(gestorId, dados) {
+export async function criarCampanha(gestorId, dados, empresaId = null) {
   const { nome, inicio, fim, multiplicador_xp = 2, min_quizzes = 5, icone = 'trophy' } = dados ?? {};
   if (!nome?.trim()) throw new HttpError(400, 'O nome da campanha é obrigatório');
   if (!Number.isInteger(min_quizzes) || min_quizzes < 1) {
     throw new HttpError(400, 'min_quizzes deve ser um inteiro >= 1');
   }
 
-  const evento = await criarEvento({ nome, multiplicador_xp, inicio, fim }); // valida o período
+  const evento = await criarEvento({ nome, multiplicador_xp, inicio, fim }, empresaId); // valida o período
 
   const { data: badge, error: erroBadge } = await db
     .from('badges')
@@ -42,6 +42,7 @@ export async function criarCampanha(gestorId, dados) {
       inicio: evento.inicio,
       fim: evento.fim,
       min_quizzes,
+      ...(empresaId ? { empresa_id: empresaId } : {}),
     })
     .select()
     .single();
@@ -53,24 +54,28 @@ export async function criarCampanha(gestorId, dados) {
   return campanha;
 }
 
-export async function listarCampanhas() {
-  const { data, error } = await db
+export async function listarCampanhas(empresaId = null) {
+  let consulta = db
     .from('campanhas')
     .select('id, nome, inicio, fim, min_quizzes')
     .order('inicio', { ascending: false });
+  if (empresaId) consulta = consulta.eq('empresa_id', empresaId);
+  const { data, error } = await consulta;
   if (error) throw error;
   return data;
 }
 
 // Chamado no fim de cada quiz (quizController). Concede a badge das
 // campanhas ativas cuja meta o usuário acabou de bater.
-export async function verificarCampanhas(userId, agora = new Date()) {
+export async function verificarCampanhas(userId, agora = new Date(), empresaId = null) {
   const iso = agora.toISOString();
-  const { data: ativas, error } = await db
+  let consulta = db
     .from('campanhas')
     .select('id, nome, inicio, fim, min_quizzes, badge_id, badges ( id, nome, descricao, icone )')
     .lte('inicio', iso)
     .gte('fim', iso);
+  if (empresaId) consulta = consulta.eq('empresa_id', empresaId);
+  const { data: ativas, error } = await consulta;
   if (error) throw error;
   if (!ativas.length) return [];
 
@@ -104,25 +109,25 @@ export async function verificarCampanhas(userId, agora = new Date()) {
 }
 
 // Ranking próprio da campanha: XP ganho dentro da janela, top 10.
-export async function rankingDaCampanha(campanhaId) {
-  const { data: campanha, error } = await db
-    .from('campanhas')
-    .select('inicio, fim')
-    .eq('id', campanhaId)
-    .maybeSingle();
+export async function rankingDaCampanha(campanhaId, empresaId = null) {
+  let busca = db.from('campanhas').select('inicio, fim').eq('id', campanhaId);
+  if (empresaId) busca = busca.eq('empresa_id', empresaId);
+  const { data: campanha, error } = await busca.maybeSingle();
   if (error) throw error;
   if (!campanha) throw new HttpError(404, 'Campanha não encontrada');
 
   const { data, error: e2 } = await db
     .from('tentativas')
-    .select('user_id, xp_ganho, profiles ( nome )')
+    .select('user_id, xp_ganho, profiles!inner ( nome, empresa_id )')
     .not('finalizada_em', 'is', null)
     .gte('finalizada_em', campanha.inicio)
     .lte('finalizada_em', campanha.fim);
   if (e2) throw e2;
+  // só pontua gente da mesma empresa
+  const tentativas = empresaId ? data.filter((t) => t.profiles?.empresa_id === empresaId) : data;
 
   const porUsuario = new Map();
-  for (const t of data) {
+  for (const t of tentativas) {
     const atual = porUsuario.get(t.user_id) ?? { nome: t.profiles?.nome ?? 'Jogador', xp: 0 };
     atual.xp += t.xp_ganho;
     porUsuario.set(t.user_id, atual);

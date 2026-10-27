@@ -1,7 +1,7 @@
 import { db } from '../config/supabase.js';
 import { HttpError } from '../utils/httpError.js';
 import { buscarTentativa, exigirQuestaoNoQuiz } from './quizService.js';
-import { chamarClaude, extrairJson } from './iaService.js';
+import { chamarClaude } from './iaService.js';
 
 // Questão aberta corrigida por IA com rubrica (roadmap H3). Grava na MESMA
 // tabela `respostas` dos demais formatos (correta = nota >= NOTA_APROVACAO),

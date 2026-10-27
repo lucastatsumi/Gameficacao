@@ -436,7 +436,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
   // Evento temporário (ex.: "semana das árvores"): multiplica o XP bruto
   // desta tentativa. Só se aplica ao modo campanha — quiz custom não tem
   // fase associada para casar com o evento.
-  const evento = ehCustom ? null : await eventoAtivoParaFase(tentativa.fase_id);
+  const evento = ehCustom ? null : await eventoAtivoParaFase(tentativa.fase_id, usuario.empresa_id);
   const multiplicadorEvento = evento?.multiplicador_xp ?? 1;
 
   // Recompensa crescente de streak: só faz sentido se o aluno de fato

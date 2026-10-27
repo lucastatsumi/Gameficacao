@@ -141,3 +141,10 @@ describe('constante de negócio', () => {
     expect(KUDOS_POR_SEMANA).toBe(3);
   });
 });
+
+describe('darKudos — isolamento por empresa', () => {
+  it('colega de outra empresa responde "não encontrado" (não revela que existe)', async () => {
+    configurarDb({ profiles: [ok({ id: 'u2', empresa_id: 'empresa-B' })] });
+    await expect(darKudos('u1', 'u2', AGORA, 'empresa-A')).rejects.toMatchObject({ status: 404 });
+  });
+});

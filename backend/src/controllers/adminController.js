@@ -107,7 +107,7 @@ export async function exportarCsvTurma(req, res, next) {
 
 export async function criarEvento(req, res, next) {
   try {
-    res.status(201).json(await eventoService.criarEvento(req.body));
+    res.status(201).json(await eventoService.criarEvento(req.body, req.usuario.empresa_id));
   } catch (err) {
     next(err);
   }
@@ -115,7 +115,7 @@ export async function criarEvento(req, res, next) {
 
 export async function listarEventos(req, res, next) {
   try {
-    res.json(await eventoService.listarEventos());
+    res.json(await eventoService.listarEventos(req.usuario.empresa_id));
   } catch (err) {
     next(err);
   }
@@ -123,7 +123,7 @@ export async function listarEventos(req, res, next) {
 
 export async function removerEvento(req, res, next) {
   try {
-    await eventoService.removerEvento(req.params.id);
+    await eventoService.removerEvento(req.params.id, req.usuario.empresa_id);
     res.status(204).end();
   } catch (err) {
     next(err);

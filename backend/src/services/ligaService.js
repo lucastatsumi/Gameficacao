@@ -16,7 +16,7 @@ export const DIVISOES = ['bronze', 'prata', 'ouro', 'diamante'];
 const FATIA_PROMOCAO = 0.2;
 const FICHAS_POR_FAIXA = { subiu: 25, manteve: 15, desceu: 5 };
 
-export async function ligaAtual(userId, agora = new Date()) {
+export async function ligaAtual(userId, agora = new Date(), empresaId = null) {
   const semana = semanaIso(agora);
   await garantirFechamentoSemana(agora);
 
@@ -26,7 +26,7 @@ export async function ligaAtual(userId, agora = new Date()) {
     semana,
     divisao: linha.divisao,
     xp_semana: linha.xp_semana,
-    ranking: await classificacaoDaDivisao(semana, linha.divisao),
+    ranking: await classificacaoDaDivisao(semana, linha.divisao, empresaId),
   };
 }
 
@@ -49,13 +49,16 @@ export async function concederXpSemana(userId, xpGanho, agora = new Date()) {
   if (error) throw error;
 }
 
-async function classificacaoDaDivisao(semana, divisao) {
-  const { data, error } = await db
+async function classificacaoDaDivisao(semana, divisao, empresaId = null) {
+  let consulta = db
     .from('ranking_liga')
     .select('id, nome, xp_semana, posicao')
     .eq('semana', semana)
     .eq('divisao', divisao)
     .order('posicao');
+  // multi-tenancy: a classificação só mostra colegas da mesma empresa
+  if (empresaId) consulta = consulta.eq('empresa_id', empresaId);
+  const { data, error } = await consulta;
   if (error) throw error;
   return data ?? [];
 }

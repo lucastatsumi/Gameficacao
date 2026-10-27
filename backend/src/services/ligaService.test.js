@@ -203,3 +203,18 @@ describe('concederXpSemana', () => {
     );
   });
 });
+
+describe('ligaAtual — isolamento por empresa', () => {
+  it('a classificação filtra pela empresa informada', async () => {
+    const mock = configurarDb({
+      ligas_fechamentos: [ok(null)],
+      ligas_semana: [
+        ok([]), // rollover: nenhuma linha na semana anterior
+        ok({ user_id: 'u1', semana: '2026-W03', divisao: 'bronze', xp_semana: 0 }),
+      ],
+      ranking_liga: [ok([])],
+    });
+    await ligaAtual('u1', AGORA, 'empresa-A');
+    expect(mock.chainsPara('ranking_liga')[0].eq).toHaveBeenCalledWith('empresa_id', 'empresa-A');
+  });
+});

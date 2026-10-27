@@ -3,16 +3,23 @@ import { HttpError } from '../utils/httpError.js';
 
 // ---------- Administração (professor) ----------
 
-export async function criarEvento(dados) {
+// empresaId null = evento global (legado); senão, visível só à empresa.
+export async function criarEvento(dados, empresaId = null) {
   const evento = validarPayload(dados);
 
-  const { data, error } = await db.from('eventos').insert(evento).select().single();
+  const { data, error } = await db
+    .from('eventos')
+    .insert({ ...evento, ...(empresaId ? { empresa_id: empresaId } : {}) })
+    .select()
+    .single();
   if (error) throw error;
   return data;
 }
 
-export async function listarEventos() {
-  const { data, error } = await db.from('eventos').select('*').order('inicio', { ascending: false });
+export async function listarEventos(empresaId = null) {
+  let consulta = db.from('eventos').select('*').order('inicio', { ascending: false });
+  if (empresaId) consulta = consulta.or(`empresa_id.is.null,empresa_id.eq.${empresaId}`);
+  const { data, error } = await consulta;
   if (error) throw error;
 
   const agora = Date.now();
@@ -27,8 +34,11 @@ export async function listarEventos() {
   }));
 }
 
-export async function removerEvento(id) {
-  const { error } = await db.from('eventos').delete().eq('id', id);
+export async function removerEvento(id, empresaId = null) {
+  // só remove eventos da própria empresa (os globais não são de ninguém)
+  let consulta = db.from('eventos').delete().eq('id', id);
+  if (empresaId) consulta = consulta.eq('empresa_id', empresaId);
+  const { error } = await consulta;
   if (error) throw error;
 }
 
@@ -55,9 +65,11 @@ function validarPayload(dados) {
 // Evento temporário com maior multiplicador de XP ativo agora para a fase
 // (eventos com fase_id null valem para qualquer fase). Retorna null se
 // nenhum evento estiver no período [inicio, fim] neste momento.
-export async function eventoAtivoParaFase(faseId) {
+export async function eventoAtivoParaFase(faseId, empresaId = null) {
   const agora = new Date().toISOString();
-  const { data, error } = await db.from('eventos').select('*').lte('inicio', agora).gte('fim', agora);
+  let consulta = db.from('eventos').select('*').lte('inicio', agora).gte('fim', agora);
+  if (empresaId) consulta = consulta.or(`empresa_id.is.null,empresa_id.eq.${empresaId}`);
+  const { data, error } = await consulta;
   if (error) throw error;
 
   const candidatos = data.filter((e) => e.fase_id == null || e.fase_id === faseId);
