@@ -14,6 +14,7 @@ import { ligasRoutes } from './ligas.routes.js';
 import { kudosRoutes } from './kudos.routes.js';
 import { temporadasRoutes } from './temporadas.routes.js';
 import { raidsRoutes } from './raids.routes.js';
+import { avaliacaoRoutes } from './avaliacao.routes.js';
 
 export const rotas = Router();
 
@@ -35,3 +36,4 @@ rotas.use('/ligas', ligasRoutes);
 rotas.use('/kudos', kudosRoutes);
 rotas.use('/temporadas', temporadasRoutes);
 rotas.use('/raids', raidsRoutes);
+rotas.use('/avaliacao', avaliacaoRoutes);

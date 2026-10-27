@@ -92,6 +92,13 @@ via Claude API.
 
 ## Horizonte 3 — Método de pontuação e avaliação
 
+> **Status**: ✅ implementados score ponderado (`utils/score.js`, migração
+> 34), escala de proficiência (`utils/proficiencia.js`), matriz de
+> competências e certificado por `window.print()` (`avaliacaoService.js`,
+> rotas `/avaliacao/*`, página `Avaliacao.jsx`). Migração 35 cria `temas`,
+> `fases.tema_id` e `questoes.competencias` (fundação do Horizonte 1).
+> Pendentes: questão aberta com IA (exige chave de API).
+
 O pedido central do pivô: sair do certo/errado binário.
 
 - **Pontuação ponderada (server-side)** — nota da tentativa composta por:

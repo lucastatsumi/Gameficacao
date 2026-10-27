@@ -73,6 +73,11 @@ export default function Layout() {
                 {t('nav.temporada')}
               </LinkNav>
             )}
+            {perfil?.role !== 'professor' && (
+              <LinkNav para="/avaliacao" icone="chart-bar-big">
+                {t('nav.avaliacao')}
+              </LinkNav>
+            )}
             <LinkNav para="/perfil" icone="user">
               {t('nav.perfil')}
             </LinkNav>
