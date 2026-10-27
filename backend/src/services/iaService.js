@@ -35,7 +35,7 @@ export function extrairJson(texto) {
   }
 }
 
-async function chamarClaude(prompt) {
+export async function chamarClaude(prompt) {
   const chave = process.env.ANTHROPIC_API_KEY;
   if (!chave) throw new HttpError(503, 'Geração por IA não configurada (ANTHROPIC_API_KEY ausente)');
 

@@ -11,10 +11,13 @@ export default function AbaIA() {
   const [rascunhos, setRascunhos] = useState([]);
   const [gerando, setGerando] = useState(false);
   const [info, setInfo] = useState(null);
+  const [sugestoes, setSugestoes] = useState([]);
+  const [faseAuditoria, setFaseAuditoria] = useState('');
   const [erro, setErro] = useState(null);
 
   const carregar = useCallback(() => {
     api.get('/admin/ia/rascunhos').then(setRascunhos).catch((err) => setErro(err.message));
+    api.get('/admin/ia/sugestoes').then(setSugestoes).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -44,6 +47,23 @@ export default function AbaIA() {
     } finally {
       setGerando(false);
     }
+  }
+
+  async function auditar() {
+    setErro(null);
+    setInfo(null);
+    try {
+      const r = await api.post('/admin/ia/auditar', { fase_id: Number(faseAuditoria) });
+      setInfo(`${r.auditadas} questão(ões) auditada(s), ${r.sugestoes.length} sugestão(ões).`);
+      carregar();
+    } catch (err) {
+      setErro(err.message);
+    }
+  }
+
+  async function resolver(id, status) {
+    await api.patch(`/admin/ia/sugestoes/${id}`, { status }).catch((err) => setErro(err.message));
+    carregar();
   }
 
   async function revisar(id, acao) {
@@ -104,6 +124,39 @@ export default function AbaIA() {
         </button>
       </form>
       {info && <p className="text-sm text-emerald-300">{info}</p>}
+
+      <div className="space-y-2">
+        <h2 className="font-semibold">Auditar banco existente</h2>
+        <div className="flex gap-2">
+          <select className={inputCls} value={faseAuditoria} onChange={(e) => setFaseAuditoria(e.target.value)}>
+            <option value="">Módulo...</option>
+            {fases.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.nome}
+              </option>
+            ))}
+          </select>
+          <button className="btn-pixel px-4" disabled={!faseAuditoria} onClick={auditar}>
+            Auditar
+          </button>
+        </div>
+        {sugestoes.map((s) => (
+          <div key={s.id} className="card-pixel p-3 text-sm">
+            <p className="opacity-70">{s.questoes?.enunciado}</p>
+            <p>
+              <strong>{s.tipo}</strong>: {s.descricao}
+            </p>
+            <div className="mt-2 flex gap-2">
+              <button className="btn-pixel px-3" onClick={() => resolver(s.id, 'resolvida')}>
+                Resolvida
+              </button>
+              <button className="btn-pixel px-3" onClick={() => resolver(s.id, 'ignorada')}>
+                Ignorar
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
 
       <div className="space-y-3">
         <h2 className="font-semibold">Rascunhos pendentes de revisão ({rascunhos.length})</h2>
