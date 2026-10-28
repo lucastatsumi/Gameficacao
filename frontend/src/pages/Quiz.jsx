@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
@@ -10,12 +10,22 @@ import BotaoBatalha from '../components/quiz/BotaoBatalha.jsx';
 import TelaResultado from '../components/quiz/TelaResultado.jsx';
 import pixelFeliz from '../assets/img/pixel-feliz.svg';
 import pixelTriste from '../assets/img/pixel-triste.svg';
-import { somLigado, alternarSom, tocarClique, tocarAcerto, tocarErro, tocarTick } from '../lib/sons.js';
+import {
+  somLigado,
+  alternarSom,
+  tocarClique,
+  tocarAcerto,
+  tocarErro,
+  tocarTick,
+} from '../lib/sons.js';
 
 export default function Quiz() {
   // /quiz/:faseId (campanha), /quiz/custom/:quizId (quiz da turma) ou
   // /quiz/diario (desafio diário — mesmas questões pra todo mundo hoje)
   const { faseId, quizId } = useParams();
+  // Veio de um convite de desafio: ao finalizar, registra o resultado
+  // (base do torneio entre equipes)
+  const desafioId = useSearchParams()[0].get('desafio');
   const ehDesafioDiario = faseId === 'diario';
   const { recarregarPerfil, perfil } = useAuth();
 
@@ -48,7 +58,9 @@ export default function Quiz() {
   // minigame "reordenar algoritmo": ids dos passos na ordem que o aluno
   // clicou, até completar a sequência
   const [ordemEscolhida, setOrdemEscolhida] = useState([]);
-  const [feedbackSeq, setFeedbackSeq] = useState(null); // resposta de /quiz/responder-sequencia
+  const [feedbackSeq, setFeedbackSeq] = useState(null); // resposta de /quiz/responder-sequencia (ou -aberta)
+  // questão aberta (corrigida por IA com rubrica): o texto digitado
+  const [textoAberto, setTextoAberto] = useState('');
 
   // "boss fight" (quiz.quiz.vidas definido): contador de erros ACUMULADO
   // na tentativa inteira (não reseta por questão) — estoura o limite e o
@@ -116,7 +128,7 @@ export default function Quiz() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [enviando, feedback, quiz, questao, sonsPermitidos]
+    [enviando, feedback, quiz, questao, sonsPermitidos],
   );
 
   // ---------- enviar sequência (minigame reordenar algoritmo) ----------
@@ -146,7 +158,39 @@ export default function Quiz() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [enviando, feedbackSeq, quiz, questao, sonsPermitidos]
+    [enviando, feedbackSeq, quiz, questao, sonsPermitidos],
+  );
+
+  // ---------- enviar resposta aberta (corrigida no servidor pela IA) ----------
+  // Usa o mesmo slot de feedback do formato de sequência: as duas são
+  // respostas "sem alternativa" e compartilham timer/avanço.
+  const responderAberta = useCallback(
+    async (texto) => {
+      if (enviando || feedbackSeq) return;
+      setEnviando(true);
+      try {
+        const fb = await api.post('/quiz/responder-aberta', {
+          tentativa_id: quiz.tentativa_id,
+          questao_id: questao.id,
+          texto: texto ?? '',
+        });
+        setFeedbackSeq({ ...fb, aberta: true });
+        if (fb.correta) {
+          som(tocarAcerto);
+          setComboAtual((n) => n + 1);
+        } else {
+          som(tocarErro);
+          setErrosCount((n) => n + 1);
+          setComboAtual(0);
+        }
+      } catch (err) {
+        setErro(err.message);
+      } finally {
+        setEnviando(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [enviando, feedbackSeq, quiz, questao, sonsPermitidos],
   );
 
   // ---------- pedir dica (quiz custom; corta o XP da questão) ----------
@@ -166,7 +210,11 @@ export default function Quiz() {
   // ---------- usar poder (eliminar alternativa / tempo extra / pular) ----------
   async function usarPoder(poder) {
     if (enviando || feedback || feedbackSeq) return;
-    if (poder === 'eliminar_alternativa' && (alternativaEscondida || estoquePoderes.eliminar_alternativa <= 0)) return;
+    if (
+      poder === 'eliminar_alternativa' &&
+      (alternativaEscondida || estoquePoderes.eliminar_alternativa <= 0)
+    )
+      return;
     if (poder === 'tempo_extra' && (tempoExtraUsado || estoquePoderes.tempo_extra <= 0)) return;
     if (poder === 'pular_questao' && estoquePoderes.pular_questao <= 0) return;
 
@@ -213,11 +261,22 @@ export default function Quiz() {
         clearInterval(intervalo);
         // tempo esgotado: envia vazio/sem alternativa (o formato decide o formato do payload)
         if (questao.formato === 'reordenar_algoritmo') responderSeq(ordemEscolhida);
+        else if (questao.formato === 'resposta_aberta') responderAberta(textoAberto);
         else responder(null);
       }
     }, 250);
     return () => clearInterval(intervalo);
-  }, [questao, feedback, feedbackSeq, resultado, responder, responderSeq, ordemEscolhida]);
+  }, [
+    questao,
+    feedback,
+    feedbackSeq,
+    resultado,
+    responder,
+    responderSeq,
+    responderAberta,
+    ordemEscolhida,
+    textoAberto,
+  ]);
 
   const vidasMax = quiz?.quiz?.vidas ?? null;
   const gameOver = vidasMax != null && errosCount >= vidasMax;
@@ -229,6 +288,15 @@ export default function Quiz() {
       setEnviando(true);
       try {
         const res = await api.post('/quiz/finalizar', { tentativa_id: quiz.tentativa_id });
+        if (desafioId) {
+          try {
+            res.desafio = await api.post(`/desafios/${desafioId}/resultado`, {
+              tentativa_id: quiz.tentativa_id,
+            });
+          } catch {
+            // resultado do desafio é bônus: não bloqueia a tela de resultado
+          }
+        }
         setResultado(res);
         recarregarPerfil(); // atualiza XP/nível na navbar
       } catch (err) {
@@ -242,6 +310,7 @@ export default function Quiz() {
     setFeedback(null);
     setFeedbackSeq(null);
     setOrdemEscolhida([]);
+    setTextoAberto('');
     setSelecionada(null);
     setDica(null);
     setAlternativaEscondida(null);
@@ -291,7 +360,12 @@ export default function Quiz() {
           </h1>
           <p className="mt-1 text-sm text-slate-400">
             Questão {indice + 1} de {quiz.questoes.length}
-            {quiz.quiz && <span className="ml-2 text-indigo-300">· Quiz da turma</span>}
+            {quiz.quiz && <span className="ml-2 text-indigo-300">· Quiz da equipe</span>}
+            {quiz.prestigio && (
+              <span className="ml-2 text-amber-300">
+                · ★ Nova Jornada+ (ciclo {quiz.prestigio.ciclo})
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -305,7 +379,10 @@ export default function Quiz() {
             </span>
           )}
           {vidasMax != null && (
-            <div className="flex items-center gap-1" title={`${Math.max(0, vidasMax - errosCount)} de ${vidasMax} vidas`}>
+            <div
+              className="flex items-center gap-1"
+              title={`${Math.max(0, vidasMax - errosCount)} de ${vidasMax} vidas`}
+            >
               {Array.from({ length: vidasMax }, (_, i) => (
                 <PixelIcon
                   key={i}
@@ -362,6 +439,12 @@ export default function Quiz() {
               BATALHA
             </span>
           )}
+          {questao.formato === 'resposta_aberta' && (
+            <span className="flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 text-amber-300">
+              <PixelIcon nome="pencil" className="h-3.5 w-3.5" />
+              RESPOSTA ABERTA
+            </span>
+          )}
           {questao.formato === 'reordenar_algoritmo' && (
             <span className="flex items-center gap-1 bg-sky-500/10 px-2 py-0.5 text-sky-300">
               <PixelIcon nome="reload" className="h-3.5 w-3.5" />
@@ -375,9 +458,9 @@ export default function Quiz() {
         </div>
         <p className="mt-2 whitespace-pre-wrap text-slate-100">{questao.enunciado}</p>
         {questao.codigo_snippet && (
-          <pre className="mt-4 overflow-x-auto border-2 border-slate-800 bg-slate-950 p-4 text-sm text-emerald-300">
-            <code>{questao.codigo_snippet}</code>
-          </pre>
+          <blockquote className="mt-4 border-2 border-slate-800 border-l-4 border-l-indigo-500/60 bg-slate-950/60 p-4 text-sm whitespace-pre-wrap italic text-slate-300">
+            {questao.codigo_snippet}
+          </blockquote>
         )}
 
         {/* "+XP" flutuando quando acerta (metade se usou dica) */}
@@ -386,7 +469,8 @@ export default function Quiz() {
             key={`xp-${indice}`}
             className="anim-subir pointer-events-none absolute -top-2 right-4 font-pixel text-sm text-amber-300"
           >
-            +{feedback?.usou_dica ? Math.max(1, Math.floor(questao.xp_valor / 2)) : questao.xp_valor}{' '}
+            +
+            {feedback?.usou_dica ? Math.max(1, Math.floor(questao.xp_valor / 2)) : questao.xp_valor}{' '}
             XP
           </span>
         )}
@@ -423,43 +507,47 @@ export default function Quiz() {
         !ehDesafioDiario &&
         (estoquePoderes.pular_questao > 0 ||
           (questao.formato !== 'reordenar_algoritmo' &&
-            (estoquePoderes.eliminar_alternativa > 0 || estoquePoderes.tempo_extra > 0))) && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {questao.formato !== 'reordenar_algoritmo' && estoquePoderes.eliminar_alternativa > 0 && (
-            <button
-              onClick={() => usarPoder('eliminar_alternativa')}
-              disabled={Boolean(alternativaEscondida) || enviando}
-              title="Elimina uma alternativa errada"
-              className="btn-pixel flex items-center gap-2 border-2 border-violet-500/40 bg-slate-900 px-3 py-2 font-pixel text-[10px] text-violet-300 hover:bg-violet-500/10 disabled:opacity-40"
-            >
-              <PixelIcon nome="trash" className="h-4 w-4" />
-              50/50 ({estoquePoderes.eliminar_alternativa})
-            </button>
-          )}
-          {questao.formato !== 'reordenar_algoritmo' && estoquePoderes.tempo_extra > 0 && (
-            <button
-              onClick={() => usarPoder('tempo_extra')}
-              disabled={tempoExtraUsado || enviando}
-              title="Adiciona 15 segundos ao tempo desta questão"
-              className="btn-pixel flex items-center gap-2 border-2 border-sky-500/40 bg-slate-900 px-3 py-2 font-pixel text-[10px] text-sky-300 hover:bg-sky-500/10 disabled:opacity-40"
-            >
-              <PixelIcon nome="clock" className="h-4 w-4" />
-              +15s ({estoquePoderes.tempo_extra})
-            </button>
-          )}
-          {estoquePoderes.pular_questao > 0 && (
-            <button
-              onClick={() => usarPoder('pular_questao')}
-              disabled={enviando}
-              title="Pula esta questão sem contar contra sua aprovação"
-              className="btn-pixel flex items-center gap-2 border-2 border-emerald-500/40 bg-slate-900 px-3 py-2 font-pixel text-[10px] text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-40"
-            >
-              <PixelIcon nome="arrow-right" className="h-4 w-4" />
-              PULAR ({estoquePoderes.pular_questao})
-            </button>
-          )}
-        </div>
-      )}
+            (estoquePoderes.tempo_extra > 0 ||
+              (questao.formato !== 'resposta_aberta' &&
+                estoquePoderes.eliminar_alternativa > 0)))) && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {questao.formato !== 'reordenar_algoritmo' &&
+              questao.formato !== 'resposta_aberta' &&
+              estoquePoderes.eliminar_alternativa > 0 && (
+                <button
+                  onClick={() => usarPoder('eliminar_alternativa')}
+                  disabled={Boolean(alternativaEscondida) || enviando}
+                  title="Elimina uma alternativa errada"
+                  className="btn-pixel flex items-center gap-2 border-2 border-violet-500/40 bg-slate-900 px-3 py-2 font-pixel text-[10px] text-violet-300 hover:bg-violet-500/10 disabled:opacity-40"
+                >
+                  <PixelIcon nome="trash" className="h-4 w-4" />
+                  50/50 ({estoquePoderes.eliminar_alternativa})
+                </button>
+              )}
+            {questao.formato !== 'reordenar_algoritmo' && estoquePoderes.tempo_extra > 0 && (
+              <button
+                onClick={() => usarPoder('tempo_extra')}
+                disabled={tempoExtraUsado || enviando}
+                title="Adiciona 15 segundos ao tempo desta questão"
+                className="btn-pixel flex items-center gap-2 border-2 border-sky-500/40 bg-slate-900 px-3 py-2 font-pixel text-[10px] text-sky-300 hover:bg-sky-500/10 disabled:opacity-40"
+              >
+                <PixelIcon nome="clock" className="h-4 w-4" />
+                +15s ({estoquePoderes.tempo_extra})
+              </button>
+            )}
+            {estoquePoderes.pular_questao > 0 && (
+              <button
+                onClick={() => usarPoder('pular_questao')}
+                disabled={enviando}
+                title="Pula esta questão sem contar contra sua aprovação"
+                className="btn-pixel flex items-center gap-2 border-2 border-emerald-500/40 bg-slate-900 px-3 py-2 font-pixel text-[10px] text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-40"
+              >
+                <PixelIcon nome="arrow-right" className="h-4 w-4" />
+                PULAR ({estoquePoderes.pular_questao})
+              </button>
+            )}
+          </div>
+        )}
 
       {/* alternativas — layout normal ou "VS" da Batalha de Complexidade */}
       {questao.formato === 'batalha_complexidade' ? (
@@ -487,6 +575,38 @@ export default function Quiz() {
               ))}
           </div>
         </div>
+      ) : questao.formato === 'resposta_aberta' ? (
+        <form
+          className="mt-4 space-y-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            responderAberta(textoAberto);
+          }}
+        >
+          <textarea
+            value={textoAberto}
+            onChange={(e) => setTextoAberto(e.target.value)}
+            disabled={respondida || enviando}
+            maxLength={3000}
+            rows={6}
+            aria-label="Sua resposta"
+            placeholder="Escreva sua resposta com suas palavras..."
+            className="w-full border-2 border-slate-700 bg-slate-900 p-3 text-sm text-slate-100 outline-none focus:border-indigo-500 disabled:opacity-60"
+          />
+          {!respondida && (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-slate-500">
+                {textoAberto.length}/3000 · corrigida por IA segundo a rubrica do gestor
+              </span>
+              <button
+                disabled={enviando || !textoAberto.trim()}
+                className="btn-pixel bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+              >
+                {enviando ? 'CORRIGINDO...' : 'ENVIAR RESPOSTA'}
+              </button>
+            </div>
+          )}
+        </form>
       ) : questao.formato === 'reordenar_algoritmo' ? (
         <div className="mt-4 space-y-4">
           <div>
@@ -616,7 +736,7 @@ export default function Quiz() {
               </p>
               {(() => {
                 const explicacao = feedback.explicacoes.find(
-                  (e) => e.id === (feedback.alternativa_correta?.id ?? null)
+                  (e) => e.id === (feedback.alternativa_correta?.id ?? null),
                 );
                 return explicacao ? (
                   <p className="mt-2 text-sm text-slate-300">{explicacao.explicacao}</p>
@@ -631,12 +751,18 @@ export default function Quiz() {
             className="btn-pixel flex w-full items-center justify-center gap-2 bg-indigo-600 py-3 font-pixel text-[11px] text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
           >
             <PixelIcon nome={ultima || gameOver ? 'flag' : 'arrow-right'} className="h-4 w-4" />
-            {enviando ? 'AGUARDE...' : gameOver ? 'FIM DE JOGO — VER RESULTADO' : ultima ? 'VER RESULTADO' : 'PRÓXIMA'}
+            {enviando
+              ? 'AGUARDE...'
+              : gameOver
+                ? 'FIM DE JOGO — VER RESULTADO'
+                : ultima
+                  ? 'VER RESULTADO'
+                  : 'PRÓXIMA'}
           </button>
         </div>
       )}
 
-      {/* feedback + próxima (formato reordenar_algoritmo) */}
+      {/* feedback + próxima (formatos reordenar_algoritmo e resposta_aberta) */}
       {feedbackSeq && (
         <div className="mt-6 space-y-4">
           <div
@@ -654,16 +780,34 @@ export default function Quiz() {
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-2 font-semibold">
                 <PixelIcon
-                  nome={feedbackSeq.tempo_esgotado ? 'clock' : feedbackSeq.correta ? 'check' : 'close'}
+                  nome={
+                    feedbackSeq.tempo_esgotado ? 'clock' : feedbackSeq.correta ? 'check' : 'close'
+                  }
                   className={`h-5 w-5 shrink-0 ${feedbackSeq.correta ? 'text-emerald-300' : 'text-red-300'}`}
                 />
                 {feedbackSeq.tempo_esgotado
                   ? 'Tempo esgotado!'
-                  : feedbackSeq.correta
-                    ? 'Ordem correta!'
-                    : 'Ordem incorreta'}
+                  : feedbackSeq.aberta
+                    ? feedbackSeq.pendente
+                      ? 'Resposta enviada — a correção ficou com o gestor'
+                      : `Nota ${feedbackSeq.nota}/100`
+                    : feedbackSeq.correta
+                      ? 'Ordem correta!'
+                      : 'Ordem incorreta'}
               </p>
-              {!feedbackSeq.correta && (
+              {feedbackSeq.aberta && feedbackSeq.feedback?.length > 0 && (
+                <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
+                  {feedbackSeq.feedback.map((f) => (
+                    <li key={f.criterio}>
+                      <span className="font-medium text-slate-200">
+                        {f.criterio} ({f.nota}/100):
+                      </span>{' '}
+                      {f.comentario}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!feedbackSeq.aberta && !feedbackSeq.correta && (
                 <ol className="mt-2 list-decimal space-y-1 pl-4 text-sm text-slate-300">
                   {feedbackSeq.ordem_correta.map((id) => (
                     <li key={id}>{questao.passos.find((p) => p.id === id)?.texto}</li>
@@ -679,7 +823,13 @@ export default function Quiz() {
             className="btn-pixel flex w-full items-center justify-center gap-2 bg-indigo-600 py-3 font-pixel text-[11px] text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
           >
             <PixelIcon nome={ultima || gameOver ? 'flag' : 'arrow-right'} className="h-4 w-4" />
-            {enviando ? 'AGUARDE...' : gameOver ? 'FIM DE JOGO — VER RESULTADO' : ultima ? 'VER RESULTADO' : 'PRÓXIMA'}
+            {enviando
+              ? 'AGUARDE...'
+              : gameOver
+                ? 'FIM DE JOGO — VER RESULTADO'
+                : ultima
+                  ? 'VER RESULTADO'
+                  : 'PRÓXIMA'}
           </button>
         </div>
       )}

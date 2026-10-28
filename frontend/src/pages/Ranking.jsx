@@ -140,7 +140,7 @@ export default function Ranking() {
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {[
           ['global', 'trophy', 'Global'],
-          ['turma', 'users', 'Turma'],
+          ['turma', 'users', 'Equipe'],
           ['fase', 'map-pin', 'Fase'],
         ].map(([valor, icone, rotulo]) => (
           <button
@@ -161,10 +161,10 @@ export default function Ranking() {
           <select
             value={turmaId}
             onChange={(e) => setTurmaId(e.target.value)}
-            aria-label="Turma do ranking"
+            aria-label="Equipe do ranking"
             className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
           >
-            <option value="">Escolha a turma...</option>
+            <option value="">Escolha a equipe...</option>
             {turmas.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.nome}
@@ -197,13 +197,13 @@ export default function Ranking() {
             <input
               value={codigoTurma}
               onChange={(e) => setCodigoTurma(e.target.value.toUpperCase())}
-              placeholder="Código da turma (ex.: ABC123)"
-              aria-label="Código da turma"
+              placeholder="Código da equipe (ex.: ABC123)"
+              aria-label="Código da equipe"
               className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm uppercase placeholder-slate-500 outline-none focus:border-indigo-500"
             />
             <button className="btn-pixel flex items-center gap-1.5 bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
               <PixelIcon nome="users" className="h-4 w-4" />
-              Entrar na turma
+              Entrar na equipe
             </button>
           </form>
           {msgTurma && (
@@ -213,7 +213,7 @@ export default function Ranking() {
           )}
           {turmas.length === 0 && (
             <p className="mt-3 text-xs text-slate-500">
-              Você ainda não está em nenhuma turma — peça o código ao seu professor ou a um colega.
+              Você ainda não está em nenhuma equipe — peça o código ao seu gestor ou a um colega.
             </p>
           )}
 

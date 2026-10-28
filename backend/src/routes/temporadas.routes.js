@@ -5,7 +5,9 @@ export const temporadasRoutes = Router();
 
 temporadasRoutes.get('/', async (req, res, next) => {
   try {
-    res.json(await temporadaService.progressoDoJogador(req.usuario.id));
+    res.json(
+      await temporadaService.progressoDoJogador(req.usuario.id, new Date(), req.usuario.empresa_id),
+    );
   } catch (err) {
     next(err);
   }
@@ -13,7 +15,7 @@ temporadasRoutes.get('/', async (req, res, next) => {
 
 temporadasRoutes.get('/:temporadaId/hall-da-fama', async (req, res, next) => {
   try {
-    res.json(await temporadaService.hallDaFama(req.params.temporadaId));
+    res.json(await temporadaService.hallDaFama(req.params.temporadaId, req.usuario.empresa_id));
   } catch (err) {
     next(err);
   }

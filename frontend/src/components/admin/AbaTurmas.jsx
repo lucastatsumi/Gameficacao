@@ -11,6 +11,7 @@ export default function AbaTurmas() {
   const [erro, setErro] = useState(null);
   const [alunos, setAlunos] = useState(null); // { turma, lista }
   const [copiado, setCopiado] = useState(false);
+  const [trilhas, setTrilhas] = useState(null); // turma com o editor de trilha aberto
 
   async function copiarConvite(turma) {
     const texto = `Entre na equipe "${turma.nome}" no TeamQuest com o código: ${turma.codigo_acesso}`;
@@ -24,7 +25,10 @@ export default function AbaTurmas() {
   }
 
   const carregar = useCallback(() => {
-    api.get('/admin/turmas').then(setTurmas).catch((err) => setErro(err.message));
+    api
+      .get('/admin/turmas')
+      .then(setTurmas)
+      .catch((err) => setErro(err.message));
   }, []);
 
   useEffect(carregar, [carregar]);
@@ -59,12 +63,15 @@ export default function AbaTurmas() {
     try {
       const lista = await api.get(`/admin/turmas/${turma.id}/alunos`);
       const escapar = (v) =>
-        String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        String(v ?? '').replace(
+          /[&<>"']/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+        );
 
       const linhas = lista
         .map(
           (a) =>
-            `<tr><td>${escapar(a.nome)}</td><td>${a.nivel}</td><td>${a.xp_total}</td><td>${a.fases_concluidas}</td><td>${a.total_tentativas}</td><td>${a.total_badges}</td></tr>`
+            `<tr><td>${escapar(a.nome)}</td><td>${a.nivel}</td><td>${a.xp_total}</td><td>${a.fases_concluidas}</td><td>${a.total_tentativas}</td><td>${a.total_badges}</td></tr>`,
         )
         .join('');
 
@@ -81,13 +88,15 @@ export default function AbaTurmas() {
           <p>Código de acesso: ${escapar(turma.codigo_acesso)} · Gerado em ${new Date().toLocaleString('pt-BR')}</p>
           <table>
             <thead><tr><th>Nome</th><th>Nível</th><th>XP</th><th>Fases concluídas</th><th>Tentativas</th><th>Badges</th></tr></thead>
-            <tbody>${linhas || '<tr><td colspan="6">Nenhum aluno matriculado ainda.</td></tr>'}</tbody>
+            <tbody>${linhas || '<tr><td colspan="6">Nenhum colaborador na equipe ainda.</td></tr>'}</tbody>
           </table>
         </body></html>`;
 
       const janela = window.open('', '_blank');
       if (!janela) {
-        setErro('Não foi possível abrir a janela de impressão — verifique o bloqueador de pop-ups.');
+        setErro(
+          'Não foi possível abrir a janela de impressão — verifique o bloqueador de pop-ups.',
+        );
         return;
       }
       janela.document.write(html);
@@ -107,25 +116,28 @@ export default function AbaTurmas() {
         <input
           value={nome}
           onChange={(e) => setNome(e.target.value)}
-          placeholder="Nome da nova turma (ex.: ES 2026/2 — Noturno)"
-          aria-label="Nome da nova turma"
+          placeholder="Nome da nova equipe (ex.: Comercial — Novos contratados)"
+          aria-label="Nome da nova equipe"
           className={inputCls}
           required
         />
         <button className="btn-pixel flex shrink-0 items-center gap-1.5 bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
           <PixelIcon nome="plus" className="h-4 w-4" />
-          Criar turma
+          Criar equipe
         </button>
       </form>
 
       <Alerta>{erro}</Alerta>
 
       {turmas.length === 0 ? (
-        <p className="text-sm text-slate-500">Nenhuma turma criada ainda.</p>
+        <p className="text-sm text-slate-500">Nenhuma equipe criada ainda.</p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {turmas.map((turma) => (
-            <div key={turma.id} className="card-pixel border-2 border-slate-800 bg-slate-900/60 p-4">
+            <div
+              key={turma.id}
+              className="card-pixel border-2 border-slate-800 bg-slate-900/60 p-4"
+            >
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h3 className="font-semibold">{turma.nome}</h3>
@@ -137,7 +149,7 @@ export default function AbaTurmas() {
                   </p>
                 </div>
                 <span className="rounded-full bg-slate-800 px-2.5 py-1 text-xs text-slate-300">
-                  {turma.total_alunos} aluno(s)
+                  {turma.total_alunos} colaborador(es)
                 </span>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -152,11 +164,18 @@ export default function AbaTurmas() {
                   {copiado === turma.id ? 'Copiado!' : 'Convidar'}
                 </button>
                 <button
+                  onClick={() => setTrilhas(trilhas?.id === turma.id ? null : turma)}
+                  className="btn-pixel flex items-center gap-1 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700"
+                >
+                  <PixelIcon nome="map-pin" className="h-3.5 w-3.5" />
+                  Trilhas
+                </button>
+                <button
                   onClick={() => verAlunos(turma)}
                   className="btn-pixel flex items-center gap-1 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700"
                 >
                   <PixelIcon nome="users" className="h-3.5 w-3.5" />
-                  Ver alunos
+                  Ver colaboradores
                 </button>
                 <button
                   onClick={() =>
@@ -177,6 +196,9 @@ export default function AbaTurmas() {
                   PDF
                 </button>
               </div>
+              {trilhas?.id === turma.id && (
+                <TrilhasDaEquipe turma={turma} aoFechar={() => setTrilhas(null)} />
+              )}
             </div>
           ))}
         </div>
@@ -185,7 +207,7 @@ export default function AbaTurmas() {
       {alunos && (
         <div className="card-pixel border-2 border-slate-800 bg-slate-900/60 p-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold">Alunos — {alunos.turma.nome}</h3>
+            <h3 className="font-semibold">Colaboradores — {alunos.turma.nome}</h3>
             <button
               onClick={() => setAlunos(null)}
               className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-200"
@@ -197,7 +219,7 @@ export default function AbaTurmas() {
           {!alunos.lista ? (
             <Spinner />
           ) : alunos.lista.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-500">Nenhum aluno matriculado ainda.</p>
+            <p className="mt-3 text-sm text-slate-500">Nenhum colaborador na equipe ainda.</p>
           ) : (
             <table className="mt-3 w-full text-sm">
               <thead className="text-left text-xs uppercase text-slate-500">
@@ -205,7 +227,7 @@ export default function AbaTurmas() {
                   <th className="py-2">Nome</th>
                   <th className="py-2">Nível</th>
                   <th className="py-2">XP</th>
-                  <th className="py-2">Fases</th>
+                  <th className="py-2">Módulos</th>
                   <th className="py-2">Tentativas</th>
                   <th className="py-2">Badges</th>
                 </tr>
@@ -226,6 +248,79 @@ export default function AbaTurmas() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// Trilhas por equipe (Horizonte 1): o gestor escolhe quais temas a equipe
+// vê. Nenhum marcado = a equipe vê todos os temas da empresa.
+function TrilhasDaEquipe({ turma, aoFechar }) {
+  const [temas, setTemas] = useState(null);
+  const [marcados, setMarcados] = useState([]);
+  const [msg, setMsg] = useState(null);
+
+  useEffect(() => {
+    Promise.all([api.get('/admin/temas'), api.get(`/admin/turmas/${turma.id}/temas`)])
+      .then(([lista, atribuidos]) => {
+        setTemas(lista);
+        setMarcados(atribuidos);
+      })
+      .catch((err) => setMsg({ tipo: 'erro', texto: err.message }));
+  }, [turma.id]);
+
+  async function salvar() {
+    setMsg(null);
+    try {
+      await api.put(`/admin/turmas/${turma.id}/temas`, { tema_ids: marcados });
+      setMsg({ tipo: 'sucesso', texto: 'Trilha da equipe salva.' });
+    } catch (err) {
+      setMsg({ tipo: 'erro', texto: err.message });
+    }
+  }
+
+  if (!temas) return <Spinner />;
+  return (
+    <div className="mt-3 space-y-2 border-t-2 border-slate-800 pt-3">
+      <p className="text-xs text-slate-400">
+        Temas que esta equipe treina (nenhum marcado = todos os temas da empresa):
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {temas.map((t) => (
+          <label
+            key={t.id}
+            className={`flex cursor-pointer items-center gap-1.5 border-2 px-2 py-1 text-xs ${
+              marcados.includes(t.id)
+                ? 'border-indigo-500 bg-indigo-500/10 text-indigo-200'
+                : 'border-slate-700 text-slate-400'
+            }`}
+          >
+            <input
+              type="checkbox"
+              className="sr-only"
+              checked={marcados.includes(t.id)}
+              onChange={() =>
+                setMarcados((m) => (m.includes(t.id) ? m.filter((x) => x !== t.id) : [...m, t.id]))
+              }
+            />
+            {t.nome}
+          </label>
+        ))}
+      </div>
+      {msg && <Alerta tipo={msg.tipo}>{msg.texto}</Alerta>}
+      <div className="flex gap-2">
+        <button
+          onClick={salvar}
+          className="btn-pixel bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500"
+        >
+          Salvar trilha
+        </button>
+        <button
+          onClick={aoFechar}
+          className="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200"
+        >
+          Fechar
+        </button>
+      </div>
     </div>
   );
 }

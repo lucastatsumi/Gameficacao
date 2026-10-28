@@ -1,4 +1,5 @@
 import { db } from '../config/supabase.js';
+import { doTenant } from '../utils/empresa.js';
 import { HttpError } from '../utils/httpError.js';
 
 const MAX_QUESTOES = 20;
@@ -6,13 +7,14 @@ const MAX_QUESTOES = 20;
 // Quizzes são abertos: qualquer usuário autenticado cria e joga.
 // O criador é o único que pode editar/desativar o próprio quiz.
 
-export async function criarQuiz(criadorId, dados) {
+export async function criarQuiz(criadorId, dados, empresaId = null) {
   const quiz = await validarPayload(dados);
 
   const { data: criado, error } = await db
     .from('quizzes_custom')
     .insert({
       criador_id: criadorId,
+      empresa_id: empresaId,
       titulo: quiz.titulo,
       descricao: quiz.descricao,
       tempo_limite_seg: quiz.tempo_limite_seg,
@@ -41,13 +43,15 @@ export async function criarQuiz(criadorId, dados) {
 }
 
 // Todos os quizzes ativos (de qualquer criador) + os inativos do próprio usuário
-export async function listarQuizzes(userId) {
-  const { data, error } = await db
-    .from('quizzes_custom')
-    .select(
-      'id, criador_id, titulo, descricao, tempo_limite_seg, sons, permitir_dicas, vidas, ativo, created_at, profiles ( nome ), quiz_custom_questoes ( count )'
-    )
-    .order('created_at', { ascending: false });
+export async function listarQuizzes(userId, empresaId = null) {
+  const { data, error } = await doTenant(
+    db
+      .from('quizzes_custom')
+      .select(
+        'id, criador_id, titulo, descricao, tempo_limite_seg, sons, permitir_dicas, vidas, ativo, created_at, profiles ( nome ), quiz_custom_questoes ( count )',
+      ),
+    empresaId,
+  ).order('created_at', { ascending: false });
   if (error) throw error;
 
   return data
@@ -62,15 +66,18 @@ export async function listarQuizzes(userId) {
 
 // Banco de questões para o montador de quiz: SEM correta/explicacao/dica —
 // qualquer usuário pode ver, então o gabarito não pode vazar aqui.
-export async function bancoDeQuestoes() {
-  const { data, error } = await db
+// temaIds: só questões dos temas visíveis para quem monta o quiz.
+export async function bancoDeQuestoes(temaIds = null) {
+  let query = db
     .from('questoes')
-    .select('id, enunciado, fase_id, dificuldade, xp_valor, dica')
+    .select('id, enunciado, fase_id, dificuldade, xp_valor, dica, fases!inner ( tema_id )')
     .eq('ativa', true)
     .order('created_at', { ascending: false });
+  if (temaIds) query = query.in('fases.tema_id', temaIds);
+  const { data, error } = await query;
   if (error) throw error;
 
-  return data.map(({ dica, ...q }) => ({ ...q, tem_dica: Boolean(dica?.trim()) }));
+  return data.map(({ dica, fases: _fases, ...q }) => ({ ...q, tem_dica: Boolean(dica?.trim()) }));
 }
 
 export async function atualizarQuiz(userId, quizId, dados) {

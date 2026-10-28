@@ -56,6 +56,15 @@ export function condicaoAtendida(badge, ctx) {
         ctx.semDica === true &&
         (ctx.totalQuestoes ?? 0) >= (p.min_questoes ?? Infinity)
       );
+    // Mecânicas da migration 40: o contexto vem dos serviços que as
+    // calculam (cartaService, campanhaService, prestigioService), não de
+    // finalizarQuiz — sem o campo no contexto, a condição é falsa.
+    case 'album_completo':
+      return (ctx.albunsCompletos ?? []).includes(p.tema_id);
+    case 'campanha':
+      return (ctx.campanhasCumpridas ?? []).includes(p.campanha_id);
+    case 'prestigio':
+      return (ctx.ciclosPrestigio ?? 0) >= (p.ciclos ?? Infinity);
     default:
       return false;
   }

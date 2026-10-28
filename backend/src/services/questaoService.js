@@ -1,25 +1,89 @@
 import { db } from '../config/supabase.js';
 import { HttpError } from '../utils/httpError.js';
+import { exigirFaseEditavel } from './temaService.js';
 
-// CRUD de questões do professor. Visão completa: inclui correta/explicacao.
+export { exigirFaseEditavel };
 
-export async function listarQuestoes(faseId) {
+// CRUD de questões do gestor. Visão completa: inclui correta/explicacao.
+
+// temaIds: só questões de temas visíveis para o gestor (os do catálogo
+// aparecem como leitura; editar exige tema do próprio tenant).
+export async function listarQuestoes(faseId, temaIds = null) {
   let query = db
     .from('questoes')
-    .select('*, alternativas ( id, letra, texto, correta, explicacao )')
+    .select(
+      '*, alternativas ( id, letra, texto, correta, explicacao ), questao_competencias ( competencia_id ), fases!inner ( tema_id )',
+    )
     .order('created_at', { ascending: false });
   if (faseId) query = query.eq('fase_id', faseId);
+  if (temaIds) query = query.in('fases.tema_id', temaIds);
 
   const { data, error } = await query;
   if (error) throw error;
 
-  return data.map((q) => ({
+  return data.map(({ questao_competencias, fases, ...q }) => ({
     ...q,
+    tema_id: fases?.tema_id ?? null,
+    competencia_ids: (questao_competencias ?? []).map((c) => c.competencia_id),
     alternativas: [...q.alternativas].sort((a, b) => a.letra.localeCompare(b.letra)),
   }));
 }
 
-export async function criarQuestao(professorId, dados) {
+// Trava de escrita: a questão precisa ser de um tema do próprio tenant do
+// gestor (o módulo de destino de uma edição é checado à parte).
+export async function exigirQuestaoEditavel(usuario, questaoId) {
+  const { data, error } = await db
+    .from('questoes')
+    .select('id, fase_id')
+    .eq('id', questaoId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new HttpError(404, 'Questão não encontrada');
+  await exigirFaseEditavel(usuario, data.fase_id);
+}
+
+// Substitui as tags de competência da questão. As competências precisam
+// ser do mesmo tema do módulo da questão. Sem a chave no payload, não
+// mexe nas tags existentes.
+export async function sincronizarCompetencias(questaoId, faseId, competenciaIds) {
+  if (!Array.isArray(competenciaIds)) return;
+  const ids = [...new Set(competenciaIds.map(Number))];
+
+  if (ids.length) {
+    const { data: fase, error: erroFase } = await db
+      .from('fases')
+      .select('tema_id')
+      .eq('id', faseId)
+      .maybeSingle();
+    if (erroFase) throw erroFase;
+    const { data: validas, error: erroComp } = await db
+      .from('competencias')
+      .select('id')
+      .in('id', ids)
+      .eq('tema_id', fase?.tema_id);
+    if (erroComp) throw erroComp;
+    if (validas.length !== ids.length) {
+      throw new HttpError(400, 'Alguma competência não pertence ao tema deste módulo');
+    }
+  }
+
+  const { error: erroDelete } = await db
+    .from('questao_competencias')
+    .delete()
+    .eq('questao_id', questaoId);
+  if (erroDelete) throw erroDelete;
+  if (ids.length) {
+    const { error } = await db
+      .from('questao_competencias')
+      .insert(ids.map((competencia_id) => ({ questao_id: questaoId, competencia_id })));
+    if (error) throw error;
+  }
+}
+
+// `extras`: colunas de rascunho de IA (status_revisao, origem, fonte_trecho,
+// nota_ia, substitui_questao_id, ativa: false) — ver iaService. A validação
+// é a MESMA das questões humanas: IA não tem caminho privilegiado.
+export async function criarQuestao(professorId, dados, extras = {}) {
   const questao = validarPayload(dados);
 
   const { data: criada, error } = await db
@@ -36,7 +100,9 @@ export async function criarQuestao(professorId, dados) {
       formato: questao.formato,
       passos: questao.passos,
       ordem_correta: questao.ordem_correta,
+      rubrica: questao.rubrica,
       criada_por: professorId,
+      ...extras,
     })
     .select()
     .single();
@@ -54,6 +120,8 @@ export async function criarQuestao(professorId, dados) {
       throw erroAlt;
     }
   }
+
+  await sincronizarCompetencias(criada.id, questao.fase_id, dados?.competencia_ids);
 
   return { ...criada, alternativas: questao.alternativas };
 }
@@ -87,6 +155,7 @@ export async function atualizarQuestao(questaoId, dados) {
       dica: questao.dica,
       passos: questao.passos,
       ordem_correta: questao.ordem_correta,
+      rubrica: questao.rubrica,
     })
     .eq('id', questaoId);
   if (error) throw error;
@@ -114,6 +183,8 @@ export async function atualizarQuestao(questaoId, dados) {
       if (erroAlt) throw erroAlt;
     }
   }
+
+  await sincronizarCompetencias(questaoId, questao.fase_id, dados?.competencia_ids);
 
   return { id: questaoId, ...questao };
 }
@@ -144,14 +215,17 @@ const LETRAS_POR_FORMATO = {
 
 // 'reordenar_algoritmo' não usa `alternativas` — ver database/14_reordenar_algoritmo.sql.
 const FORMATO_SEQUENCIA = 'reordenar_algoritmo';
-const FORMATOS_VALIDOS = [...Object.keys(LETRAS_POR_FORMATO), FORMATO_SEQUENCIA];
+// 'resposta_aberta': texto livre corrigido por IA contra a rubrica — ver
+// database/38_ia_questoes_abertas.sql.
+export const FORMATO_ABERTA = 'resposta_aberta';
+const FORMATOS_VALIDOS = [...Object.keys(LETRAS_POR_FORMATO), FORMATO_SEQUENCIA, FORMATO_ABERTA];
 
 function validarCamposComuns(dados) {
   const {
     fase_id,
     enunciado,
     codigo_snippet = null,
-    linguagem = 'javascript',
+    linguagem = 'texto',
     dificuldade = 'media',
     tempo_limite_seg = 60,
     xp_valor = 10,
@@ -192,7 +266,7 @@ function validarAlternativas(formato, alternativas) {
   if (!Array.isArray(alternativas) || alternativas.length !== letrasEsperadas.length) {
     throw new HttpError(
       400,
-      `Questões no formato "${formato}" devem ter exatamente ${letrasEsperadas.length} alternativas`
+      `Questões no formato "${formato}" devem ter exatamente ${letrasEsperadas.length} alternativas`,
     );
   }
 
@@ -206,7 +280,10 @@ function validarAlternativas(formato, alternativas) {
   for (const alt of alternativas) {
     if (!alt.texto?.trim()) throw new HttpError(400, `Alternativa ${alt.letra}: texto obrigatório`);
     if (!alt.explicacao?.trim()) {
-      throw new HttpError(400, `Alternativa ${alt.letra}: explicação obrigatória (é o feedback pedagógico)`);
+      throw new HttpError(
+        400,
+        `Alternativa ${alt.letra}: explicação obrigatória (é o feedback pedagógico)`,
+      );
     }
   }
 
@@ -223,7 +300,10 @@ function validarAlternativas(formato, alternativas) {
 // são gerados aqui, não confiamos em nada vindo do cliente para o gabarito.
 function validarPassos(passos) {
   if (!Array.isArray(passos) || passos.length < 2) {
-    throw new HttpError(400, 'Questões no formato "reordenar_algoritmo" precisam de pelo menos 2 passos');
+    throw new HttpError(
+      400,
+      'Questões no formato "reordenar_algoritmo" precisam de pelo menos 2 passos',
+    );
   }
   for (const p of passos) {
     if (!p.texto?.trim()) throw new HttpError(400, 'Todo passo precisa de um texto');
@@ -233,14 +313,89 @@ function validarPassos(passos) {
   return { passos: passosComId, ordem_correta: passosComId.map((p) => p.id) };
 }
 
+// Rubrica: critérios com peso (> 0) e, opcional, uma resposta de
+// referência que orienta a correção. Normaliza os pesos para somar 100.
+function validarRubrica(rubrica) {
+  const criterios = rubrica?.criterios;
+  if (!Array.isArray(criterios) || !criterios.length || criterios.length > 8) {
+    throw new HttpError(400, 'A rubrica precisa de 1 a 8 critérios');
+  }
+  for (const c of criterios) {
+    if (!c.criterio?.trim()) throw new HttpError(400, 'Todo critério da rubrica precisa de descrição');
+    if (!(Number(c.peso) > 0)) throw new HttpError(400, 'Todo critério da rubrica precisa de peso > 0');
+  }
+  const total = criterios.reduce((s, c) => s + Number(c.peso), 0);
+  return {
+    criterios: criterios.map((c) => ({
+      criterio: c.criterio.trim(),
+      peso: Math.round((1000 * Number(c.peso)) / total) / 10,
+    })),
+    referencia: rubrica.referencia?.trim() || null,
+  };
+}
+
 export function validarPayload(dados) {
   const comuns = validarCamposComuns(dados);
 
   if (comuns.formato === FORMATO_SEQUENCIA) {
     const { passos, ordem_correta } = validarPassos(dados?.passos);
-    return { ...comuns, passos, ordem_correta, alternativas: [] };
+    return { ...comuns, passos, ordem_correta, alternativas: [], rubrica: null };
+  }
+
+  if (comuns.formato === FORMATO_ABERTA) {
+    return {
+      ...comuns,
+      passos: null,
+      ordem_correta: null,
+      alternativas: [],
+      rubrica: validarRubrica(dados?.rubrica),
+    };
   }
 
   const alternativas = validarAlternativas(comuns.formato, dados?.alternativas);
-  return { ...comuns, passos: null, ordem_correta: null, alternativas };
+  return { ...comuns, passos: null, ordem_correta: null, alternativas, rubrica: null };
+}
+
+// ---------- Revisão de rascunhos de IA (Horizonte 2) ----------
+
+async function buscarRascunho(questaoId) {
+  const { data, error } = await db
+    .from('questoes')
+    .select('id, status_revisao, substitui_questao_id')
+    .eq('id', questaoId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data || data.status_revisao !== 'pendente_revisao') {
+    throw new HttpError(404, 'Rascunho não encontrado ou já revisado');
+  }
+  return data;
+}
+
+// Aprovar liga a questão. Se o rascunho veio da auditoria, a questão
+// original é desativada (soft-delete) — o histórico de respostas dela fica.
+export async function aprovarRascunho(questaoId) {
+  const rascunho = await buscarRascunho(questaoId);
+  const { error } = await db
+    .from('questoes')
+    .update({ status_revisao: 'aprovada', ativa: true })
+    .eq('id', questaoId);
+  if (error) throw error;
+  if (rascunho.substitui_questao_id) {
+    const { error: erroOriginal } = await db
+      .from('questoes')
+      .update({ ativa: false })
+      .eq('id', rascunho.substitui_questao_id);
+    if (erroOriginal) throw erroOriginal;
+  }
+  return { id: questaoId, status_revisao: 'aprovada' };
+}
+
+export async function descartarRascunho(questaoId) {
+  await buscarRascunho(questaoId);
+  const { error } = await db
+    .from('questoes')
+    .update({ status_revisao: 'descartada', ativa: false })
+    .eq('id', questaoId);
+  if (error) throw error;
+  return { id: questaoId, status_revisao: 'descartada' };
 }

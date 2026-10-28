@@ -4,6 +4,9 @@ import AbaTurmas from '../components/admin/AbaTurmas.jsx';
 import AbaQuestoes from '../components/admin/AbaQuestoes.jsx';
 import AbaRelatorio from '../components/admin/AbaRelatorio.jsx';
 import AbaEventos from '../components/admin/AbaEventos.jsx';
+import AbaTemas from '../components/admin/AbaTemas.jsx';
+import AbaIA from '../components/admin/AbaIA.jsx';
+import AbaCampanhas from '../components/admin/AbaCampanhas.jsx';
 
 export default function Admin() {
   const [aba, setAba] = useState('turmas');
@@ -12,14 +15,17 @@ export default function Admin() {
     <div>
       <div className="flex items-center gap-3">
         <PixelIcon nome="briefcase" className="h-7 w-7 text-indigo-400" />
-        <h1 className="font-pixel text-lg text-slate-100">Painel do Professor</h1>
+        <h1 className="font-pixel text-lg text-slate-100">Painel do Gestor</h1>
       </div>
 
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         {[
-          ['turmas', 'users', 'Turmas'],
+          ['turmas', 'users', 'Equipes'],
+          ['temas', 'book-open', 'Temas'],
           ['questoes', 'pencil', 'Questões'],
+          ['ia', 'zap', 'IA'],
           ['relatorio', 'chart-bar-big', 'Relatório'],
+          ['campanhas', 'flag', 'Campanhas'],
           ['eventos', 'fire', 'Eventos'],
         ].map(([valor, icone, rotulo]) => (
           <button
@@ -39,8 +45,11 @@ export default function Admin() {
 
       <div className="mt-6">
         {aba === 'turmas' && <AbaTurmas />}
+        {aba === 'temas' && <AbaTemas />}
         {aba === 'questoes' && <AbaQuestoes />}
+        {aba === 'ia' && <AbaIA />}
         {aba === 'relatorio' && <AbaRelatorio />}
+        {aba === 'campanhas' && <AbaCampanhas />}
         {aba === 'eventos' && <AbaEventos />}
       </div>
     </div>

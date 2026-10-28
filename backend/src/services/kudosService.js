@@ -1,6 +1,7 @@
 import { db } from '../config/supabase.js';
 import { HttpError } from '../utils/httpError.js';
 import { semanaIso } from '../utils/semana.js';
+import { mesmoTenant } from '../utils/empresa.js';
 import { concederFichas } from './fichaService.js';
 import { registrarKudosNaMissao } from './missaoService.js';
 
@@ -37,11 +38,12 @@ export async function resumoDeKudos(userId, agora = new Date()) {
 //   fichas — evita o "eu te dou, você me dá de volta na hora";
 // - teto semanal de fichas vindas de kudos recebidos, para o kudos
 //   continuar sendo reconhecimento e não uma fonte extra de farming.
-export async function darKudos(deId, paraId, agora = new Date()) {
+export async function darKudos(deId, paraId, agora = new Date(), empresaId = null) {
   if (!paraId) throw new HttpError(400, 'para_usuario é obrigatório');
   if (paraId === deId) throw new HttpError(400, 'Você não pode dar kudos a si mesmo');
 
-  const alvoExiste = await perfilExiste(paraId);
+  // Kudos só entre colegas da mesma empresa
+  const alvoExiste = await perfilExiste(paraId, empresaId);
   if (!alvoExiste) throw new HttpError(404, 'Jogador não encontrado');
 
   const semana = semanaIso(agora);
@@ -60,7 +62,12 @@ export async function darKudos(deId, paraId, agora = new Date()) {
 
   const { error } = await db
     .from('kudos')
-    .insert({ de_usuario: deId, para_usuario: paraId, semana, fichas_concedidas: fichasConcedidas });
+    .insert({
+      de_usuario: deId,
+      para_usuario: paraId,
+      semana,
+      fichas_concedidas: fichasConcedidas,
+    });
   if (error) {
     if (error.code === '23505') {
       throw new HttpError(400, 'Você já deu kudos a este colega nesta semana');
@@ -79,10 +86,14 @@ export async function darKudos(deId, paraId, agora = new Date()) {
   };
 }
 
-async function perfilExiste(userId) {
-  const { data, error } = await db.from('profiles').select('id').eq('id', userId).maybeSingle();
+async function perfilExiste(userId, empresaId) {
+  const { data, error } = await db
+    .from('profiles')
+    .select('id, empresa_id')
+    .eq('id', userId)
+    .maybeSingle();
   if (error) throw error;
-  return Boolean(data);
+  return Boolean(data) && mesmoTenant(data.empresa_id, empresaId);
 }
 
 async function contar(coluna, userId, semana) {

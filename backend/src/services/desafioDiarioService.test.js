@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeDb, ok } from '../test/dbMock.js';
 
 vi.mock('../config/supabase.js', () => ({ db: { from: vi.fn() } }));
+// O banco sorteado é o dos temas da empresa — aqui, um tema só
+vi.mock('./temaService.js', () => ({ idsTemasDaEmpresa: vi.fn(async () => [1]) }));
 
 const { db } = await import('../config/supabase.js');
 const { idsDoDesafio, iniciarDesafioDiario, statusDoDia, QUESTOES_DESAFIO } =
@@ -84,8 +86,20 @@ describe('statusDoDia', () => {
     configurarDb({
       tentativas: [
         ok([
-          { user_id: 'user-2', acertos: 5, total_questoes: 5, finalizada_em: 'x', profiles: { nome: 'Bia' } },
-          { user_id: 'user-1', acertos: 4, total_questoes: 5, finalizada_em: 'y', profiles: { nome: 'Ana' } },
+          {
+            user_id: 'user-2',
+            acertos: 5,
+            total_questoes: 5,
+            finalizada_em: 'x',
+            profiles: { nome: 'Bia' },
+          },
+          {
+            user_id: 'user-1',
+            acertos: 4,
+            total_questoes: 5,
+            finalizada_em: 'y',
+            profiles: { nome: 'Ana' },
+          },
         ]),
         ok({ id: 't1', acertos: 4, total_questoes: 5, finalizada_em: 'y' }),
       ],

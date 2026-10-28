@@ -7,7 +7,9 @@ import { verificarBadges } from './badgeService.js';
 import { eventoAtivoParaFase } from './eventoService.js';
 import { selecionarAdaptativo } from '../utils/dificuldadeAdaptativa.js';
 import { aplicarCombo } from '../utils/combo.js';
+import { calcularScore } from '../utils/pontuacao.js';
 import { idsDoDesafio } from './desafioDiarioService.js';
+import { mesmoTenant } from '../utils/empresa.js';
 
 const TENTATIVAS_PARA_DIFICULDADE = 5; // janela recente usada para medir desempenho na fase
 
@@ -29,7 +31,10 @@ function taxaAcertoRecente(tentativas) {
 // POST /quiz/iniciar — valida desbloqueio, sorteia questões e abre
 // a tentativa. As alternativas vão SEM os campos correta/explicacao.
 // ---------------------------------------------------------------
-export async function iniciarQuiz(userId, faseId) {
+// opcoes (prestígio, ver prestigioService.modificadoresDaFase):
+//   { ciclo, fatorTempo, semFaceis } — Nova Jornada+ reinicia a trilha
+//   sem questões fáceis e com o timer reduzido.
+export async function iniciarQuiz(userId, faseId, opcoes = {}) {
   if (!faseId) throw new HttpError(400, 'fase_id é obrigatório');
 
   const { data: fase, error: erroFase } = await db
@@ -58,7 +63,7 @@ export async function iniciarQuiz(userId, faseId) {
     .from('questoes')
     .select(
       // NUNCA inclui `ordem_correta` (gabarito do formato reordenar_algoritmo)
-      'id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, formato, passos, alternativas ( id, letra, texto )'
+      'id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, formato, passos, alternativas ( id, letra, texto )',
     )
     .eq('fase_id', faseId)
     .eq('ativa', true);
@@ -76,19 +81,29 @@ export async function iniciarQuiz(userId, faseId) {
 
   const taxaAcertoPct = taxaAcertoRecente(tentativasRecentes);
 
-  const sorteadas = selecionarAdaptativo(questoes, taxaAcertoPct, QUESTOES_POR_QUIZ)
-    .map((q) => ({
-      ...q,
-      tem_dica: false, // dicas são exclusivas dos quizzes customizados
-      alternativas: [...q.alternativas].sort((a, b) => a.letra.localeCompare(b.letra)),
-      // embaralha os passos a cada tentativa — senão a ordem cadastrada já
-      // seria uma dica
-      passos: q.passos ? embaralhar(q.passos) : null,
-    }));
+  const fatorTempo = opcoes.fatorTempo ?? 1;
+  const semFaceis = questoes.filter((q) => q.dificuldade !== 'facil');
+  // Sem questões média/difícil no módulo, não trava o prestígio: usa todas
+  const banco = opcoes.semFaceis && semFaceis.length ? semFaceis : questoes;
+
+  const sorteadas = selecionarAdaptativo(banco, taxaAcertoPct, QUESTOES_POR_QUIZ).map((q) => ({
+    ...q,
+    tempo_limite_seg: Math.max(10, Math.ceil(q.tempo_limite_seg * fatorTempo)),
+    tem_dica: false, // dicas são exclusivas dos quizzes customizados
+    alternativas: [...q.alternativas].sort((a, b) => a.letra.localeCompare(b.letra)),
+    // embaralha os passos a cada tentativa — senão a ordem cadastrada já
+    // seria uma dica
+    passos: q.passos ? embaralhar(q.passos) : null,
+  }));
 
   const { data: tentativa, error: erroTentativa } = await db
     .from('tentativas')
-    .insert({ user_id: userId, fase_id: faseId, total_questoes: sorteadas.length })
+    .insert({
+      user_id: userId,
+      fase_id: faseId,
+      total_questoes: sorteadas.length,
+      ...(opcoes.ciclo ? { ciclo_prestigio: opcoes.ciclo, fator_tempo: fatorTempo } : {}),
+    })
     .select()
     .single();
   if (erroTentativa) throw erroTentativa;
@@ -96,6 +111,7 @@ export async function iniciarQuiz(userId, faseId) {
   return {
     tentativa_id: tentativa.id,
     fase: { id: fase.id, nome: fase.nome },
+    prestigio: opcoes.ciclo ? { ciclo: opcoes.ciclo, fator_tempo: fatorTempo } : null,
     questoes: sorteadas,
   };
 }
@@ -110,6 +126,10 @@ export async function iniciarQuizCustom(usuario, quizId) {
   const quiz = await buscarQuizCustom(quizId);
   // Quizzes são abertos a todos; só o criador pode jogar um quiz desativado
   // (para testá-lo antes de reativar)
+  // Quiz de outra empresa: 404 (não confirma que existe)
+  if (!mesmoTenant(quiz.empresa_id, usuario.empresa_id)) {
+    throw new HttpError(404, 'Quiz não encontrado');
+  }
   if (!quiz.ativo && quiz.criador_id !== usuario.id) {
     throw new HttpError(403, 'Este quiz foi desativado pelo criador');
   }
@@ -120,7 +140,7 @@ export async function iniciarQuizCustom(usuario, quizId) {
     .from('quiz_custom_questoes')
     .select(
       // NUNCA inclui `ordem_correta` (gabarito do formato reordenar_algoritmo)
-      'ordem, questoes ( id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, formato, passos, dica, ativa, alternativas ( id, letra, texto ) )'
+      'ordem, questoes ( id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, formato, passos, dica, ativa, alternativas ( id, letra, texto ) )',
     )
     .eq('quiz_id', quizId)
     .order('ordem');
@@ -203,7 +223,7 @@ export async function obterDica(userId, dados) {
 // comparando timestamps do próprio banco. Funciona para fases e
 // para quizzes customizados.
 // ---------------------------------------------------------------
-export async function responderQuestao(userId, dados) {
+export async function responderQuestao(userId, dados, empresaId = null) {
   const { tentativa_id, questao_id, alternativa_id = null, tempo_resposta_ms } = dados ?? {};
   if (!tentativa_id || !questao_id) {
     throw new HttpError(400, 'tentativa_id e questao_id são obrigatórios');
@@ -230,7 +250,7 @@ export async function responderQuestao(userId, dados) {
   } else if (tentativa.desafio_dia) {
     // O conjunto do dia é derivado da seed da data — recalcular é barato e
     // impede responder questões fora do desafio (quebraria o ranking justo)
-    const idsDoDia = await idsDoDesafio(tentativa.desafio_dia);
+    const idsDoDia = await idsDoDesafio(tentativa.desafio_dia, empresaId);
     if (!idsDoDia.includes(questao_id)) {
       throw new HttpError(400, 'Questão não pertence ao desafio de hoje');
     }
@@ -247,6 +267,7 @@ export async function responderQuestao(userId, dados) {
     .eq('questao_id', questao_id)
     .eq('poder', 'tempo_extra')
     .maybeSingle();
+  tempoLimiteSeg = Math.max(10, Math.ceil(tempoLimiteSeg * Number(tentativa.fator_tempo ?? 1)));
   if (poderTempo?.segundos_extra) tempoLimiteSeg += poderTempo.segundos_extra;
 
   // Timer no servidor: o tempo conta desde a resposta anterior
@@ -340,6 +361,7 @@ export async function responderSequencia(userId, dados) {
   } else if (questao.fase_id !== tentativa.fase_id) {
     throw new HttpError(400, 'Questão não pertence a esta tentativa');
   }
+  tempoLimiteSeg = Math.max(10, Math.ceil(tempoLimiteSeg * Number(tentativa.fator_tempo ?? 1)));
 
   const { data: ultimaResposta } = await db
     .from('respostas')
@@ -402,7 +424,9 @@ export async function finalizarQuiz(usuario, tentativaId) {
   // em que o aluno respondeu.
   const { data: respostas, error: erroRespostas } = await db
     .from('respostas')
-    .select('correta, usou_dica, tempo_resposta_ms, respondida_em, questoes ( xp_valor )')
+    .select(
+      'correta, usou_dica, tempo_resposta_ms, respondida_em, questoes ( xp_valor, dificuldade, tempo_limite_seg )'
+    )
     .eq('tentativa_id', tentativaId)
     .order('respondida_em', { ascending: true });
   if (erroRespostas) throw erroRespostas;
@@ -415,7 +439,9 @@ export async function finalizarQuiz(usuario, tentativaId) {
   // Evento temporário (ex.: "semana das árvores"): multiplica o XP bruto
   // desta tentativa. Só se aplica ao modo campanha — quiz custom não tem
   // fase associada para casar com o evento.
-  const evento = ehCustom ? null : await eventoAtivoParaFase(tentativa.fase_id);
+  const evento = ehCustom
+    ? null
+    : await eventoAtivoParaFase(tentativa.fase_id, usuario.empresa_id ?? null);
   const multiplicadorEvento = evento?.multiplicador_xp ?? 1;
 
   // Recompensa crescente de streak: só faz sentido se o aluno de fato
@@ -439,6 +465,10 @@ export async function finalizarQuiz(usuario, tentativaId) {
 
   const aprovada = acertos >= Math.ceil(totalEfetivo * PCT_APROVACAO);
 
+  // Score 0–100 (Horizonte 3): métrica de AVALIAÇÃO, separada do XP —
+  // nenhuma mecânica lúdica (evento, streak, poderes) entra nele.
+  const score = calcularScore(respostas, totalEfetivo - respostas.length);
+
   // Anti-farming: repetir só rende o XP que EXCEDER o melhor desempenho
   // anterior na mesma origem (fase ou quiz custom). O desafio diário fica
   // fora — só existe 1 tentativa por dia e as questões mudam a cada dia.
@@ -454,6 +484,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
       acertos,
       xp_ganho: xpGanho,
       aprovada,
+      score,
     })
     .eq('id', tentativaId);
   if (erroTentativa) throw erroTentativa;
@@ -489,8 +520,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
 
   // "Sem usar dica": só faz sentido avaliar se o quiz foi respondido por
   // completo (senão questões puladas/pendentes mascarariam o resultado).
-  const semDica =
-    respostas.length === totalEfetivo && respostas.every((r) => !r.usou_dica);
+  const semDica = respostas.length === totalEfetivo && respostas.every((r) => !r.usou_dica);
 
   const badgesNovas = await verificarBadges(usuario.id, {
     xpTotal,
@@ -518,6 +548,7 @@ export async function finalizarQuiz(usuario, tentativaId) {
     total_questoes: tentativa.total_questoes,
     questoes_puladas: puladasData.length,
     aprovada,
+    score,
     sem_dica: semDica,
     xp_bruto: xpBruto,
     bonus_streak: bonusStreak,
@@ -594,15 +625,18 @@ async function melhorXpBrutoAnterior(userId, tentativa, tentativaAtualId) {
   let query = db
     .from('respostas')
     .select(
-      'tentativa_id, usou_dica, questoes ( xp_valor ), tentativas!inner ( user_id, fase_id, quiz_custom_id )',
+      'tentativa_id, usou_dica, questoes ( xp_valor ), tentativas!inner ( user_id, fase_id, quiz_custom_id, ciclo_prestigio )',
     )
     .eq('correta', true)
     .eq('tentativas.user_id', userId)
     .neq('tentativa_id', tentativaAtualId);
 
+  // Prestígio: cada ciclo da Nova Jornada só compete com ele mesmo
   query = tentativa.quiz_custom_id
     ? query.eq('tentativas.quiz_custom_id', tentativa.quiz_custom_id)
-    : query.eq('tentativas.fase_id', tentativa.fase_id);
+    : query
+        .eq('tentativas.fase_id', tentativa.fase_id)
+        .eq('tentativas.ciclo_prestigio', tentativa.ciclo_prestigio ?? 0);
 
   const { data, error } = await query;
   if (error) throw error;

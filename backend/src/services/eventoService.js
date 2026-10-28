@@ -1,18 +1,28 @@
 import { db } from '../config/supabase.js';
+import { doTenant } from '../utils/empresa.js';
 import { HttpError } from '../utils/httpError.js';
 
 // ---------- Administração (professor) ----------
 
-export async function criarEvento(dados) {
+export async function criarEvento(dados, empresaId = null) {
   const evento = validarPayload(dados);
 
-  const { data, error } = await db.from('eventos').insert(evento).select().single();
+  const { data, error } = await db
+    .from('eventos')
+    .insert({ ...evento, empresa_id: empresaId })
+    .select()
+    .single();
   if (error) throw error;
   return data;
 }
 
-export async function listarEventos() {
-  const { data, error } = await db.from('eventos').select('*').order('inicio', { ascending: false });
+export async function listarEventos(empresaId = null) {
+  const { data, error } = await doTenant(db.from('eventos').select('*'), empresaId).order(
+    'inicio',
+    {
+      ascending: false,
+    },
+  );
   if (error) throw error;
 
   const agora = Date.now();
@@ -27,8 +37,8 @@ export async function listarEventos() {
   }));
 }
 
-export async function removerEvento(id) {
-  const { error } = await db.from('eventos').delete().eq('id', id);
+export async function removerEvento(id, empresaId = null) {
+  const { error } = await doTenant(db.from('eventos').delete().eq('id', id), empresaId);
   if (error) throw error;
 }
 
@@ -55,15 +65,17 @@ function validarPayload(dados) {
 // Evento temporário com maior multiplicador de XP ativo agora para a fase
 // (eventos com fase_id null valem para qualquer fase). Retorna null se
 // nenhum evento estiver no período [inicio, fim] neste momento.
-export async function eventoAtivoParaFase(faseId) {
+export async function eventoAtivoParaFase(faseId, empresaId = null) {
   const agora = new Date().toISOString();
-  const { data, error } = await db.from('eventos').select('*').lte('inicio', agora).gte('fim', agora);
+  const { data, error } = await doTenant(db.from('eventos').select('*'), empresaId)
+    .lte('inicio', agora)
+    .gte('fim', agora);
   if (error) throw error;
 
   const candidatos = data.filter((e) => e.fase_id == null || e.fase_id === faseId);
   if (!candidatos.length) return null;
 
   return candidatos.reduce((maior, atual) =>
-    atual.multiplicador_xp > maior.multiplicador_xp ? atual : maior
+    atual.multiplicador_xp > maior.multiplicador_xp ? atual : maior,
   );
 }

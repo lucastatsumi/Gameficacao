@@ -9,6 +9,17 @@ import { inputCls } from './inputCls.js';
 // com LETRAS_POR_FORMATO em backend/src/services/questaoService.js.
 const LETRAS_POR_FORMATO = { padrao: ['A', 'B', 'C', 'D'], batalha_complexidade: ['A', 'B'] };
 const FORMATO_SEQUENCIA = 'reordenar_algoritmo';
+const FORMATO_ABERTA = 'resposta_aberta';
+
+function rubricaVazia() {
+  return {
+    criterios: [
+      { criterio: '', peso: 50 },
+      { criterio: '', peso: 50 },
+    ],
+    referencia: '',
+  };
+}
 
 function alternativasVazias(formato) {
   if (!LETRAS_POR_FORMATO[formato]) return [];
@@ -29,27 +40,42 @@ function questaoVazia(formato = 'padrao') {
     fase_id: '',
     enunciado: '',
     codigo_snippet: '',
-    linguagem: 'javascript',
+    linguagem: 'texto',
     dificuldade: 'media',
-    tempo_limite_seg: formato === 'batalha_complexidade' ? 15 : 60,
+    tempo_limite_seg:
+      formato === 'batalha_complexidade' ? 15 : formato === FORMATO_ABERTA ? 180 : 60,
     xp_valor: formato === 'batalha_complexidade' ? 20 : 10,
     dica: '',
     formato,
     alternativas: alternativasVazias(formato),
     passos: passosVazios(formato),
+    competencia_ids: [],
+    rubrica: formato === FORMATO_ABERTA ? rubricaVazia() : null,
   };
 }
 
 export default function AbaQuestoes() {
+  const [temas, setTemas] = useState([]);
   const [fases, setFases] = useState([]);
   const [filtroFase, setFiltroFase] = useState('');
   const [questoes, setQuestoes] = useState(null);
   const [form, setForm] = useState(null); // null | {dados, editandoId}
   const [erro, setErro] = useState(null);
 
+  // Temas visíveis para o gestor (com módulos e competências). Só os
+  // `editavel` (do próprio tenant) aceitam criar/editar questões — os do
+  // catálogo aparecem como leitura.
   useEffect(() => {
-    api.get('/fases').then(setFases).catch(() => {});
+    api
+      .get('/admin/temas')
+      .then((lista) => {
+        setTemas(lista);
+        setFases(lista.flatMap((t) => t.modulos.map((m) => ({ ...m, tema_nome: t.nome }))));
+      })
+      .catch(() => {});
   }, []);
+
+  const temasEditaveis = new Set(temas.filter((t) => t.editavel).map((t) => t.id));
 
   const carregar = useCallback(() => {
     setQuestoes(null);
@@ -62,7 +88,9 @@ export default function AbaQuestoes() {
   useEffect(carregar, [carregar]);
 
   async function desativar(questao) {
-    if (!window.confirm('Desativar esta questão? Ela sai dos quizzes, mas o histórico é preservado.'))
+    if (
+      !window.confirm('Desativar esta questão? Ela sai dos quizzes, mas o histórico é preservado.')
+    )
       return;
     try {
       await api.delete(`/admin/questoes/${questao.id}`);
@@ -78,14 +106,18 @@ export default function AbaQuestoes() {
         <select
           value={filtroFase}
           onChange={(e) => setFiltroFase(e.target.value)}
-          aria-label="Filtrar questões por fase"
+          aria-label="Filtrar questões por módulo"
           className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
         >
-          <option value="">Todas as fases</option>
-          {fases.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.nome}
-            </option>
+          <option value="">Todos os módulos</option>
+          {temas.map((t) => (
+            <optgroup key={t.id} label={t.nome}>
+              {t.modulos.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nome}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <button
@@ -101,7 +133,7 @@ export default function AbaQuestoes() {
 
       {form && (
         <FormQuestao
-          fases={fases}
+          temas={temas.filter((t) => t.editavel)}
           form={form}
           aoFechar={() => setForm(null)}
           aoSalvar={() => {
@@ -149,10 +181,27 @@ export default function AbaQuestoes() {
                         desativada
                       </span>
                     )}
+                    {q.formato === FORMATO_ABERTA && (
+                      <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-amber-300">
+                        resposta aberta
+                      </span>
+                    )}
+                    {q.status_revisao === 'pendente_revisao' && (
+                      <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-violet-300">
+                        rascunho da IA · aguardando revisão
+                      </span>
+                    )}
+                    {!temasEditaveis.has(q.tema_id) && (
+                      <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-sky-300">
+                        catálogo · somente leitura
+                      </span>
+                    )}
                   </div>
                   <p className="mt-2 line-clamp-2 text-sm text-slate-200">{q.enunciado}</p>
                 </div>
-                <div className="flex shrink-0 gap-2">
+                <div
+                  className={`flex shrink-0 gap-2 ${temasEditaveis.has(q.tema_id) ? '' : 'hidden'}`}
+                >
                   <button
                     onClick={() =>
                       setForm({
@@ -178,10 +227,14 @@ export default function AbaQuestoes() {
                                   .sort(
                                     (a, b) =>
                                       (q.ordem_correta ?? []).indexOf(a.id) -
-                                      (q.ordem_correta ?? []).indexOf(b.id)
+                                      (q.ordem_correta ?? []).indexOf(b.id),
                                   )
                                   .map((p) => ({ texto: p.texto }))
                               : passosVazios(q.formato),
+                          competencia_ids: q.competencia_ids ?? [],
+                          rubrica: q.rubrica
+                            ? { ...q.rubrica, referencia: q.rubrica.referencia ?? '' }
+                            : null,
                         },
                         editandoId: q.id,
                       })
@@ -210,8 +263,18 @@ export default function AbaQuestoes() {
   );
 }
 
-function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
+function FormQuestao({ temas, form, aoFechar, aoSalvar }) {
   const [dados, setDados] = useState(form.dados);
+  const temaDaFase = temas.find((t) => t.modulos.some((m) => m.id === Number(dados.fase_id)));
+
+  function alternarCompetencia(id) {
+    setDados((d) => ({
+      ...d,
+      competencia_ids: d.competencia_ids.includes(id)
+        ? d.competencia_ids.filter((c) => c !== id)
+        : [...d.competencia_ids, id],
+    }));
+  }
   const [erro, setErro] = useState(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -225,6 +288,18 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
       formato,
       alternativas: alternativasVazias(formato),
       passos: passosVazios(formato),
+      rubrica: formato === FORMATO_ABERTA ? rubricaVazia() : null,
+      tempo_limite_seg: formato === FORMATO_ABERTA ? 180 : d.tempo_limite_seg,
+    }));
+  }
+
+  function mudarCriterio(indice, campo, valor) {
+    setDados((d) => ({
+      ...d,
+      rubrica: {
+        ...d.rubrica,
+        criterios: d.rubrica.criterios.map((c, i) => (i === indice ? { ...c, [campo]: valor } : c)),
+      },
     }));
   }
 
@@ -236,7 +311,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
           ? { ...a, correta: a.letra === letra }
           : a.letra === letra
             ? { ...a, [campo]: valor }
-            : a
+            : a,
       ),
     }));
   }
@@ -277,6 +352,13 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
       xp_valor: Number(dados.xp_valor),
       codigo_snippet: dados.codigo_snippet?.trim() ? dados.codigo_snippet : null,
       dica: dados.dica?.trim() ? dados.dica.trim() : null,
+      rubrica:
+        dados.formato === FORMATO_ABERTA
+          ? {
+              criterios: dados.rubrica.criterios.map((c) => ({ ...c, peso: Number(c.peso) })),
+              referencia: dados.rubrica.referencia,
+            }
+          : null,
     };
     try {
       if (form.editandoId) await api.put(`/admin/questoes/${form.editandoId}`, payload);
@@ -290,7 +372,10 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
   }
 
   return (
-    <form onSubmit={salvar} className="card-pixel space-y-4 border-2 border-indigo-500/40 bg-slate-900/80 p-5">
+    <form
+      onSubmit={salvar}
+      className="card-pixel space-y-4 border-2 border-indigo-500/40 bg-slate-900/80 p-5"
+    >
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">{form.editandoId ? 'Editar questão' : 'Nova questão'}</h3>
         <button
@@ -306,16 +391,24 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
       <div className="grid gap-3 sm:grid-cols-4">
         <select
           value={dados.fase_id}
-          onChange={(e) => mudar('fase_id', e.target.value)}
-          aria-label="Fase da questão"
+          onChange={(e) =>
+            // Competências são do tema: trocar de módulo para outro tema
+            // limpa as tags escolhidas
+            setDados((d) => ({ ...d, fase_id: e.target.value, competencia_ids: [] }))
+          }
+          aria-label="Módulo da questão"
           className={inputCls}
           required
         >
-          <option value="">Fase...</option>
-          {fases.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.nome}
-            </option>
+          <option value="">Módulo...</option>
+          {temas.map((t) => (
+            <optgroup key={t.id} label={t.nome}>
+              {t.modulos.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nome}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <select
@@ -329,6 +422,7 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
           <option value="padrao">Múltipla escolha (4 alternativas)</option>
           <option value="batalha_complexidade">Duelo — escolha entre 2 alternativas</option>
           <option value={FORMATO_SEQUENCIA}>Ordenar etapas (passos em sequência)</option>
+          <option value={FORMATO_ABERTA}>Resposta aberta (corrigida por IA com rubrica)</option>
         </select>
         <select
           value={dados.dificuldade}
@@ -372,24 +466,121 @@ function FormQuestao({ fases, form, aoFechar, aoSalvar }) {
       <textarea
         value={dados.codigo_snippet}
         onChange={(e) => mudar('codigo_snippet', e.target.value)}
-        placeholder="Trecho de código (opcional)"
-        aria-label="Trecho de código"
-        rows={4}
-        className={`${inputCls} font-mono`}
+        placeholder="Texto de apoio (opcional — ex.: trecho da política ou do manual citado no cenário)"
+        aria-label="Texto de apoio"
+        rows={3}
+        className={inputCls}
       />
+      {temaDaFase?.competencias?.length > 0 && (
+        <fieldset className="flex flex-wrap gap-2">
+          <legend className="mb-1 text-xs text-slate-500">
+            Competências avaliadas (alimentam a matriz de competências e as cartas)
+          </legend>
+          {temaDaFase.competencias.map((c) => (
+            <label
+              key={c.id}
+              className={`flex cursor-pointer items-center gap-1.5 border-2 px-2 py-1 text-xs ${
+                dados.competencia_ids.includes(c.id)
+                  ? 'border-indigo-500 bg-indigo-500/10 text-indigo-200'
+                  : 'border-slate-700 text-slate-400'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={dados.competencia_ids.includes(c.id)}
+                onChange={() => alternarCompetencia(c.id)}
+                className="sr-only"
+              />
+              {c.nome}
+            </label>
+          ))}
+        </fieldset>
+      )}
       <input
         value={dados.dica}
         onChange={(e) => mudar('dica', e.target.value)}
-        placeholder="Dica (opcional — usada nos quizzes da turma; quem pedir ganha metade do XP)"
+        placeholder="Dica (opcional — usada nos quizzes da equipe; quem pedir ganha metade do XP)"
         aria-label="Dica"
         className={inputCls}
       />
 
-      {dados.formato === FORMATO_SEQUENCIA ? (
+      {dados.formato === FORMATO_ABERTA ? (
         <div className="space-y-2">
           <p className="text-xs text-slate-500">
-            Digite os passos do algoritmo NA ORDEM CERTA — essa ordem vira o gabarito. O
-            jogo embaralha a exibição a cada tentativa.
+            Rubrica de correção: a IA dá 0–100 em cada critério e a nota final é a média ponderada
+            pelos pesos (calculada no servidor). Você pode revisar e sobrescrever qualquer nota na
+            aba IA.
+          </p>
+          {dados.rubrica.criterios.map((c, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                value={c.criterio}
+                onChange={(e) => mudarCriterio(i, 'criterio', e.target.value)}
+                placeholder={`Critério ${i + 1} (ex.: cita o canal oficial de denúncia)`}
+                aria-label={`Critério ${i + 1}`}
+                className={inputCls}
+                required
+              />
+              <input
+                type="number"
+                min={1}
+                value={c.peso}
+                onChange={(e) => mudarCriterio(i, 'peso', e.target.value)}
+                aria-label={`Peso do critério ${i + 1}`}
+                title="Peso"
+                className={`${inputCls} w-24 shrink-0`}
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  setDados((d) => ({
+                    ...d,
+                    rubrica: {
+                      ...d.rubrica,
+                      criterios: d.rubrica.criterios.filter((_, j) => j !== i),
+                    },
+                  }))
+                }
+                disabled={dados.rubrica.criterios.length <= 1}
+                title="Remover critério"
+                className="shrink-0 px-2 text-slate-400 hover:text-red-300 disabled:opacity-30"
+              >
+                <PixelIcon nome="trash" className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() =>
+              setDados((d) => ({
+                ...d,
+                rubrica: {
+                  ...d.rubrica,
+                  criterios: [...d.rubrica.criterios, { criterio: '', peso: 25 }],
+                },
+              }))
+            }
+            disabled={dados.rubrica.criterios.length >= 8}
+            className="text-xs text-indigo-300 hover:text-indigo-200 disabled:opacity-40"
+          >
+            + Adicionar critério
+          </button>
+          <textarea
+            value={dados.rubrica.referencia}
+            onChange={(e) =>
+              setDados((d) => ({ ...d, rubrica: { ...d.rubrica, referencia: e.target.value } }))
+            }
+            placeholder="Resposta de referência (opcional — orienta a correção, nunca é mostrada ao colaborador)"
+            aria-label="Resposta de referência"
+            rows={2}
+            className={inputCls}
+          />
+        </div>
+      ) : dados.formato === FORMATO_SEQUENCIA ? (
+        <div className="space-y-2">
+          <p className="text-xs text-slate-500">
+            Digite os passos do processo NA ORDEM CERTA — essa ordem vira o gabarito. O jogo
+            embaralha a exibição a cada tentativa.
           </p>
           {dados.passos.map((passo, i) => (
             <div key={i} className="flex items-center gap-2">

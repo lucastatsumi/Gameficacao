@@ -2,6 +2,8 @@ import { db } from '../config/supabase.js';
 import { HttpError } from '../utils/httpError.js';
 import { dataDeHoje } from '../utils/streak.js';
 import { criarPrng, embaralharComSeed } from '../utils/seed.js';
+import { doTenant } from '../utils/empresa.js';
+import { idsTemasDaEmpresa } from './temaService.js';
 
 // Desafio diário (roadmap v2, 4.8): mesmas questões para todo mundo no
 // mesmo dia — sorteio determinístico semeado pela DATA sobre o banco de
@@ -13,13 +15,18 @@ export const QUESTOES_DESAFIO = 5;
 
 // Ids das questões do dia — derivado, nunca armazenado: qualquer processo
 // chega ao mesmo resultado (ordena por id para normalizar antes do
-// embaralhamento semeado).
-export async function idsDoDesafio(dia) {
+// embaralhamento semeado). O banco sorteado é o dos temas da EMPRESA,
+// então todo mundo da mesma empresa recebe o mesmo desafio.
+export async function idsDoDesafio(dia, empresaId = null) {
+  const temaIds = await idsTemasDaEmpresa(empresaId);
+  if (!temaIds.length) return [];
+
   const { data: questoes, error } = await db
     .from('questoes')
-    .select('id')
+    .select('id, fases!inner ( tema_id )')
     .eq('ativa', true)
-    .in('formato', ['padrao', 'batalha_complexidade']);
+    .in('formato', ['padrao', 'batalha_complexidade'])
+    .in('fases.tema_id', temaIds);
   if (error) throw error;
 
   const ids = (questoes ?? []).map((q) => q.id).sort();
@@ -27,7 +34,7 @@ export async function idsDoDesafio(dia) {
   return embaralharComSeed(ids, prng).slice(0, QUESTOES_DESAFIO);
 }
 
-export async function iniciarDesafioDiario(userId) {
+export async function iniciarDesafioDiario(userId, empresaId = null) {
   const dia = dataDeHoje();
 
   const { data: existente, error: erroExistente } = await db
@@ -43,13 +50,13 @@ export async function iniciarDesafioDiario(userId) {
     throw new HttpError(409, 'Você já jogou o desafio de hoje — volte amanhã!');
   }
 
-  const ids = await idsDoDesafio(dia);
+  const ids = await idsDoDesafio(dia, empresaId);
   if (!ids.length) throw new HttpError(404, 'Sem questões disponíveis para o desafio de hoje');
 
   const { data: questoes, error: erroQuestoes } = await db
     .from('questoes')
     .select(
-      'id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, formato, alternativas ( id, letra, texto )'
+      'id, enunciado, codigo_snippet, linguagem, dificuldade, tempo_limite_seg, xp_valor, formato, alternativas ( id, letra, texto )',
     )
     .in('id', ids);
   if (erroQuestoes) throw erroQuestoes;
@@ -86,12 +93,19 @@ export async function iniciarDesafioDiario(userId) {
 }
 
 // Status do dia para o card no mapa: se o jogador já jogou e o top do dia.
-export async function statusDoDia(userId) {
+export async function statusDoDia(userId, empresaId = null) {
   const dia = dataDeHoje();
 
-  const { data: tentativas, error } = await db
-    .from('tentativas')
-    .select('user_id, acertos, total_questoes, finalizada_em, profiles ( nome )')
+  // Pódio do dia só entre colegas da mesma empresa
+  const { data: tentativas, error } = await doTenant(
+    db
+      .from('tentativas')
+      .select(
+        'user_id, acertos, total_questoes, finalizada_em, profiles!inner ( nome, empresa_id )',
+      ),
+    empresaId,
+    'profiles.empresa_id',
+  )
     .eq('desafio_dia', dia)
     .not('finalizada_em', 'is', null)
     .order('acertos', { ascending: false })

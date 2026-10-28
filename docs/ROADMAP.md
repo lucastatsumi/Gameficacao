@@ -1,5 +1,16 @@
 # Roadmap v2 — Plataforma empresarial de quiz gamificado
 
+> **Status (2026-10-27, branch `feat/plataforma-corporativa`)**: implementados
+> os Horizontes 1 (multi-tema, competências, trilhas por equipe, onboarding
+> da empresa), 2 (geração/auditoria de questões com IA e a partir de
+> documento, sempre como rascunho revisado), 3 (score ponderado, matriz de
+> competências, proficiência, certificado, questão aberta com rubrica), o
+> restante do 4 (cartas 4.9, prestígio 4.11, campanhas, torneio entre
+> equipes) e o 5 implementável (multi-tenancy por `empresa_id`, papéis
+> dono/gestor/colaborador, evolução temporal por snapshots). Migrations
+> 34–40 pendentes de aplicação: ver `docs/deploy.md`. Continuam fora do
+> escopo os itens de "Fora do escopo de implementação autônoma".
+
 > O roadmap anterior (jogo sério de Estrutura de Dados, [`ROADMAP-v1.md`](./ROADMAP-v1.md))
 > foi concluído. Este documento define a próxima fase: **pivotar o produto
 > para o mercado corporativo** — a empresa escolhe os temas, os quizzes são

@@ -1,4 +1,5 @@
 import { db } from '../config/supabase.js';
+import { doTenant, mesmoTenant } from '../utils/empresa.js';
 import { HttpError } from '../utils/httpError.js';
 import { concederFichas } from './fichaService.js';
 
@@ -11,27 +12,29 @@ import { concederFichas } from './fichaService.js';
 // da fama consultável — congela sozinho, sem cron externo (mesma ideia
 // de eventoAtivoParaFase).
 
-export async function criarTemporada(dados) {
+export async function criarTemporada(dados, empresaId = null) {
   const temporada = validarPayload(dados);
-  const { data, error } = await db.from('temporadas').insert(temporada).select().single();
+  const { data, error } = await db
+    .from('temporadas')
+    .insert({ ...temporada, empresa_id: empresaId })
+    .select()
+    .single();
   if (error) throw error;
   return data;
 }
 
-export async function listarTemporadas(agora = new Date()) {
-  const { data, error } = await db
-    .from('temporadas')
-    .select('*')
-    .order('inicio', { ascending: false });
+export async function listarTemporadas(agora = new Date(), empresaId = null) {
+  const { data, error } = await doTenant(db.from('temporadas').select('*'), empresaId).order(
+    'inicio',
+    { ascending: false },
+  );
   if (error) throw error;
   return (data ?? []).map((temporada) => comStatus(temporada, agora));
 }
 
-export async function temporadaAtiva(agora = new Date()) {
+export async function temporadaAtiva(agora = new Date(), empresaId = null) {
   const iso = agora.toISOString();
-  const { data, error } = await db
-    .from('temporadas')
-    .select('*')
+  const { data, error } = await doTenant(db.from('temporadas').select('*'), empresaId)
     .lte('inicio', iso)
     .gte('fim', iso)
     .order('inicio', { ascending: false })
@@ -45,11 +48,23 @@ export async function temporadaAtiva(agora = new Date()) {
 // degrau 'cosmetico' referencia um item que já precisa existir em
 // itens_catalogo (criado como exclusivo desta temporada antes de montar
 // a trilha).
-export async function definirTrilha(temporadaId, degraus) {
+export async function definirTrilha(temporadaId, degraus, empresaId = null) {
   if (!Array.isArray(degraus) || !degraus.length) {
     throw new HttpError(400, 'A trilha precisa de ao menos um degrau');
   }
   const linhas = degraus.map((degrau, indice) => validarDegrau(temporadaId, degrau, indice));
+
+  // Só a temporada do próprio tenant (validação antes, para não ir ao
+  // banco com payload inválido)
+  const { data: temporada, error: erroTemporada } = await db
+    .from('temporadas')
+    .select('id, empresa_id')
+    .eq('id', temporadaId)
+    .maybeSingle();
+  if (erroTemporada) throw erroTemporada;
+  if (!temporada || !mesmoTenant(temporada.empresa_id, empresaId)) {
+    throw new HttpError(404, 'Temporada não encontrada');
+  }
 
   const { error: erroDelete } = await db
     .from('temporada_recompensas')
@@ -67,10 +82,15 @@ export async function definirTrilha(temporadaId, degraus) {
 // anti-farming de quizService. Silencioso se não há temporada ativa.
 // Retorna os degraus concedidos agora (para o controller expor ao
 // jogador, tipo poderService.concederPoder no streak).
-export async function concederPontosTemporada(userId, xpGanho, agora = new Date()) {
+export async function concederPontosTemporada(
+  userId,
+  xpGanho,
+  agora = new Date(),
+  empresaId = null,
+) {
   if (!xpGanho || xpGanho <= 0) return [];
 
-  const temporada = await temporadaAtiva(agora);
+  const temporada = await temporadaAtiva(agora, empresaId);
   if (!temporada) return [];
 
   const linha = await buscarOuCriarLinha(temporada.id, userId);
@@ -88,8 +108,8 @@ export async function concederPontosTemporada(userId, xpGanho, agora = new Date(
 
 // Progresso do jogador na temporada ativa: pontos acumulados + trilha
 // inteira com o que já foi resgatado, para a UI desenhar o passe.
-export async function progressoDoJogador(userId, agora = new Date()) {
-  const temporada = await temporadaAtiva(agora);
+export async function progressoDoJogador(userId, agora = new Date(), empresaId = null) {
+  const temporada = await temporadaAtiva(agora, empresaId);
   if (!temporada) return null;
 
   const [
@@ -126,10 +146,11 @@ export async function progressoDoJogador(userId, agora = new Date()) {
 // Hall da fama: ranking por pontos desc de qualquer temporada (ativa ou
 // encerrada) — como pontos só somam dentro do período, o placar de uma
 // temporada encerrada já está congelado.
-export async function hallDaFama(temporadaId) {
-  const { data, error } = await db
-    .from('ranking_temporada')
-    .select('id, nome, pontos, posicao')
+export async function hallDaFama(temporadaId, empresaId = null) {
+  const { data, error } = await doTenant(
+    db.from('ranking_temporada').select('id, nome, pontos, posicao'),
+    empresaId,
+  )
     .eq('temporada_id', temporadaId)
     .order('posicao');
   if (error) throw error;
@@ -152,7 +173,7 @@ async function buscarOuCriarLinha(temporadaId, userId) {
     .from('temporada_pontos')
     .upsert(
       { temporada_id: temporadaId, user_id: userId, pontos: 0 },
-      { onConflict: 'temporada_id,user_id', ignoreDuplicates: true }
+      { onConflict: 'temporada_id,user_id', ignoreDuplicates: true },
     );
   if (erroUpsert) throw erroUpsert;
 
@@ -179,7 +200,7 @@ async function resgatarElegiveis(temporadaId, userId, pontos) {
     .eq('user_id', userId)
     .in(
       'recompensa_id',
-      degraus.map((d) => d.id)
+      degraus.map((d) => d.id),
     );
   if (erroResgatados) throw erroResgatados;
   const resgatadosIds = new Set((jaResgatados ?? []).map((r) => r.recompensa_id));
@@ -240,12 +261,16 @@ function validarDegrau(temporadaId, degrau, indice) {
   const posicao = degrau?.posicao ?? indice + 1;
   const pontosNecessarios = Number(degrau?.pontos_necessarios);
   if (!(pontosNecessarios > 0)) {
-    throw new HttpError(400, `Degrau ${posicao}: pontos_necessarios deve ser um número maior que 0`);
+    throw new HttpError(
+      400,
+      `Degrau ${posicao}: pontos_necessarios deve ser um número maior que 0`,
+    );
   }
 
   if (degrau?.tipo === 'fichas') {
     const fichas = Number(degrau.fichas);
-    if (!(fichas > 0)) throw new HttpError(400, `Degrau ${posicao}: fichas deve ser um número maior que 0`);
+    if (!(fichas > 0))
+      throw new HttpError(400, `Degrau ${posicao}: fichas deve ser um número maior que 0`);
     return {
       temporada_id: temporadaId,
       posicao,

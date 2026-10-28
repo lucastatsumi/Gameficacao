@@ -34,21 +34,29 @@ export default function TelaResultado({ resultado, sons = true }) {
       {resultado.aprovada ? (
         <img src={pixelTrofeu} alt="Troféu pixel-art" className="anim-flutuar mx-auto w-24" />
       ) : (
-        <img src={pixelTriste} alt="Carinha triste pixel-art" className="anim-flutuar mx-auto w-20" />
+        <img
+          src={pixelTriste}
+          alt="Carinha triste pixel-art"
+          className="anim-flutuar mx-auto w-20"
+        />
       )}
-      <h1 className={`mt-6 font-pixel text-lg text-slate-100 ${resultado.aprovada ? 'anim-pop' : ''}`}>
-        {resultado.aprovada ? 'FASE CONCLUÍDA!' : 'QUASE LÁ!'}
+      <h1
+        className={`mt-6 font-pixel text-lg text-slate-100 ${resultado.aprovada ? 'anim-pop' : ''}`}
+      >
+        {resultado.aprovada ? 'MÓDULO CONCLUÍDO!' : 'QUASE LÁ!'}
       </h1>
       <p className="mt-1 text-slate-400">
         {resultado.fase} — você acertou {resultado.acertos} de {resultado.total_questoes} ({pct}%)
       </p>
       {!resultado.aprovada && (
         <p className="mt-1 text-sm text-amber-400/80">
-          Acerte pelo menos 70% para concluir a fase. Tente de novo!
+          Acerte pelo menos 70% para concluir o módulo. Tente de novo!
         </p>
       )}
 
-      <div className="mt-8 grid grid-cols-3 gap-3">
+      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {/* Nota de avaliação (0–100): separada do XP, que é a moeda do jogo */}
+        <CartaoStat rotulo="Nota" valor={resultado.score ?? '—'} />
         <CartaoStat rotulo="XP ganho" valor={`+${resultado.xp_ganho}`} destaque />
         <CartaoStat rotulo="XP total" valor={resultado.xp_total} />
         <CartaoStat rotulo="Nível" valor={resultado.nivel} />
@@ -87,8 +95,8 @@ export default function TelaResultado({ resultado, sons = true }) {
 
       {resultado.fichas_ganhas > 0 && (
         <div className="anim-pop card-pixel mt-4 flex items-center justify-center gap-2 border-2 border-cyan-500/40 bg-cyan-500/10 p-3 text-cyan-300">
-          <PixelIcon nome="star" className="h-5 w-5" />
-          +{resultado.fichas_ganhas} fichas para gastar na loja!
+          <PixelIcon nome="star" className="h-5 w-5" />+{resultado.fichas_ganhas} fichas para gastar
+          na loja!
         </div>
       )}
 
@@ -138,6 +146,35 @@ export default function TelaResultado({ resultado, sons = true }) {
         <div className="anim-pop card-pixel mt-6 flex items-center justify-center gap-2 border-2 border-violet-500/40 bg-violet-500/10 p-4 text-violet-300">
           <PixelIcon nome="zap" className="h-5 w-5" />
           Você subiu para o nível {resultado.nivel}!
+        </div>
+      )}
+
+      {resultado.desafio && (
+        <div
+          className={`anim-pop card-pixel mt-4 border-2 p-3 ${
+            resultado.desafio.venceu
+              ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+              : 'border-slate-700 bg-slate-900/60 text-slate-300'
+          }`}
+        >
+          <p className="flex items-center justify-center gap-2 font-semibold">
+            <PixelIcon nome="zap" className="h-5 w-5" />
+            {resultado.desafio.venceu
+              ? `Desafio vencido! ${resultado.desafio.acertos} × ${resultado.desafio.acertos_alvo} — ponto para sua equipe no torneio.`
+              : `Desafio não batido desta vez (${resultado.desafio.acertos} × ${resultado.desafio.acertos_alvo}).`}
+          </p>
+        </div>
+      )}
+
+      {resultado.cartas_novas?.length > 0 && (
+        <div className="anim-pop card-pixel mt-4 border-2 border-amber-500/40 bg-amber-500/10 p-3 text-amber-200">
+          <p className="flex items-center justify-center gap-2 font-semibold">
+            <PixelIcon nome="book-open" className="h-5 w-5" />
+            Carta revelada: {resultado.cartas_novas.map((c) => c.nome).join(', ')}
+          </p>
+          <Link to="/perfil" className="mt-1 block text-xs underline">
+            Ver no álbum
+          </Link>
         </div>
       )}
 

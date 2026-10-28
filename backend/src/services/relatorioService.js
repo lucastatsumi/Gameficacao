@@ -1,13 +1,14 @@
 import { db } from '../config/supabase.js';
+import { doTenant } from '../utils/empresa.js';
 import { alunosDaTurma, exigirTurmaDoProfessor } from './turmaService.js';
 
 // Taxa de acerto e tempo médio por questão (view desempenho_questoes) —
 // mostra ao professor os conceitos em que a turma mais erra.
-export async function desempenhoPorQuestao(faseId) {
-  let query = db
-    .from('desempenho_questoes')
-    .select('*')
-    .order('taxa_acerto_pct', { ascending: true });
+export async function desempenhoPorQuestao(faseId, empresaId = null) {
+  let query = doTenant(db.from('desempenho_questoes').select('*'), empresaId).order(
+    'taxa_acerto_pct',
+    { ascending: true },
+  );
   if (faseId) query = query.eq('fase_id', faseId);
 
   const { data, error } = await query;
@@ -18,8 +19,10 @@ export async function desempenhoPorQuestao(faseId) {
 // Visão agregada POR FASE (não por questão individual): taxa de aprovação
 // e média de acerto de todas as tentativas finalizadas em cada fase —
 // mostra ao professor em que ponto da trilha a turma mais trava.
-export async function desempenhoPorFase() {
-  const { data, error } = await db.from('desempenho_fases').select('*').order('ordem');
+export async function desempenhoPorFase(empresaId = null) {
+  const { data, error } = await doTenant(db.from('desempenho_fases').select('*'), empresaId).order(
+    'ordem',
+  );
   if (error) throw error;
   return data;
 }

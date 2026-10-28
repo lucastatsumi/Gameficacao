@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../services/api.js';
+import PainelAvaliacao from '../components/avaliacao/PainelAvaliacao.jsx';
+import AlbumCartas from '../components/avaliacao/AlbumCartas.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import Alerta from '../components/ui/Alerta.jsx';
@@ -15,7 +17,11 @@ export default function Perfil() {
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
-    Promise.all([api.get('/perfil/badges'), api.get('/perfil/historico'), api.get('/perfil/revisao')])
+    Promise.all([
+      api.get('/perfil/badges'),
+      api.get('/perfil/historico'),
+      api.get('/perfil/revisao'),
+    ])
       .then(([b, h, r]) => {
         setBadges(b);
         setHistorico(h);
@@ -38,7 +44,11 @@ export default function Perfil() {
             {perfil.role === 'professor' ? (
               <PixelIcon nome="book-open" className="h-9 w-9" />
             ) : (
-              <AvatarPixel nivel={perfil.nivel} paleta={perfil.cosmeticos?.paleta} className="h-12 w-12" />
+              <AvatarPixel
+                nivel={perfil.nivel}
+                paleta={perfil.cosmeticos?.paleta}
+                className="h-12 w-12"
+              />
             )}
           </div>
           <div className="min-w-0 flex-1">
@@ -124,7 +134,9 @@ export default function Perfil() {
             </div>
             <div className="text-center">
               <p className="font-pixel text-sm text-slate-100">{perfil.atributos.dias_ativos}</p>
-              <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-500">Persistência</p>
+              <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-500">
+                Persistência
+              </p>
             </div>
           </div>
         )}
@@ -133,31 +145,35 @@ export default function Perfil() {
           (perfil.poderes.eliminar_alternativa > 0 ||
             perfil.poderes.tempo_extra > 0 ||
             perfil.poderes.pular_questao > 0) && (
-          <div className="mt-4 flex flex-wrap gap-3 border-t-2 border-slate-800 pt-4">
-            <p className="w-full text-xs uppercase tracking-wide text-slate-500">
-              Poderes disponíveis (use durante o quiz)
-            </p>
-            {perfil.poderes.eliminar_alternativa > 0 && (
-              <span className="flex items-center gap-1.5 border-2 border-violet-500/40 bg-violet-500/10 px-3 py-1.5 text-xs text-violet-300">
-                <PixelIcon nome="trash" className="h-4 w-4" />
-                50/50 × {perfil.poderes.eliminar_alternativa}
-              </span>
-            )}
-            {perfil.poderes.tempo_extra > 0 && (
-              <span className="flex items-center gap-1.5 border-2 border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs text-sky-300">
-                <PixelIcon nome="clock" className="h-4 w-4" />
-                +15s × {perfil.poderes.tempo_extra}
-              </span>
-            )}
-            {perfil.poderes.pular_questao > 0 && (
-              <span className="flex items-center gap-1.5 border-2 border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300">
-                <PixelIcon nome="arrow-right" className="h-4 w-4" />
-                Pular × {perfil.poderes.pular_questao}
-              </span>
-            )}
-          </div>
-        )}
+            <div className="mt-4 flex flex-wrap gap-3 border-t-2 border-slate-800 pt-4">
+              <p className="w-full text-xs uppercase tracking-wide text-slate-500">
+                Poderes disponíveis (use durante o quiz)
+              </p>
+              {perfil.poderes.eliminar_alternativa > 0 && (
+                <span className="flex items-center gap-1.5 border-2 border-violet-500/40 bg-violet-500/10 px-3 py-1.5 text-xs text-violet-300">
+                  <PixelIcon nome="trash" className="h-4 w-4" />
+                  50/50 × {perfil.poderes.eliminar_alternativa}
+                </span>
+              )}
+              {perfil.poderes.tempo_extra > 0 && (
+                <span className="flex items-center gap-1.5 border-2 border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs text-sky-300">
+                  <PixelIcon nome="clock" className="h-4 w-4" />
+                  +15s × {perfil.poderes.tempo_extra}
+                </span>
+              )}
+              {perfil.poderes.pular_questao > 0 && (
+                <span className="flex items-center gap-1.5 border-2 border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300">
+                  <PixelIcon nome="arrow-right" className="h-4 w-4" />
+                  Pular × {perfil.poderes.pular_questao}
+                </span>
+              )}
+            </div>
+          )}
       </div>
+
+      <PainelAvaliacao />
+
+      <AlbumCartas />
 
       {/* estante de badges */}
       <section>
@@ -199,22 +215,31 @@ export default function Perfil() {
           </p>
           <div className="mt-4 space-y-3">
             {revisao.map((r) => (
-              <div key={r.resposta_id} className="card-pixel border-2 border-slate-800 bg-slate-900/60 p-4">
+              <div
+                key={r.resposta_id}
+                className="card-pixel border-2 border-slate-800 bg-slate-900/60 p-4"
+              >
                 <p className="text-sm text-slate-200">{r.questao.enunciado}</p>
                 {r.questao.codigo_snippet && (
-                  <pre className="mt-3 overflow-x-auto border-2 border-slate-800 bg-slate-950 p-3 text-xs text-emerald-300">
-                    <code>{r.questao.codigo_snippet}</code>
-                  </pre>
+                  <blockquote className="mt-3 border-2 border-slate-800 border-l-4 border-l-indigo-500/60 bg-slate-950/60 p-3 text-xs whitespace-pre-wrap italic text-slate-300">
+                    {r.questao.codigo_snippet}
+                  </blockquote>
                 )}
                 <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
                   <p className="border-2 border-red-500/30 bg-red-500/10 p-2 text-red-300">
-                    {r.sua_alternativa
-                      ? <>Você marcou <strong>{r.sua_alternativa.letra}</strong>: {r.sua_alternativa.texto}</>
-                      : 'Tempo esgotado — sem resposta'}
+                    {r.sua_alternativa ? (
+                      <>
+                        Você marcou <strong>{r.sua_alternativa.letra}</strong>:{' '}
+                        {r.sua_alternativa.texto}
+                      </>
+                    ) : (
+                      'Tempo esgotado — sem resposta'
+                    )}
                   </p>
                   {r.alternativa_correta && (
                     <p className="border-2 border-emerald-500/30 bg-emerald-500/10 p-2 text-emerald-300">
-                      Certa era <strong>{r.alternativa_correta.letra}</strong>: {r.alternativa_correta.texto}
+                      Certa era <strong>{r.alternativa_correta.letra}</strong>:{' '}
+                      {r.alternativa_correta.texto}
                     </p>
                   )}
                 </div>
