@@ -79,9 +79,17 @@ sistema de XP, níveis, badges, mapa de módulos desbloqueável e ranking.
 │   ├── 23_loja.sql               #   Loja de poderes e cosméticos
 │   ├── 24_missoes.sql            #   Missões diárias
 │   ├── 25_desafio_diario.sql     #   Desafio diário (seed por data)
-│   ├── 26_fase_estruturas_avancadas.sql # Fase 8: grafos, hash, heaps, recursão
+│   ├── 26_fase_estruturas_avancadas.sql # Fase 8 (conteúdo reescrito pela 31)
 │   ├── 27_ligas.sql              #   Ligas semanais (divisões, fechamento lazy)
-│   └── 28_kudos.sql              #   Kudos entre colegas (3/semana, anti-conluio)
+│   ├── 28_kudos.sql              #   Kudos entre colegas (3/semana, anti-conluio)
+│   ├── 29_temporadas.sql … 33_raid_boss.sql # Temporadas, missão semanal, pivô corporativo, raid
+│   ├── 34_limpeza_conteudo_corporativo.sql # Remove resquícios técnicos do conteúdo
+│   ├── 35_temas_competencias.sql #   Temas, módulos, competências, trilhas por equipe
+│   ├── 36_empresas_multitenancy.sql # Empresas, papéis, isolamento por empresa_id
+│   ├── 37_avaliacao.sql          #   Score 0–100 e desempenho por competência
+│   ├── 38_ia_questoes_abertas.sql #  Rascunhos de IA, rubricas, custos de IA
+│   ├── 39_badges_novos_tipos.sql #   Enum de badges (rodar antes da 40)
+│   └── 40_cartas_prestigio_campanhas_torneios.sql # Cartas, prestígio, campanhas, torneios, snapshots
 ├── backend/
 │   └── src/
 │       ├── config/               # Cliente Supabase, variáveis de ambiente
@@ -138,3 +146,7 @@ As chaves ficam em: **Dashboard do Supabase → Project Settings → API Keys**.
 - A `service_role` vai **somente** no `backend/.env`.
 - A `anon`/`publishable` vai no `frontend/.env` **e** no `backend/.env`
   (usada para validação de JWT).
+- `ANTHROPIC_API_KEY` (opcional, **somente** no `backend/.env`): liga a
+  geração/auditoria de questões e a correção de respostas abertas por IA
+  (modelo em `IA_MODELO`, padrão `claude-opus-5-5`). Sem ela o resto
+  funciona e as respostas abertas ficam pendentes para o gestor.
